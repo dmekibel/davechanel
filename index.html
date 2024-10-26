@@ -1,30 +1,399 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dave Chanel - Heaven Portfolio</title>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/windows95.css">
+    <title>Dave Chanel - Heavenly Portfolio</title>
+    <link rel="stylesheet" href="https://unpkg.com/98.css">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            font-family: "Perfect DOS VGA 437", monospace;
+        }
+
+        /* Gates Animation */
+        .gates-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #87CEEB;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .gate {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            transition: transform 2s ease-in-out;
+        }
+
+        .gate.left {
+            left: 0;
+            transform-origin: left;
+        }
+
+        .gate.right {
+            right: 0;
+            transform-origin: right;
+        }
+
+        .gate.open.left {
+            transform: translateX(-100%);
+        }
+
+        .gate.open.right {
+            transform: translateX(100%);
+        }
+
+        .light-rays {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0;
+            transition: opacity 2s;
+        }
+
+        .light-rays.visible {
+            opacity: 1;
+        }
+
+        /* Desktop Environment */
+        .desktop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzgwQjNGRjsiIC8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojRjBGOEZGOyIgLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyYWQpIi8+PC9zdmc+');
+            background-size: cover;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+
+        .desktop.visible {
+            opacity: 1;
+        }
+
+        /* Icons Grid */
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            padding: 5px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .desktop-icon img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 5px;
+        }
+
+        /* Windows */
+        .window {
+            position: absolute;
+            min-width: 300px;
+            background: #c0c0c0;
+            border: 2px solid #fff;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+            resize: both;
+            overflow: auto;
+        }
+
+        .window-header {
+            background: #000080;
+            color: white;
+            padding: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .window-content {
+            padding: 10px;
+            background: white;
+        }
+
+        /* File Explorer */
+        .file-explorer {
+            display: flex;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 200px;
+            background: #c0c0c0;
+            padding: 10px;
+            border-right: 2px solid #808080;
+        }
+
+        .file-list {
+            flex-grow: 1;
+            padding: 10px;
+            background: white;
+        }
+
+        .folder {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .folder:hover {
+            background: #000080;
+            color: white;
+        }
+
+        .folder img {
+            width: 16px;
+            height: 16px;
+            margin-right: 5px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .icons-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+                padding: 10px;
+            }
+
+            .window {
+                width: 90% !important;
+                height: 80% !important;
+                left: 5% !important;
+                top: 10% !important;
+            }
+
+            .sidebar {
+                width: 100px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Opening Gates Animation -->
+    <!-- Gates Animation -->
     <div class="gates-container">
-        <img src="assets/animations/gates_opening.gif" alt="Heaven Gates Opening Animation">
+        <div class="gate left"></div>
+        <div class="gate right"></div>
+        <div class="light-rays"></div>
     </div>
 
     <!-- Desktop Environment -->
     <div class="desktop">
-        <img src="assets/wallpapers/heaven_wallpaper.jpg" class="wallpaper" alt="Heaven Wallpaper">
-        <div class="icon-grid">
-            <div class="icon"><img src="assets/icons/about.png" alt="About"><span>About Me</span></div>
-            <div class="icon"><img src="assets/icons/projects.png" alt="Projects"><span>Projects</span></div>
-            <div class="icon"><img src="assets/icons/contact.png" alt="Contact"><span>Contact</span></div>
-            <div class="icon"><img src="assets/icons/skills.png" alt="Skills"><span>Skills</span></div>
+        <div class="icons-grid">
+            <!-- Icons will be dynamically added here -->
         </div>
     </div>
-    <script src="js/main.js"></script>
-    <script src="js/windows.js"></script>
+
+    <script>
+        // Configuration
+        const icons = [
+            { id: 'about', title: 'About Me', icon: '📝' },
+            { id: 'projects', title: 'Projects', icon: '📁' },
+            { id: 'skills', title: 'Skills', icon: '⚡' },
+            { id: 'contact', title: 'Contact', icon: '📧' }
+        ];
+
+        const content = {
+            about: {
+                title: 'About Me',
+                content: `
+                    <div style="padding: 20px;">
+                        <h2>Dave Chanel</h2>
+                        <p>Creative Developer & Digital Artist</p>
+                        <br>
+                        <p>Welcome to my heavenly portfolio! I create digital experiences that blend technology with artistry.</p>
+                    </div>
+                `
+            },
+            projects: {
+                title: 'Projects',
+                content: `
+                    <div class="file-explorer">
+                        <div class="sidebar">
+                            <div class="folder">📁 Project 1</div>
+                            <div class="folder">📁 Project 2</div>
+                            <div class="folder">📁 Project 3</div>
+                        </div>
+                        <div class="file-list">
+                            <h3>Select a project from the sidebar</h3>
+                        </div>
+                    </div>
+                `
+            },
+            skills: {
+                title: 'Skills',
+                content: `
+                    <div style="padding: 20px;">
+                        <h3>Technical Skills</h3>
+                        <ul>
+                            <li>Web Development</li>
+                            <li>UI/UX Design</li>
+                            <li>Digital Art</li>
+                            <li>AI Art Generation</li>
+                        </ul>
+                    </div>
+                `
+            },
+            contact: {
+                title: 'Contact',
+                content: `
+                    <div style="padding: 20px;">
+                        <h3>Get in Touch</h3>
+                        <p>Email: hello@davechanel.com</p>
+                        <p>Twitter: @davechanel</p>
+                        <p>Instagram: @davechanel</p>
+                    </div>
+                `
+            }
+        };
+
+        // Window Management
+        class WindowManager {
+            constructor() {
+                this.windows = new Map();
+                this.zIndex = 1000;
+            }
+
+            createWindow(id, title, content) {
+                if (this.windows.has(id)) {
+                    this.focusWindow(id);
+                    return;
+                }
+
+                const win = document.createElement('div');
+                win.className = 'window';
+                win.style.zIndex = ++this.zIndex;
+                win.style.left = '50%';
+                win.style.top = '50%';
+                win.style.transform = 'translate(-50%, -50%)';
+                win.style.width = '500px';
+                win.style.height = '400px';
+
+                win.innerHTML = `
+                    <div class="window-header">
+                        <div>${title}</div>
+                        <button onclick="windowManager.closeWindow('${id}')">&times;</button>
+                    </div>
+                    <div class="window-content">${content}</div>
+                `;
+
+                document.body.appendChild(win);
+                this.windows.set(id, win);
+                this.makeDraggable(win);
+            }
+
+            closeWindow(id) {
+                const win = this.windows.get(id);
+                if (win) {
+                    win.remove();
+                    this.windows.delete(id);
+                }
+            }
+
+            focusWindow(id) {
+                const win = this.windows.get(id);
+                if (win) {
+                    win.style.zIndex = ++this.zIndex;
+                }
+            }
+
+            makeDraggable(win) {
+                const header = win.querySelector('.window-header');
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+                header.onmousedown = dragMouseDown;
+
+                function dragMouseDown(e) {
+                    e.preventDefault();
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    document.onmouseup = closeDragElement;
+                    document.onmousemove = elementDrag;
+                }
+
+                function elementDrag(e) {
+                    e.preventDefault();
+                    pos1 = pos3 - e.clientX;
+                    pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    win.style.top = (win.offsetTop - pos2) + "px";
+                    win.style.left = (win.offsetLeft - pos1) + "px";
+                }
+
+                function closeDragElement() {
+                    document.onmouseup = null;
+                    document.onmousemove = null;
+                }
+            }
+        }
+
+        // Initialize
+        const windowManager = new WindowManager();
+
+        // Create Desktop Icons
+        function createDesktop() {
+            const grid = document.querySelector('.icons-grid');
+            icons.forEach(icon => {
+                const div = document.createElement('div');
+                div.className = 'desktop-icon';
+                div.innerHTML = `
+                    <div style="font-size: 32px;">${icon.icon}</div>
+                    <span>${icon.title}</span>
+                `;
+                div.onclick = () => windowManager.createWindow(icon.id, content[icon.id].title, content[icon.id].content);
+                grid.appendChild(div);
+            });
+        }
+
+        // Animation Sequence
+        window.onload = () => {
+            setTimeout(() => {
+                document.querySelector('.gate.left').classList.add('open');
+                document.querySelector('.gate.right').classList.add('open');
+                document.querySelector('.light-rays').classList.add('visible');
+
+                setTimeout(() => {
+                    document.querySelector('.desktop').classList.add('visible');
+                    document.querySelector('.gates-container').style.display = 'none';
+                    createDesktop();
+                }, 2000);
+            }, 1000);
+        };
+    </script>
 </body>
 </html>
