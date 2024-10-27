@@ -136,16 +136,119 @@
             }
         }
 
-        /* Desktop */
+        /* Desktop Environment */
         .desktop {
             width: 100vw;
-            height: 100vh;
+            height: calc(100vh - 28px);
             background: linear-gradient(180deg, #87CEEB 0%, #E0FFFF 100%);
             position: relative;
             display: none;
+            overflow: hidden;
         }
 
-        /* Mobile Adjustments */
+        /* Desktop Icons */
+        .desktop-icons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+            gap: 24px;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            cursor: pointer;
+            padding: 5px;
+        }
+
+            .desktop-icon:hover {
+                background: rgba(255,255,255,0.1);
+                outline: 1px dotted white;
+            }
+
+            .desktop-icon img {
+                width: 32px;
+                height: 32px;
+                margin-bottom: 4px;
+            }
+
+            .desktop-icon span {
+                font-size: 12px;
+                max-width: 64px;
+                word-wrap: break-word;
+            }
+
+        /* Taskbar */
+        .taskbar {
+            height: 28px;
+            background: #c0c0c0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-top: 1px solid #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 2px;
+            z-index: 1000;
+        }
+
+        .start-button {
+            height: 22px;
+            padding: 0 5px;
+            margin-right: 6px;
+            display: flex;
+            align-items: center;
+            background: #c0c0c0;
+            border: 1px solid #ffffff;
+            border-right-color: #808080;
+            border-bottom-color: #808080;
+            cursor: pointer;
+        }
+
+            .start-button:active {
+                border: 1px solid #808080;
+                border-right-color: #ffffff;
+                border-bottom-color: #ffffff;
+            }
+
+            .start-button img {
+                width: 16px;
+                height: 16px;
+                margin-right: 4px;
+            }
+
+        .taskbar-divider {
+            width: 1px;
+            height: 20px;
+            background: #808080;
+            border-right: 1px solid #ffffff;
+            margin: 0 6px;
+        }
+
+        .system-tray {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            border-left: 1px solid #808080;
+            border-top: 1px solid #808080;
+            height: 22px;
+        }
+
+        .clock {
+            font-size: 11px;
+            padding: 0 8px;
+        }
+
+        /* Mobile Adaptations */
         @media (max-width: 768px) {
             .cloud {
                 transform: scale(0.5);
@@ -174,8 +277,41 @@
     <!-- Clouds -->
     <div class="clouds-container"></div>
 
-    <!-- Desktop -->
-    <div class="desktop"></div>
+    <!-- Desktop Environment -->
+    <div class="desktop">
+        <div class="cloud-bg"></div>
+
+        <div class="desktop-icons">
+            <div class="desktop-icon">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='10' r='6' fill='white'/%3E%3Cpath d='M8 28c0-8 16-8 16 0' fill='white'/%3E%3C/svg%3E" alt="About">
+                <span>About Me</span>
+            </div>
+            <div class="desktop-icon">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 8h24v20H4z' fill='white'/%3E%3Cpath d='M12 4h8v4h-8z' fill='white'/%3E%3C/svg%3E" alt="Projects">
+                <span>Projects</span>
+            </div>
+            <div class="desktop-icon">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 4l12 24H4z' fill='white'/%3E%3C/svg%3E" alt="Skills">
+                <span>Skills</span>
+            </div>
+            <div class="desktop-icon">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 8h24v16H4z M4 8l12 8 12-8' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E" alt="Contact">
+                <span>Contact</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-button">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000080'/%3E%3Cpath d='M2 2h12v12H2z' fill='white'/%3E%3C/svg%3E" alt="Start">
+            <span>Start</span>
+        </button>
+        <div class="taskbar-divider"></div>
+        <div class="system-tray">
+            <div class="clock">4:20 PM</div>
+        </div>
+    </div>
 
     <script>
         const CLOUD_PATHS = [
@@ -202,40 +338,57 @@
         }
 
         // Animation Sequence
-        document.querySelector('.enter-button').addEventListener('click', () => {
-            // 1. Hide enter screen
-            document.querySelector('.enter-screen').style.display = 'none';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Clock update
+            function updateClock() {
+                const clock = document.querySelector('.clock');
+                const now = new Date();
+                clock.textContent = now.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
 
-            // 2. Show and animate gates
-            const gatesContainer = document.querySelector('.gates-container');
-            gatesContainer.style.display = 'block';
+            setInterval(updateClock, 60000);
+            updateClock();
 
-            setTimeout(() => {
-                gatesContainer.classList.add('gates-open');
-            }, 100);
+            // Entry sequence
+            document.querySelector('.enter-button').addEventListener('click', () => {
+                // 1. Hide enter screen
+                document.querySelector('.enter-screen').style.display = 'none';
 
-            // 3. Start cloud sequence
-            setTimeout(() => {
-                gatesContainer.style.display = 'none';
-                const cloudsContainer = document.querySelector('.clouds-container');
-                cloudsContainer.style.display = 'block';
+                // 2. Show and animate gates
+                const gatesContainer = document.querySelector('.gates-container');
+                gatesContainer.style.display = 'block';
 
-                // Create clouds at intervals
-                const cloudInterval = setInterval(() => {
-                    createCloud(cloudsContainer);
-                }, 500);
-
-                // Stop creating clouds after 3 seconds
                 setTimeout(() => {
-                    clearInterval(cloudInterval);
-                }, 3000);
+                    gatesContainer.classList.add('gates-open');
+                }, 100);
 
-                // 4. Show desktop
+                // 3. Start cloud sequence
                 setTimeout(() => {
-                    cloudsContainer.style.display = 'none';
-                    document.querySelector('.desktop').style.display = 'block';
-                }, 4000);
-            }, 2500);
+                    gatesContainer.style.display = 'none';
+                    const cloudsContainer = document.querySelector('.clouds-container');
+                    cloudsContainer.style.display = 'block';
+
+                    // Create clouds at intervals
+                    const cloudInterval = setInterval(() => {
+                        createCloud(cloudsContainer);
+                    }, 500);
+
+                    // Stop creating clouds after 3 seconds
+                    setTimeout(() => {
+                        clearInterval(cloudInterval);
+                    }, 3000);
+
+                    // 4. Show desktop
+                    setTimeout(() => {
+                        cloudsContainer.style.display = 'none';
+                        document.querySelector('.desktop').style.display = 'block';
+                    }, 4000);
+                }, 2500);
+            });
         });
     </script>
 </body>

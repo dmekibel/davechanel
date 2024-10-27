@@ -55,3 +55,113 @@
         padding: 8px 20px;
     }
 }
+/* Desktop Environment */
+.desktop {
+    width: 100vw;
+    height: calc(100vh - 28px); /* Subtract taskbar height */
+    background: linear-gradient(180deg, #87CEEB 0%, #E0FFFF 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Desktop Icons */
+.desktop-icons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 24px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+    max-width: 480px; /* Keeps icons from spreading across entire screen */
+}
+
+.desktop-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    cursor: pointer;
+    padding: 5px;
+}
+
+    .desktop-icon:hover {
+        background: rgba(255,255,255,0.1);
+        outline: 1px dotted white;
+    }
+
+    .desktop-icon img {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 4px;
+    }
+
+    .desktop-icon span {
+        font-size: 12px;
+        max-width: 64px;
+        word-wrap: break-word;
+    }
+
+/* Taskbar */
+.taskbar {
+    height: 28px;
+    background: #c0c0c0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #ffffff;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    z-index: 1000;
+}
+
+.start-button {
+    height: 22px;
+    padding: 0 5px;
+    margin-right: 6px;
+    display: flex;
+    align-items: center;
+    background: #c0c0c0;
+    border: 1px solid #ffffff;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    cursor: pointer;
+}
+
+    .start-button:active {
+        border: 1px solid #808080;
+        border-right-color: #ffffff;
+        border-bottom-color: #ffffff;
+    }
+
+    .start-button img {
+        width: 16px;
+        height: 16px;
+        margin-right: 4px;
+    }
+
+.taskbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #808080;
+    border-right: 1px solid #ffffff;
+    margin: 0 6px;
+}
+
+.system-tray {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-left: 1px solid #808080;
+    border-top: 1px solid #808080;
+    height: 22px;
+}
+
+.clock {
+    font-size: 11px;
+    padding: 0 8px;
+}
