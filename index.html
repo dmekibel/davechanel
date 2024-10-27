@@ -19,7 +19,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: linear-gradient(180deg, #87CEEB 0%, #E0FFFF 100%);
+            background: linear-gradient(180deg, #4169E1 0%, #87CEEB 70%, #E0FFFF 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -27,18 +27,23 @@
         }
 
         .enter-button {
-            padding: 10px 30px;
-            font-size: 24px;
-            background: #c0c0c0;
-            border: 2px solid #ffffff;
-            border-right-color: #808080;
-            border-bottom-color: #808080;
-            cursor: pointer;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: transform 0.1s;
+            padding: 20px 40px;
+            font-size: 32px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FFD700, #FFF8DC);
+            border: 3px solid #FFD700;
+            border-right-color: #B8860B;
+            border-bottom-color: #B8860B;
+            color: #4a4a4a;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            transition: all 0.2s ease;
         }
+
+            .enter-button:hover {
+                transform: scale(1.05);
+                box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+            }
 
             .enter-button:active {
                 border: 2px solid #808080;
@@ -411,87 +416,112 @@
     </div>
 
     <script>
-        const CLOUD_PATHS = [
+        <script>
+            const CLOUD_PATHS = [
             'assets/icons/Layer 2.png',  // 997x378
             'assets/icons/Layer 3.png',  // 1469x702
             'assets/icons/Layer 4.png'   // 964x452
-        ];
+            ];
 
-        function createCloud(container) {
+            function createCloud(container) {
             const cloudIndex = Math.floor(Math.random() * CLOUD_PATHS.length);
             const cloud = document.createElement('div');
             cloud.className = `cloud size-${cloudIndex + 1} ascending-cloud`;
             cloud.style.backgroundImage = `url('${CLOUD_PATHS[cloudIndex]}')`;
 
-            // Random horizontal position, accounting for cloud width
             const cloudWidth = [997, 1469, 964][cloudIndex];
             const maxLeft = window.innerWidth - (cloudWidth * 0.5);
             cloud.style.left = Math.random() * maxLeft + 'px';
 
             container.appendChild(cloud);
-
-            // Remove cloud after animation
             setTimeout(() => cloud.remove(), 4000);
         }
 
-        // Animation Sequence
         document.addEventListener('DOMContentLoaded', () => {
-            // Clock update
-            function updateClock() {
-                const clock = document.querySelector('.clock');
-                const now = new Date();
-                clock.textContent = now.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                });
-            }
-
+                // Clock update
+                function updateClock() {
+                    const clock = document.querySelector('.clock');
+                    const now = new Date();
+                    clock.textContent = now.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                }
             setInterval(updateClock, 60000);
             updateClock();
+
+            // Start Menu
+            document.querySelector('.start-button').addEventListener('click', function(e) {
+                e.stopPropagation();
+            const existingMenu = document.querySelector('.start-menu');
+            if (existingMenu) {
+                existingMenu.remove();
+            return;
+                }
+
+            const startMenu = document.createElement('div');
+            startMenu.className = 'start-menu';
+            startMenu.innerHTML = `
+            <div class="start-menu-item">Programs</div>
+            <div class="start-menu-item">Documents</div>
+            <div class="start-menu-item">Settings</div>
+            <div class="start-menu-item">Find</div>
+            <div class="start-menu-item">Help</div>
+            <div class="start-menu-divider"></div>
+            <div class="start-menu-item">Shut Down...</div>
+            `;
+            document.body.appendChild(startMenu);
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
+                    const startMenu = document.querySelector('.start-menu');
+            if (startMenu) startMenu.remove();
+                }
+            });
 
             // Entry sequence
             document.querySelector('.enter-button').addEventListener('click', () => {
                 // 1. Hide enter screen
                 document.querySelector('.enter-screen').style.display = 'none';
 
-                // 2. Show and animate gates
-                const gatesContainer = document.querySelector('.gates-container');
-                gatesContainer.style.display = 'block';
+            // 2. Show and animate gates
+            const gatesContainer = document.querySelector('.gates-container');
+            gatesContainer.style.display = 'block';
 
                 setTimeout(() => {
-                    gatesContainer.classList.add('gates-open');
+                gatesContainer.classList.add('gates-open');
                 }, 100);
 
                 // 3. Start cloud sequence
                 setTimeout(() => {
-                    gatesContainer.style.display = 'none';
-                    const cloudsContainer = document.querySelector('.clouds-container');
-                    cloudsContainer.style.display = 'block';
+                gatesContainer.style.display = 'none';
+            const cloudsContainer = document.querySelector('.clouds-container');
+            cloudsContainer.style.display = 'block';
 
                     // Create clouds at intervals
                     const cloudInterval = setInterval(() => {
-                        createCloud(cloudsContainer);
+                createCloud(cloudsContainer);
                     }, 500);
 
                     // Stop creating clouds after 3 seconds
                     setTimeout(() => {
-                        clearInterval(cloudInterval);
+                clearInterval(cloudInterval);
                     }, 3000);
 
                     // 4. Show desktop and taskbar separately
                     setTimeout(() => {
-                        cloudsContainer.style.display = 'none';
-                        document.querySelector('.desktop').style.display = 'block';
-                        // Show taskbar with a slight delay for that classic boot feel
+                cloudsContainer.style.display = 'none';
+            document.querySelector('.desktop').style.display = 'block';
                         setTimeout(() => {
-                            document.querySelector('.taskbar').style.display = 'block';
-                        }, 800);
+                document.querySelector('.taskbar').style.display = 'flex';
+                        }, 1000);
                     }, 4000);
-                }, 4000);
-            }, 2500);
-        });
+                }, 2500);
             });
+        });
+    </script>
     </script>
     // Start Menu Functionality
     document.querySelector('.start-button').addEventListener('click', function() {
