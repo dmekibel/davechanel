@@ -1,0 +1,22 @@
+
+/* Basic Windows 95 Style */
+body {
+    font-family: "MS Sans Serif", sans-serif;
+    color: #000;
+}
+
+.desktop {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #808080;
+    position: relative;
+}
+
+.icon-grid {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
