@@ -416,14 +416,13 @@
     </div>
 
     <script>
-        <script>
-            const CLOUD_PATHS = [
+        const CLOUD_PATHS = [
             'assets/icons/Layer 2.png',  // 997x378
             'assets/icons/Layer 3.png',  // 1469x702
             'assets/icons/Layer 4.png'   // 964x452
-            ];
+        ];
 
-            function createCloud(container) {
+        function createCloud(container) {
             const cloudIndex = Math.floor(Math.random() * CLOUD_PATHS.length);
             const cloud = document.createElement('div');
             cloud.className = `cloud size-${cloudIndex + 1} ascending-cloud`;
@@ -437,91 +436,94 @@
             setTimeout(() => cloud.remove(), 4000);
         }
 
+        // Wait for DOM to load
         document.addEventListener('DOMContentLoaded', () => {
-                // Clock update
-                function updateClock() {
-                    const clock = document.querySelector('.clock');
-                    const now = new Date();
-                    clock.textContent = now.toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    });
-                }
-            setInterval(updateClock, 60000);
-            updateClock();
-
-            // Start Menu
-            document.querySelector('.start-button').addEventListener('click', function(e) {
-                e.stopPropagation();
-            const existingMenu = document.querySelector('.start-menu');
-            if (existingMenu) {
-                existingMenu.remove();
-            return;
-                }
-
-            const startMenu = document.createElement('div');
-            startMenu.className = 'start-menu';
-            startMenu.innerHTML = `
-            <div class="start-menu-item">Programs</div>
-            <div class="start-menu-item">Documents</div>
-            <div class="start-menu-item">Settings</div>
-            <div class="start-menu-item">Find</div>
-            <div class="start-menu-item">Help</div>
-            <div class="start-menu-divider"></div>
-            <div class="start-menu-item">Shut Down...</div>
-            `;
-            document.body.appendChild(startMenu);
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
-                    const startMenu = document.querySelector('.start-menu');
-            if (startMenu) startMenu.remove();
-                }
-            });
-
-            // Entry sequence
+            // Entry button click handler
             document.querySelector('.enter-button').addEventListener('click', () => {
+                console.log('Enter button clicked'); // Debug line
+
                 // 1. Hide enter screen
                 document.querySelector('.enter-screen').style.display = 'none';
 
-            // 2. Show and animate gates
-            const gatesContainer = document.querySelector('.gates-container');
-            gatesContainer.style.display = 'block';
+                // 2. Show and animate gates
+                const gatesContainer = document.querySelector('.gates-container');
+                gatesContainer.style.display = 'block';
 
                 setTimeout(() => {
-                gatesContainer.classList.add('gates-open');
+                    gatesContainer.classList.add('gates-open');
                 }, 100);
 
                 // 3. Start cloud sequence
                 setTimeout(() => {
-                gatesContainer.style.display = 'none';
-            const cloudsContainer = document.querySelector('.clouds-container');
-            cloudsContainer.style.display = 'block';
+                    gatesContainer.style.display = 'none';
+                    const cloudsContainer = document.querySelector('.clouds-container');
+                    cloudsContainer.style.display = 'block';
 
                     // Create clouds at intervals
                     const cloudInterval = setInterval(() => {
-                createCloud(cloudsContainer);
+                        createCloud(cloudsContainer);
                     }, 500);
 
                     // Stop creating clouds after 3 seconds
                     setTimeout(() => {
-                clearInterval(cloudInterval);
+                        clearInterval(cloudInterval);
                     }, 3000);
 
-                    // 4. Show desktop and taskbar separately
+                    // 4. Show desktop and taskbar
                     setTimeout(() => {
-                cloudsContainer.style.display = 'none';
-            document.querySelector('.desktop').style.display = 'block';
+                        cloudsContainer.style.display = 'none';
+                        document.querySelector('.desktop').style.display = 'block';
                         setTimeout(() => {
-                document.querySelector('.taskbar').style.display = 'flex';
+                            document.querySelector('.taskbar').style.display = 'flex';
                         }, 1000);
                     }, 4000);
                 }, 2500);
             });
+
+            // Clock update
+            function updateClock() {
+                const clock = document.querySelector('.clock');
+                const now = new Date();
+                clock.textContent = now.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+            setInterval(updateClock, 60000);
+            updateClock();
+
+            // Start menu functionality
+            document.querySelector('.start-button').addEventListener('click', function (e) {
+                e.stopPropagation();
+                const existingMenu = document.querySelector('.start-menu');
+                if (existingMenu) {
+                    existingMenu.remove();
+                    return;
+                }
+
+                const startMenu = document.createElement('div');
+                startMenu.className = 'start-menu';
+                startMenu.innerHTML = `
+                    <div class="start-menu-item">Programs</div>
+                    <div class="start-menu-item">Documents</div>
+                    <div class="start-menu-item">Settings</div>
+                    <div class="start-menu-item">Find</div>
+                    <div class="start-menu-item">Help</div>
+                    <div class="start-menu-divider"></div>
+                    <div class="start-menu-item">Shut Down...</div>
+                `;
+                document.body.appendChild(startMenu);
+            });
+
+            // Close start menu when clicking elsewhere
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
+                    const startMenu = document.querySelector('.start-menu');
+                    if (startMenu) startMenu.remove();
+                }
+            });
         });
-    </script>
     </script>
     // Start Menu Functionality
     document.querySelector('.start-button').addEventListener('click', function() {
