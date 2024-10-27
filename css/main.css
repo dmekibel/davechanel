@@ -1,43 +1,57 @@
-
-body {
+/* Base Styles */
+* {
     margin: 0;
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: #cfe2f3;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'MS Sans Serif', 'Segoe UI', Tahoma, sans-serif;
 }
 
-.gates-container {
-    width: 100%;
-    text-align: center;
-    padding-top: 50px;
+/* Desktop Environment */
+.desktop {
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(180deg, #87CEEB 0%, #E0FFFF 100%);
+    position: relative;
+    display: none;
+    overflow: hidden;
 }
 
-.wallpaper {
-    width: 100%;
-    height: auto;
+/* Windows 95 UI Elements */
+.enter-button {
+    padding: 10px 30px;
+    font-size: 24px;
+    background: #c0c0c0;
+    border: 2px solid #ffffff;
+    border-right-color: #808080;
+    border-bottom-color: #808080;
+    cursor: pointer;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: transform 0.1s;
 }
 
-.icon-grid {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding-top: 50px;
+.enter-button:active {
+    border: 2px solid #808080;
+    border-right-color: #ffffff;
+    border-bottom-color: #ffffff;
+    transform: translateY(1px);
 }
 
-.icon {
-    text-align: center;
+/* Desktop Icons */
+.desktop-icons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
 }
 
-.icon img {
-    width: 64px;
-    height: 64px;
-}
-
-.icon span {
-    display: block;
-    margin-top: 8px;
-    font-size: 0.9rem;
+/* Mobile Adaptations */
+@media (max-width: 768px) {
+    .enter-button {
+        font-size: 18px;
+        padding: 8px 20px;
+    }
 }
