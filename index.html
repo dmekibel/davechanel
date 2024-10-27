@@ -149,8 +149,8 @@
         /* Desktop Icons */
         .desktop-icons {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+            gap: 15px;
             padding: 20px;
             position: relative;
             z-index: 1;
@@ -158,14 +158,19 @@
         }
 
         .desktop-icon {
+            width: 75px;
+            height: 75px;
+            padding: 8px;
+            margin: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
             cursor: pointer;
-            padding: 5px;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(70, 130, 180, 0.8);
         }
 
             .desktop-icon:hover {
@@ -187,8 +192,8 @@
 
         /* Taskbar */
         .taskbar {
-            height: 28px;
-            background: #c0c0c0;
+            height: 35px;
+            background: linear-gradient(to right, #c0c0c0, #d8d8d8);
             position: fixed;
             bottom: 0;
             left: 0;
@@ -258,6 +263,18 @@
             .enter-button {
                 font-size: 18px;
                 padding: 8px 20px;
+            }
+
+            .desktop-icons {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .desktop-icon {
+                width: 100%;
+                max-width: 120px;
+                margin: auto;
             }
         }
     </style>
