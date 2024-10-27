@@ -139,11 +139,57 @@
         /* Desktop Environment */
         .desktop {
             width: 100vw;
-            height: calc(100vh - 28px);
-            background: linear-gradient(180deg, #87CEEB 0%, #E0FFFF 100%);
+            height: calc(100vh - 35px);
+            background: #008080; /* Classic Win95 teal */
             position: relative;
             display: none;
             overflow: hidden;
+        }
+
+        .desktop-icon {
+            width: 100px; /* Bigger icons */
+            height: 100px;
+            background: transparent;
+            border: 1px dotted transparent;
+        }
+
+            .desktop-icon:hover {
+                border: 1px dotted white;
+                background: rgba(255, 255, 255, 0.1);
+            }
+
+            .desktop-icon:active {
+                background: rgba(0, 0, 128, 0.3);
+            }
+
+            .desktop-icon span {
+                font-size: 14px;
+                margin-top: 8px;
+                color: white;
+                text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            }
+
+        /* Classic Windows 95 taskbar */
+        .taskbar {
+            display: none; /* Hidden initially */
+            height: 35px;
+            background: #c0c0c0;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #404040;
+            border-bottom: 2px solid #404040;
+        }
+
+        .start-button {
+            height: 28px;
+            margin: 2px;
+            padding: 2px 8px;
+            font-weight: bold;
+            font-size: 14px;
+            border-top: 2px solid #fff;
+            border-left: 2px solid #fff;
+            border-right: 2px solid #404040;
+            border-bottom: 2px solid #404040;
         }
 
         /* Desktop Icons */
@@ -253,6 +299,40 @@
             padding: 0 8px;
         }
 
+        /* Start Menu Styles */
+        .start-menu {
+            position: fixed;
+            bottom: 35px;
+            left: 0;
+            width: 200px;
+            background: #c0c0c0;
+            border: 2px solid #fff;
+            border-right: 2px solid #404040;
+            border-bottom: 2px solid #404040;
+            padding: 2px;
+            z-index: 9999;
+        }
+
+        .start-menu-item {
+            padding: 4px 8px;
+            margin: 2px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+        }
+
+            .start-menu-item:hover {
+                background: #000080;
+                color: white;
+                cursor: pointer;
+            }
+
+        .start-menu-divider {
+            height: 2px;
+            background: #808080;
+            margin: 4px 0;
+            border-bottom: 1px solid #fff;
+        }
         /* Mobile Adaptations */
         @media (max-width: 768px) {
             .cloud {
@@ -399,14 +479,42 @@
                         clearInterval(cloudInterval);
                     }, 3000);
 
-                    // 4. Show desktop
+                    // 4. Show desktop and taskbar separately
                     setTimeout(() => {
                         cloudsContainer.style.display = 'none';
                         document.querySelector('.desktop').style.display = 'block';
+                        // Show taskbar with a slight delay for that classic boot feel
+                        setTimeout(() => {
+                            document.querySelector('.taskbar').style.display = 'block';
+                        }, 800);
                     }, 4000);
-                }, 2500);
-            });
+                }, 4000);
+            }, 2500);
         });
+            });
     </script>
+    // Start Menu Functionality
+    document.querySelector('.start-button').addEventListener('click', function() {
+    const startMenu = document.createElement('div');
+    startMenu.className = 'start-menu';
+    startMenu.innerHTML = `
+    <div class="start-menu-item">Programs</div>
+    <div class="start-menu-item">Documents</div>
+    <div class="start-menu-item">Settings</div>
+    <div class="start-menu-item">Find</div>
+    <div class="start-menu-item">Help</div>
+    <div class="start-menu-divider"></div>
+    <div class="start-menu-item">Shut Down...</div>
+    `;
+    document.body.appendChild(startMenu);
+    });
+
+    // Close start menu when clicking elsewhere
+    document.addEventListener('click', function(e) {
+    if (!e.target.closest('.start-button') && !e.target.closest('.start-menu')) {
+    const startMenu = document.querySelector('.start-menu');
+    if (startMenu) startMenu.remove();
+    }
+    });
 </body>
 </html>
