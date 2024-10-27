@@ -21,3 +21,9 @@ function updateClock() {
 // Update clock every minute
 setInterval(updateClock, 60000);
 updateClock(); // Initial update
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize and display the clock in the system tray
+    updateClock();
+    setInterval(updateClock, 60000);
+    document.querySelector('.clock').style.display = 'block';
+});
