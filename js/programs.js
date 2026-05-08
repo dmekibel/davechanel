@@ -5,6 +5,7 @@
 import { openWindow, closeWindow } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
+import { startScreensaver } from "./screensaver.js";
 
 const t = (s) => s;   // i18n removed; identity for now
 
@@ -578,6 +579,7 @@ export function openProgram(progId) {
     case "explorer":  return openExplorer([]);
     case "logout":    return logout();
     case "restart":   return restart();
+    case "sleep":     return startScreensaver();
     default:          return null;
   }
 }

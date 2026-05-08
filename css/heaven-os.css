@@ -1,3 +1,38 @@
+/* === Screensaver (bouncing-DVD-style) ============================= */
+
+.screensaver {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 999999;
+  cursor: none;
+  overflow: hidden;
+  transition: opacity 0.22s ease;
+}
+.screensaver.waking { opacity: 0; }
+
+.screensaver-logo {
+  position: absolute;
+  top: 0; left: 0;
+  font-family: "VT323", "Courier New", monospace;
+  font-size: clamp(48px, 12vw, 110px);
+  font-weight: 700;
+  line-height: 0.9;
+  white-space: nowrap;
+  color: #ffffff;
+  text-shadow: 0 0 28px currentColor;
+  user-select: none;
+  will-change: transform, color;
+  letter-spacing: -1px;
+  pointer-events: none;
+}
+.screensaver-logo .ss-sub {
+  font-size: 0.45em;
+  margin-left: 0.18em;
+  vertical-align: 0.55em;
+  letter-spacing: 0;
+}
+
 /* === Welcome / login screen (Win98 logon dialog) =================== */
 
 .login-overlay {
