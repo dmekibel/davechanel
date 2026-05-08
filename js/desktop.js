@@ -3,6 +3,7 @@
 import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
 import { ICONS, iconFor } from "./icons.js";
+import { buildStartMenu, closeAllStartMenus } from "./start-menu.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -322,9 +323,12 @@ function initStartMenu() {
   const btn = document.getElementById("start-btn");
   const menu = document.getElementById("start-menu");
 
+  buildStartMenu(menu);
+
   const setOpen = (open) => {
     menu.hidden = !open;
     btn.setAttribute("aria-expanded", String(open));
+    if (!open) closeAllStartMenus();
   };
 
   btn.addEventListener("click", (e) => {
@@ -332,14 +336,10 @@ function initStartMenu() {
     setOpen(menu.hidden);
   });
   document.addEventListener("click", (e) => {
-    if (!menu.contains(e.target) && e.target !== btn) setOpen(false);
-  });
-  menu.addEventListener("click", (e) => {
-    const li = e.target.closest("[data-program]");
-    if (!li) return;
-    const prog = li.dataset.program;
+    if (menu.contains(e.target)) return;
+    if (e.target.closest(".start-menu.cascade")) return;
+    if (e.target === btn || btn.contains(e.target)) return;
     setOpen(false);
-    openProgram(prog);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") setOpen(false);

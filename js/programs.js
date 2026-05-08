@@ -578,18 +578,173 @@ export function openFile(file) {
 
 export function openProgram(progId) {
   switch (progId) {
-    case "fine-art":  return openExplorer(["Fine Art"]);
-    case "balance":   return openExplorer(["Balancē Creative"]);
-    case "about":     return openNotepad(findByPath(["About Me.txt"]));
-    case "showreel":  return openShowreel(findByPath(["Showreel.mpg"]));
-    case "contact":   return openCompose();
-    case "recycle":   return openExplorer(["Recycle Bin"]);
-    case "explorer":  return openExplorer([]);
-    case "logout":    return logout();
-    case "restart":   return restart();
-    case "sleep":     return startScreensaver();
-    default:          return null;
+    case "fine-art":     return openExplorer(["Fine Art"]);
+    case "balance":      return openExplorer(["Balancē Creative"]);
+    case "about":        return openNotepad(findByPath(["About Me.txt"]));
+    case "showreel":     return openShowreel(findByPath(["Showreel.mpg"]));
+    case "contact":      return openCompose();
+    case "recycle":      return openExplorer(["Recycle Bin"]);
+    case "explorer":     return openExplorer([]);
+    case "logout":       return logout();
+    case "restart":      return restart();
+    case "sleep":        return startScreensaver();
+    case "welcome":      return openWelcome();
+    case "settings":     return openSettings();
+    case "control-panel":return openSettings();
+    case "find":         return openStub("Find Files",  "Find / search isn't wired up yet.");
+    case "help":         return openStub("Heaven OS Help", "Help system isn't wired up yet. Check the file explorer for now.");
+    case "run":          return openStub("Run", "There's nothing to run. This isn't a real OS.");
+    default:             return null;
   }
+}
+
+function openStub(title, message) {
+  const div = document.createElement("div");
+  div.style.cssText = "padding:18px 22px;font-family:Tahoma,sans-serif;font-size:12px;line-height:1.45;color:#000;background:#fff;height:100%;";
+  div.innerHTML = `<p>${message}</p>`;
+  return openWindow({ title, icon: ICONS.notepad(14), iconHtml: true, content: div, width: 360, height: 200 });
+}
+
+export function openWelcome() {
+  const wrap = document.createElement("div");
+  wrap.className = "welcome";
+  wrap.innerHTML = `
+    <div class="welcome-head">
+      <div class="welcome-logo"><span>Heaven</span><sup>OS</sup></div>
+      <div class="welcome-tag">Welcome</div>
+    </div>
+    <div class="welcome-body">
+      <ul class="welcome-toc" role="tablist">
+        <li role="tab" data-id="intro"   class="active">Start Here</li>
+        <li role="tab" data-id="art">My Fine Art</li>
+        <li role="tab" data-id="studio">Balancē Creative</li>
+        <li role="tab" data-id="contact">Get In Touch</li>
+      </ul>
+      <div class="welcome-pane">
+        <h3 class="welcome-h">Welcome</h3>
+        <p>Welcome to <b>Heaven OS</b>, the personal portfolio of David Mekibel.</p>
+        <p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years of digital art, a decade of complex 3D, and at the cutting edge of AI image and video since the field existed.</p>
+        <p style="margin-top:14px;color:#444;font-size:11px;">Click an item on the left to learn more. Or close this window and explore via <b>My Computer</b>.</p>
+      </div>
+    </div>
+    <div class="welcome-foot">
+      <label><input type="checkbox" id="welcome-show" checked> Show this screen each time Heaven OS starts.</label>
+      <button class="welcome-close" type="button">Close</button>
+    </div>
+  `;
+
+  const id = openWindow({
+    title: "Welcome to Heaven OS",
+    icon: ICONS.notepad(14),
+    iconHtml: true,
+    content: wrap,
+    width: 560,
+    height: 360,
+    flush: true,
+  });
+
+  // TOC interactions
+  const PANES = {
+    intro: {
+      h: "Welcome",
+      body: "<p>Welcome to <b>Heaven OS</b>, the personal portfolio of David Mekibel.</p><p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years of digital art, a decade of complex 3D, and at the cutting edge of AI image and video since the field existed.</p>",
+    },
+    art: {
+      h: "Fine Art",
+      body: "<p>The fine-art side of my practice. ArtPrize 2024 + 2025 finalist; winner of the Artist Seed Grant in New Media in 2025.</p><p>Open <b>Fine Art</b> from the desktop or <b>My Computer</b> to browse selected works and the artist CV.</p>",
+    },
+    studio: {
+      h: "Balancē Creative",
+      body: "<p>Co-founded studio. Full creative pipeline for brands: ideation, branding, AI visuals, 3D, motion graphics, VFX. 1000+ projects shipped.</p><p>Open <b>Balancē Creative</b> for the studio CV, brand work, and music industry work via MIR Studios.</p>",
+    },
+    contact: {
+      h: "Get In Touch",
+      body: "<p>Email: <a href='mailto:dmekibel@gmail.com'>dmekibel@gmail.com</a></p><p>LinkedIn: <a href='https://www.linkedin.com/in/david-mekibel' target='_blank' rel='noopener'>linkedin.com/in/david-mekibel</a></p><p>Instagram: @dalledave (work) · @mikdavidu (personal)</p>",
+    },
+  };
+  const toc = wrap.querySelector(".welcome-toc");
+  const pane = wrap.querySelector(".welcome-pane");
+  toc.addEventListener("click", (e) => {
+    const li = e.target.closest("[data-id]");
+    if (!li) return;
+    toc.querySelectorAll("li").forEach(n => n.classList.toggle("active", n === li));
+    const p = PANES[li.dataset.id];
+    pane.innerHTML = `<h3 class="welcome-h">${p.h}</h3>${p.body}`;
+  });
+  wrap.querySelector(".welcome-close").addEventListener("click", () => closeWindow(id));
+
+  return id;
+}
+
+export function openSettings() {
+  const wrap = document.createElement("div");
+  wrap.className = "settings";
+  wrap.innerHTML = `
+    <div class="settings-tabs" role="tablist">
+      <button role="tab" data-tab="background" class="active">Background</button>
+      <button role="tab" data-tab="screensaver">Screen Saver</button>
+      <button role="tab" data-tab="appearance">Appearance</button>
+      <button role="tab" data-tab="effects">Effects</button>
+      <button role="tab" data-tab="settings">Settings</button>
+    </div>
+    <div class="settings-body" data-pane="background">
+      <div class="settings-preview">
+        <div class="monitor">
+          <div class="monitor-screen">
+            <div class="mini-desk"></div>
+          </div>
+          <div class="monitor-stand"></div>
+          <div class="monitor-base"></div>
+        </div>
+      </div>
+      <p>Wallpaper / theme pickers coming in a later build.</p>
+    </div>
+    <div class="settings-foot">
+      <button class="settings-btn primary" type="button">OK</button>
+      <button class="settings-btn" type="button">Cancel</button>
+      <button class="settings-btn" type="button">Apply</button>
+    </div>
+  `;
+
+  const PANES = {
+    background:  "<p>Wallpaper picker — choose a Heaven OS background. Coming soon.</p>",
+    screensaver: "<p>Pick a screensaver. Currently: <b>Bouncing David Mekibel</b>. Activated via Start &gt; Sleep.</p>",
+    appearance:  "<p>Color schemes (Win98, Heaven Inc., Custom). Coming soon.</p>",
+    effects:     "<p>Smooth menu fade, drop shadows, etc. Coming soon.</p>",
+    settings:    "<p><b>Display:</b> Default Monitor on Heaven Inc. RealityEngine</p><p><b>Colors:</b> True Color</p><p><b>Screen area:</b> auto-fit window</p>",
+  };
+  const body = wrap.querySelector(".settings-body");
+  const tabs = wrap.querySelector(".settings-tabs");
+
+  // Save the original preview HTML so we can restore on Background
+  const previewHTML = body.innerHTML;
+
+  tabs.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-tab]");
+    if (!btn) return;
+    tabs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
+    const tab = btn.dataset.tab;
+    if (tab === "background") {
+      body.innerHTML = previewHTML;
+    } else {
+      body.innerHTML = `<div class="settings-text">${PANES[tab] || ""}</div>`;
+    }
+    body.dataset.pane = tab;
+  });
+
+  const id = openWindow({
+    title: "Display Properties",
+    icon: ICONS.myComputer(14),
+    iconHtml: true,
+    content: wrap,
+    width: 460,
+    height: 380,
+    flush: true,
+  });
+  wrap.querySelectorAll(".settings-foot .settings-btn").forEach(b => {
+    b.addEventListener("click", () => closeWindow(id));
+  });
+  return id;
 }
 
 function logout() {

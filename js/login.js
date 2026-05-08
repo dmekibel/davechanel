@@ -24,6 +24,10 @@ export function showLogin(onComplete) {
     setTimeout(() => {
       overlay.remove();
       onComplete();
+      // Auto-open the Welcome window once the desktop has booted
+      setTimeout(() => {
+        import("./programs.js").then(m => m.openWelcome && m.openWelcome());
+      }, 250);
     }, 480);
   };
   userBtn.addEventListener("click", finish, { once: true });
