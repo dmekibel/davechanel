@@ -22,6 +22,20 @@ export function initDesktop() {
   initStartMenu();
   initClock();
   initMarquee();
+  initReflow();
+}
+
+// Re-lay-out the desktop icon grid when the viewport changes (orientation
+// flip, browser resize). Icons that ended up off-screen get pushed back
+// into the new viable grid.
+function initReflow() {
+  let timer = null;
+  const reflow = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => renderDesktopIcons(), 180);
+  };
+  window.addEventListener("resize", reflow);
+  window.addEventListener("orientationchange", reflow);
 }
 
 const POS_KEY = "heaven-os.icon-positions";

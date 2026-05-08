@@ -319,10 +319,25 @@ export function openExplorer(startPath = []) {
     li.addEventListener("click", () => {
       if (node === FS) { navigateTo([]); return; }
       if (node.type === "folder") navigateTo(path);
+      else if (node.type === "file") openFile(node);   // single-click opens files in the tree
     });
     li.addEventListener("dblclick", () => {
       if (node === FS) return;
       if (node.type === "file") openFile(node);
+    });
+    // Touch double-tap fallback (covers older iOS where dblclick is flaky)
+    let lastTap = 0;
+    li.addEventListener("touchend", (e) => {
+      if (e.changedTouches.length !== 1) return;
+      const now = Date.now();
+      if (now - lastTap < 350) {
+        lastTap = 0;
+        if (node === FS) navigateTo([]);
+        else if (node.type === "folder") navigateTo(path);
+        else openFile(node);
+      } else {
+        lastTap = now;
+      }
     });
     return li;
   }
