@@ -121,46 +121,51 @@
   text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
-/* User tile: XP-position, Win98 raised-button chrome to match the rest of the OS */
+/* User tile: XP-style — avatar on the left, name + bio on the right.
+   Glowy translucent tile, NOT Win98 chrome (that fought the canvas). */
 .login-user {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 14px;
-  padding: 10px 22px 10px 10px;
-  background: var(--chrome);
-  color: #000;
-  border: 2px solid;
-  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  cursor: default;
+  padding: 9px 22px 9px 9px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
   text-align: left;
-  font-family: var(--ui-font);
-  box-shadow: 1px 1px 0 #000;
+  font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
 .login-user:hover,
 .login-user:focus-visible {
-  outline: 1px dotted #000;
-  outline-offset: -5px;
-}
-.login-user:active {
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  padding: 11px 21px 9px 11px;
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 0 16px rgba(255,255,255,0.22);
+  outline: none;
 }
 .login-avatar {
-  width: 50px; height: 50px;
+  width: 56px; height: 56px;
   background: #fff;
-  border: 2px solid;
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  border: 3px solid rgba(255,255,255,0.85);
   display: grid; place-items: center;
-  flex: 0 0 50px;
+  flex: 0 0 56px;
   image-rendering: pixelated;
 }
-.login-avatar svg { display: block; width: 44px; height: 44px; }
-.login-meta { text-align: left; }
-.login-name { font-size: 14px; font-weight: 700; line-height: 1.1; color: #000; }
+.login-avatar svg { display: block; width: 50px; height: 50px; }
+.login-meta { text-align: left; min-width: 0; }
+.login-name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #fff;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
 .login-intro {
-  font-size: 11px;
+  font-size: 12px;
   margin-top: 4px;
-  color: #333;
+  color: rgba(255,255,255,0.92);
   max-width: 260px;
   line-height: 1.35;
 }

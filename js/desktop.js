@@ -64,14 +64,27 @@ function renderDesktopIcons() {
 
   // Default-grid positioning for icons that don't have a saved position.
   // Single column down the left edge.
+  // We clamp every position (saved or default) to the current viewport so
+  // positions persisted on a wider screen don't end up off-screen / hugging
+  // the right edge on a narrower screen.
+  const desktopEl = document.getElementById("desktop");
+  const dW = desktopEl?.clientWidth  || window.innerWidth;
+  const dH = desktopEl?.clientHeight || (window.innerHeight - 30);
+  const ICON_W = 84;
+  const ICON_H = 80;
+  const maxX = Math.max(GRID_X0, dW - ICON_W - GRID_X0);
+  const maxY = Math.max(GRID_Y0, dH - ICON_H - GRID_Y0);
+
   for (let i = 0; i < all.length; i++) {
     const meta = all[i];
     const li = makeIcon({ name: meta.name, iconHtml: meta.iconHtml, open: meta.open });
     const pos = saved[meta.name];
     const col = Math.floor(i / 6);
     const row = i % 6;
-    const x = pos ? pos[0] : GRID_X0 + col * CELL_W;
-    const y = pos ? pos[1] : GRID_Y0 + row * CELL_H;
+    let x = pos ? pos[0] : GRID_X0 + col * CELL_W;
+    let y = pos ? pos[1] : GRID_Y0 + row * CELL_H;
+    x = Math.max(GRID_X0, Math.min(maxX, x));
+    y = Math.max(GRID_Y0, Math.min(maxY, y));
     li.style.left = x + "px";
     li.style.top  = y + "px";
     makeIconDraggable(li);
