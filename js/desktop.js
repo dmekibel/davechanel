@@ -23,22 +23,32 @@ export function initDesktop() {
   initMarquee();
 }
 
+const POS_KEY = "heaven-os.icon-positions";
+
+function loadIconPositions() {
+  try { return JSON.parse(localStorage.getItem(POS_KEY) || "{}"); }
+  catch (_) { return {}; }
+}
+function saveIconPosition(name, x, y) {
+  try {
+    const all = loadIconPositions();
+    all[name] = [x, y];
+    localStorage.setItem(POS_KEY, JSON.stringify(all));
+  } catch (_) {}
+}
+
 function renderDesktopIcons() {
   const ul = document.getElementById("desktop-icons");
   ul.innerHTML = "";
 
-  // Heaven OS shortcut first
-  for (const sc of DESKTOP_SHORTCUTS) {
-    ul.appendChild(makeIcon({
+  const saved = loadIconPositions();
+  const all = [
+    ...DESKTOP_SHORTCUTS.map(sc => ({
       name: sc.name,
       iconHtml: sc.iconHtml,
       open: () => openProgram(sc.program),
-    }));
-  }
-
-  // Then file-system shortcuts
-  for (const item of rootDesktopItems()) {
-    ul.appendChild(makeIcon({
+    })),
+    ...rootDesktopItems().map(item => ({
       name: item.name,
       iconHtml: iconFor(item, 32),
       open: () => {
@@ -49,8 +59,100 @@ function renderDesktopIcons() {
           return openFile(item);
         }
       },
-    }));
+    })),
+  ];
+
+  // Default-grid positioning for icons that don't have a saved position yet.
+  // Single column down the left edge, with a gentle wrap on tall stacks.
+  const COL_W = 96;
+  const ROW_H = 86;
+  const PAD_X = 12;
+  const PAD_Y = 12;
+  for (let i = 0; i < all.length; i++) {
+    const meta = all[i];
+    const li = makeIcon({ name: meta.name, iconHtml: meta.iconHtml, open: meta.open });
+    const pos = saved[meta.name];
+    let x, y;
+    if (pos) {
+      [x, y] = pos;
+    } else {
+      const col = Math.floor(i / 6);
+      const row = i % 6;
+      x = PAD_X + col * COL_W;
+      y = PAD_Y + row * ROW_H;
+    }
+    li.style.left = x + "px";
+    li.style.top  = y + "px";
+    makeIconDraggable(li);
+    ul.appendChild(li);
   }
+}
+
+function makeIconDraggable(li) {
+  const desktop = document.getElementById("desktop");
+  let dragged, startX, startY, originX, originY;
+
+  const begin = (clientX, clientY, isTouch) => {
+    dragged = false;
+    startX = clientX;
+    startY = clientY;
+    originX = li.offsetLeft;
+    originY = li.offsetTop;
+
+    const move = (cx, cy, e) => {
+      const dx = cx - startX;
+      const dy = cy - startY;
+      if (!dragged && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      dragged = true;
+      li.classList.add("dragging");
+      if (e && e.cancelable) e.preventDefault();
+      const dRect = desktop.getBoundingClientRect();
+      const w = li.offsetWidth, h = li.offsetHeight;
+      const nx = Math.max(0, Math.min(dRect.width  - w, originX + dx));
+      const ny = Math.max(0, Math.min(dRect.height - h, originY + dy));
+      li.style.left = nx + "px";
+      li.style.top  = ny + "px";
+    };
+    const onMouseMove = (e) => move(e.clientX, e.clientY, e);
+    const onTouchMove = (e) => {
+      const p = e.touches[0] || e.changedTouches[0];
+      if (p) move(p.clientX, p.clientY, e);
+    };
+    const cleanup = () => {
+      li.classList.remove("dragging");
+      if (dragged) {
+        saveIconPosition(li.querySelector(".icon-label").textContent, li.offsetLeft, li.offsetTop);
+        li.dataset.justDragged = "1";
+        setTimeout(() => delete li.dataset.justDragged, 50);
+      }
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup",   cleanup);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend",  cleanup);
+      document.removeEventListener("touchcancel", cleanup);
+    };
+
+    if (isTouch) {
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend",  cleanup);
+      document.addEventListener("touchcancel", cleanup);
+    } else {
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup",   cleanup);
+    }
+  };
+
+  li.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    begin(e.clientX, e.clientY, false);
+  });
+  li.addEventListener("touchstart", (e) => {
+    const p = e.touches[0];
+    if (!p) return;
+    e.stopPropagation();
+    begin(p.clientX, p.clientY, true);
+  }, { passive: true });
 }
 
 function initMarquee() {
@@ -164,13 +266,25 @@ function makeIcon({ name, iconHtml, open }) {
   li.appendChild(ic);
   li.appendChild(lbl);
 
-  li.addEventListener("dblclick", open);
+  // touch / coarse-pointer devices: single-tap opens.
+  // mouse / fine-pointer: single-click selects, double-click opens.
+  const isCoarse = () => matchMedia("(pointer: coarse)").matches;
+
+  li.addEventListener("dblclick", () => {
+    if (li.dataset.justDragged === "1") return;
+    open();
+  });
   li.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
   });
   li.addEventListener("click", () => {
-    document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
-    li.classList.add("selected");
+    if (li.dataset.justDragged === "1") return;
+    if (isCoarse()) {
+      open();
+    } else {
+      document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
+      li.classList.add("selected");
+    }
   });
   return li;
 }

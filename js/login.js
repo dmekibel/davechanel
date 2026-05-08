@@ -4,12 +4,8 @@
 
 const t = (s) => s;   // i18n removed
 
-const KEY = "heaven-os.logged-in";
-
-export function shouldShowLogin() {
-  try { return !sessionStorage.getItem(KEY); }
-  catch (_) { return true; }
-}
+// Always show the welcome screen on a fresh page load.
+export function shouldShowLogin() { return true; }
 
 export function showLogin(onComplete) {
   const overlay = document.getElementById("login-overlay");
@@ -29,7 +25,6 @@ export function showLogin(onComplete) {
 
   const userBtn = overlay.querySelector("#login-user");
   const finish = () => {
-    try { sessionStorage.setItem(KEY, "1"); } catch (_) {}
     overlay.classList.add("fade-out");
     setTimeout(() => {
       overlay.remove();
