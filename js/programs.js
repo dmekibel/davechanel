@@ -107,120 +107,298 @@ export function openShowreel(file) {
   });
 }
 
-// ---- File Explorer (folder browser) --------------------------------
+// ---- File Explorer (Win98) ------------------------------------------
 
 export function openExplorer(startPath = []) {
-  const root = findByPath(startPath) || FS;
+  // History for Back / Forward
+  const history = [[...startPath]];
+  let histIdx = 0;
+  const expanded = new Set(["Heaven OS:"]);  // tree nodes that are expanded
 
+  // Container
   const wrap = document.createElement("div");
   wrap.className = "explorer";
 
-  // Tree (left): roots only for now (v1 — simple, expand in v0.3)
-  const treeWrap = document.createElement("div");
-  treeWrap.className = "tree";
-  const treeUl = document.createElement("ul");
-  for (const child of FS.children) {
-    if (child.type !== "folder") continue;
-    const li = document.createElement("li");
-    li.className = "folder";
-    li.textContent = child.name;
-    li.addEventListener("dblclick", () => navigateTo([child.name]));
-    li.addEventListener("click", () => navigateTo([child.name]));
-    treeUl.appendChild(li);
-  }
-  treeWrap.appendChild(treeUl);
+  // ---- Toolbar ------------------------------------------------------
+  const toolbar = document.createElement("div");
+  toolbar.className = "exp-toolbar";
 
-  // Pane (right)
+  const mkTool = (label, arrow, onClick) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "exp-tool";
+    if (arrow) {
+      const a = document.createElement("span");
+      a.className = "arrow";
+      a.textContent = arrow;
+      b.appendChild(a);
+    }
+    const t = document.createElement("span");
+    t.textContent = label;
+    b.appendChild(t);
+    b.addEventListener("click", onClick);
+    return b;
+  };
+
+  const backBtn = mkTool("Back", "◀", () => goBack());
+  const fwdBtn  = mkTool("Forward", "▶", () => goForward());
+  const upBtn   = mkTool("Up", "▲", () => goUp());
+
+  toolbar.appendChild(backBtn);
+  toolbar.appendChild(fwdBtn);
+  const sep1 = document.createElement("span"); sep1.className = "sep"; toolbar.appendChild(sep1);
+  toolbar.appendChild(upBtn);
+
+  // ---- Address bar --------------------------------------------------
+  const addr = document.createElement("div");
+  addr.className = "exp-address";
+  const addrLabel = document.createElement("label");
+  addrLabel.textContent = "Address:";
+  const addrField = document.createElement("div");
+  addrField.className = "field";
+  addr.appendChild(addrLabel);
+  addr.appendChild(addrField);
+
+  // ---- Body (tree + pane) ------------------------------------------
+  const body = document.createElement("div");
+  body.className = "exp-body";
+
+  const tree = document.createElement("div");
+  tree.className = "exp-tree";
+
   const pane = document.createElement("div");
-  pane.className = "pane";
-
-  const breadcrumb = document.createElement("div");
-  breadcrumb.style.cssText = "font-family:Tahoma,sans-serif;font-size:12px;border-bottom:1px solid #888;padding-bottom:6px;margin-bottom:8px;";
-
+  pane.className = "exp-pane";
   const grid = document.createElement("div");
-  grid.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill, 88px);gap:14px;padding:6px 0;";
+  grid.className = "exp-grid";
+  pane.appendChild(grid);
+
+  body.appendChild(tree);
+  body.appendChild(pane);
+
+  // ---- Status bar ---------------------------------------------------
+  const status = document.createElement("div");
+  status.className = "exp-statusbar";
+  const sCount = document.createElement("span"); sCount.className = "panel"; status.appendChild(sCount);
+  const sPath  = document.createElement("span"); sPath.className  = "panel flex"; status.appendChild(sPath);
+
+  wrap.appendChild(toolbar);
+  wrap.appendChild(addr);
+  wrap.appendChild(body);
+  wrap.appendChild(status);
+
+  // ---- State / navigation ------------------------------------------
 
   let currentPath = [...startPath];
+  let winId = null;
 
+  function pathKey(path) {
+    return ["Heaven OS:", ...path].join("/");
+  }
+
+  function pushHistory(path) {
+    history.length = histIdx + 1;
+    history.push([...path]);
+    histIdx = history.length - 1;
+  }
+
+  function goBack() {
+    if (histIdx <= 0) return;
+    histIdx -= 1;
+    currentPath = [...history[histIdx]];
+    render();
+  }
+  function goForward() {
+    if (histIdx >= history.length - 1) return;
+    histIdx += 1;
+    currentPath = [...history[histIdx]];
+    render();
+  }
+  function goUp() {
+    if (currentPath.length === 0) return;
+    navigateTo(currentPath.slice(0, -1));
+  }
   function navigateTo(path) {
     const node = findByPath(path);
-    if (!node || node.type !== "folder") {
-      // it's a file — open with appropriate program
-      if (node && node.type === "file") openFile(node);
+    if (!node) return;
+    if (node.type === "file") {
+      openFile(node);
       return;
     }
-    currentPath = path;
+    currentPath = [...path];
+    pushHistory(currentPath);
+    // ensure ancestors are expanded
+    let acc = "Heaven OS:";
+    expanded.add(acc);
+    for (const seg of currentPath) {
+      acc += "/" + seg;
+      expanded.add(acc);
+    }
     render();
   }
 
-  function render() {
-    breadcrumb.innerHTML = "";
-    const segs = ["Heaven OS:", ...currentPath];
-    segs.forEach((seg, i) => {
-      const a = document.createElement("a");
-      a.href = "#";
-      a.textContent = seg;
-      a.style.color = "#1010a0";
-      a.addEventListener("click", (e) => {
-        e.preventDefault();
-        navigateTo(currentPath.slice(0, i));
-      });
-      breadcrumb.appendChild(a);
-      if (i < segs.length - 1) {
-        const sep = document.createElement("span");
-        sep.textContent = " \\ ";
-        sep.style.color = "#666";
-        breadcrumb.appendChild(sep);
-      }
-    });
+  // ---- Tree rendering ----------------------------------------------
 
-    const node = findByPath(currentPath) || FS;
-    grid.innerHTML = "";
-    if (!node.children || node.children.length === 0) {
-      const empty = document.createElement("div");
-      empty.style.cssText = "color:#666;font-family:Tahoma;font-size:12px;padding:20px;";
-      empty.textContent = "(this folder is empty)";
-      grid.appendChild(empty);
-      return;
+  function renderTree() {
+    tree.innerHTML = "";
+    const ul = document.createElement("ul");
+    ul.appendChild(treeRow(FS, [], 0));
+    if (expanded.has("Heaven OS:")) {
+      const childrenUl = document.createElement("ul");
+      for (const child of FS.children) {
+        renderTreeNode(child, [child.name], 1, childrenUl);
+      }
+      ul.appendChild(childrenUl);
     }
-    for (const child of node.children) {
-      const tile = document.createElement("div");
-      tile.style.cssText = "display:flex;flex-direction:column;align-items:center;gap:4px;cursor:default;font-family:Tahoma;font-size:11px;text-align:center;";
-      const ic = document.createElement("div");
-      ic.textContent = child.icon || (child.type === "folder" ? "📁" : "📄");
-      ic.style.cssText = "font-size:36px;line-height:1;";
-      const lbl = document.createElement("div");
-      lbl.textContent = child.name;
-      lbl.style.cssText = "max-width:84px;word-wrap:break-word;line-height:1.15;";
-      tile.appendChild(ic);
-      tile.appendChild(lbl);
-      tile.addEventListener("dblclick", () => {
-        if (child.type === "folder") navigateTo([...currentPath, child.name]);
-        else openFile(child);
-      });
-      grid.appendChild(tile);
+    tree.appendChild(ul);
+  }
+
+  function renderTreeNode(node, path, depth, container) {
+    container.appendChild(treeRow(node, path, depth));
+    if (node.type === "folder" && expanded.has(pathKey(path)) && node.children?.length) {
+      const sub = document.createElement("ul");
+      for (const child of node.children) {
+        renderTreeNode(child, [...path, child.name], depth + 1, sub);
+      }
+      container.appendChild(sub);
     }
   }
 
-  pane.appendChild(breadcrumb);
-  pane.appendChild(grid);
-  wrap.appendChild(treeWrap);
-  wrap.appendChild(pane);
+  function treeRow(node, path, depth) {
+    const li = document.createElement("li");
+    li.className = "row";
+    if (path.length === currentPath.length && path.every((p, i) => p === currentPath[i]) && node.type === "folder") {
+      li.classList.add("selected");
+    }
+    li.style.paddingLeft = (depth * 14) + "px";
+
+    // twisty
+    const tw = document.createElement("span");
+    tw.className = "twisty";
+    if (node.type === "folder" && node.children?.length) {
+      const key = node === FS ? "Heaven OS:" : pathKey(path);
+      tw.textContent = expanded.has(key) ? "−" : "+";
+      tw.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (expanded.has(key)) expanded.delete(key);
+        else expanded.add(key);
+        renderTree();
+      });
+    } else {
+      tw.textContent = "";
+    }
+    li.appendChild(tw);
+
+    // icon + label
+    const ic = document.createElement("span");
+    ic.className = "icon";
+    ic.textContent = node.icon || (node.type === "folder" ? "📁" : "📄");
+    li.appendChild(ic);
+    const lbl = document.createElement("span");
+    lbl.textContent = node === FS ? "Heaven OS" : node.name;
+    li.appendChild(lbl);
+
+    li.addEventListener("click", () => {
+      if (node === FS) { navigateTo([]); return; }
+      if (node.type === "folder") navigateTo(path);
+    });
+    li.addEventListener("dblclick", () => {
+      if (node === FS) return;
+      if (node.type === "file") openFile(node);
+    });
+    return li;
+  }
+
+  // ---- Pane rendering ----------------------------------------------
+
+  function render() {
+    const node = findByPath(currentPath) || FS;
+    const titleName = currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS";
+
+    // address
+    addrField.innerHTML = "";
+    const ic = document.createElement("span");
+    ic.className = "icon";
+    ic.textContent = node.icon || (node.type === "folder" ? "📁" : "📄");
+    addrField.appendChild(ic);
+    const txt = document.createElement("span");
+    txt.textContent = "Heaven OS:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
+    addrField.appendChild(txt);
+
+    // toolbar enable/disable
+    backBtn.toggleAttribute("disabled", histIdx <= 0);
+    fwdBtn.toggleAttribute("disabled", histIdx >= history.length - 1);
+    upBtn.toggleAttribute("disabled", currentPath.length === 0);
+
+    // grid
+    grid.innerHTML = "";
+    const items = node.children || [];
+    if (items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "exp-empty";
+      empty.textContent = "(this folder is empty)";
+      grid.appendChild(empty);
+    } else {
+      for (const child of items) {
+        const tile = document.createElement("div");
+        tile.className = "exp-tile";
+        tile.tabIndex = 0;
+        const tIc = document.createElement("div");
+        tIc.className = "ic";
+        tIc.textContent = child.icon || (child.type === "folder" ? "📁" : "📄");
+        const tLbl = document.createElement("div");
+        tLbl.className = "lbl";
+        tLbl.textContent = child.name;
+        tile.appendChild(tIc);
+        tile.appendChild(tLbl);
+
+        const open = () => {
+          if (child.type === "folder") navigateTo([...currentPath, child.name]);
+          else openFile(child);
+        };
+        tile.addEventListener("click", () => {
+          grid.querySelectorAll(".exp-tile.selected").forEach(n => n.classList.remove("selected"));
+          tile.classList.add("selected");
+        });
+        tile.addEventListener("dblclick", open);
+        tile.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+        });
+        grid.appendChild(tile);
+      }
+    }
+
+    // status
+    sCount.textContent = `${items.length} object(s)`;
+    sPath.textContent  = "Heaven OS:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
+
+    // tree
+    renderTree();
+
+    // window title
+    if (winId != null) {
+      const wEl = document.querySelector(`[data-win-id="${winId}"]`);
+      if (wEl) {
+        const titleSpan = wEl.querySelector(".window-title span:last-child");
+        if (titleSpan) titleSpan.textContent = titleName;
+        wEl.setAttribute("aria-label", titleName);
+      }
+    }
+  }
 
   render();
 
-  // Make the explorer use the chrome flush (no white inset, since we have our own panes)
-  const id = openWindow({
+  winId = openWindow({
     title: currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS",
     icon: "📁",
     content: wrap,
-    width: 720,
-    height: 460,
+    width: 760,
+    height: 480,
+    flush: true,
   });
-  // Mark content as flush-styled
-  const win = document.querySelector(`[role="dialog"][aria-label="${currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS"}"] .window-content`);
-  if (win) win.classList.add("flush");
-  return id;
+  // tag the window so we can find it later for title updates
+  const wEl = [...document.querySelectorAll(".window")].find(el => el.getAttribute("aria-label") === (currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS"));
+  if (wEl) wEl.dataset.winId = String(winId);
+  return winId;
 }
 
 // ---- Generic file opener -------------------------------------------

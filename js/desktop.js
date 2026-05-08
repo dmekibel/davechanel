@@ -9,6 +9,11 @@ const PROG_FOR = {
   "Recycle Bin": "recycle",
 };
 
+// Synthetic desktop shortcuts that don't live in the FS but appear on the desktop.
+const DESKTOP_SHORTCUTS = [
+  { name: "Heaven OS", icon: "♁", program: "explorer" },   // opens explorer at root
+];
+
 export function initDesktop() {
   renderDesktopIcons();
   initStartMenu();
@@ -18,39 +23,30 @@ export function initDesktop() {
 function renderDesktopIcons() {
   const ul = document.getElementById("desktop-icons");
   ul.innerHTML = "";
+
+  // Heaven OS shortcut first
+  for (const sc of DESKTOP_SHORTCUTS) {
+    ul.appendChild(makeIcon({
+      name: sc.name,
+      icon: sc.icon,
+      open: () => openProgram(sc.program),
+    }));
+  }
+
+  // Then file-system shortcuts
   for (const item of rootDesktopItems()) {
-    const li = document.createElement("li");
-    li.className = "desktop-icon";
-    li.tabIndex = 0;
-
-    const ic = document.createElement("div");
-    ic.className = "icon-img";
-    ic.textContent = item.icon || (item.type === "folder" ? "▣" : "📄");
-    const lbl = document.createElement("div");
-    lbl.className = "icon-label";
-    lbl.textContent = item.name;
-    li.appendChild(ic);
-    li.appendChild(lbl);
-
-    const open = () => {
-      if (item.type === "folder") {
-        const prog = PROG_FOR[item.name];
-        if (prog) return openProgram(prog);
-      } else {
-        return openFile(item);
-      }
-    };
-
-    li.addEventListener("dblclick", open);
-    li.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
-    });
-    li.addEventListener("click", () => {
-      // selection
-      document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
-      li.classList.add("selected");
-    });
-    ul.appendChild(li);
+    ul.appendChild(makeIcon({
+      name: item.name,
+      icon: item.icon || (item.type === "folder" ? "▣" : "📄"),
+      open: () => {
+        if (item.type === "folder") {
+          const prog = PROG_FOR[item.name];
+          if (prog) return openProgram(prog);
+        } else {
+          return openFile(item);
+        }
+      },
+    }));
   }
 
   // click on empty desktop deselects
@@ -59,6 +55,31 @@ function renderDesktopIcons() {
       document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
     }
   });
+}
+
+function makeIcon({ name, icon, open }) {
+  const li = document.createElement("li");
+  li.className = "desktop-icon";
+  li.tabIndex = 0;
+
+  const ic = document.createElement("div");
+  ic.className = "icon-img";
+  ic.textContent = icon;
+  const lbl = document.createElement("div");
+  lbl.className = "icon-label";
+  lbl.textContent = name;
+  li.appendChild(ic);
+  li.appendChild(lbl);
+
+  li.addEventListener("dblclick", open);
+  li.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+  });
+  li.addEventListener("click", () => {
+    document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
+    li.classList.add("selected");
+  });
+  return li;
 }
 
 function initStartMenu() {

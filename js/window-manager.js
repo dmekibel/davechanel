@@ -94,7 +94,7 @@ function makeResizeHandles(rec) {
 
 function startDrag(id, ev, isTouch = false) {
   const rec = windows.get(id);
-  if (!rec || rec.maximized || isMobile()) return;
+  if (!rec || rec.maximized) return;
   bringToFront(id);
   const startX = ev.clientX;
   const startY = ev.clientY;
@@ -194,7 +194,7 @@ function makeTaskbarEntry(rec) {
   return li;
 }
 
-export function openWindow({ title, icon, content, width = 520, height = 380, x, y }) {
+export function openWindow({ title, icon, content, width = 520, height = 380, x, y, flush = false }) {
   // If a window with this title is already open (single-instance per program),
   // just focus it instead of opening a duplicate.
   for (const rec of windows.values()) {
@@ -213,21 +213,23 @@ export function openWindow({ title, icon, content, width = 520, height = 380, x,
   const rec = { id, el, title, icon, maximized: false, prev: null, taskbar: null };
   windows.set(id, rec);
 
-  // Position
-  if (!isMobile()) {
-    const cx = (window.innerWidth - width) / 2 + (id - 1) * 24;
-    const cy = (window.innerHeight - height - 30) / 2 + (id - 1) * 24;
-    el.style.left = (x ?? Math.max(20, cx)) + "px";
-    el.style.top  = (y ?? Math.max(20, cy)) + "px";
-    el.style.width  = width + "px";
-    el.style.height = height + "px";
-  }
+  // Position — cap to viewport so windows always fit on small screens
+  const vw = window.innerWidth;
+  const vh = window.innerHeight - 30;     // taskbar reserve
+  const w  = Math.max(240, Math.min(width,  vw - 16));
+  const h  = Math.max(140, Math.min(height, vh - 16));
+  const cx = Math.max(8, (vw - w) / 2 + (id - 1) * 24);
+  const cy = Math.max(8, (vh - h) / 2 + (id - 1) * 24);
+  el.style.left   = (x ?? cx) + "px";
+  el.style.top    = (y ?? cy) + "px";
+  el.style.width  = w + "px";
+  el.style.height = h + "px";
 
   el.appendChild(makeTitlebar(rec));
 
   // Content host
   const contentEl = document.createElement("div");
-  contentEl.className = "window-content";
+  contentEl.className = "window-content" + (flush ? " flush" : "");
   if (typeof content === "string") {
     contentEl.innerHTML = content;
   } else if (content instanceof Node) {
