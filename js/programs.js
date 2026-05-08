@@ -607,96 +607,62 @@ function openStub(title, message) {
 }
 
 export function openWelcome() {
-  // Multi-page Win98-flavored Welcome / Quick Tour with Back / Next / Close.
+  // 4 short pages — matches the Win98 reference (4 contents items).
   const PAGES = [
     {
       title: "Welcome",
       body: `
-        <p><b>Welcome to Heaven OS</b> — the personal portfolio of <b>David Mekibel</b>.</p>
-        <p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years
-        of digital art, a decade of complex 3D, and at the cutting edge of AI
-        image and video since the field existed.</p>
-        <p>This is a fully working retro desktop. You'll find my fine-art
-        practice, the studio's commercial work, my CVs, and how to reach me.
-        Click <b>Next</b> for a 60-second tour, or <b>Close</b> if you'd
-        rather poke around on your own.</p>
+        <p>Welcome to the world of <b>Heaven OS</b> — the portfolio of David Mekibel.</p>
+        <p>Sit back and relax as you take a brief tour of the options available on this screen.</p>
+        <p>If you want to explore an option, just click it.</p>
       `,
     },
     {
-      title: "How to navigate",
+      title: "Discover My Work",
       body: `
-        <p><b>Desktop icons</b> open windows. <b>Single-click</b> selects,
-        <b>double-click</b> opens. You can drag icons around to rearrange.</p>
-        <p><b>My Computer</b> is the main file explorer. Browse the whole
-        site from there.</p>
-        <p><b>Start menu</b> (bottom-left) has Programs, Documents, Settings,
-        plus Sleep / Log Out / Restart.</p>
-        <p><b>Drag windows</b> by their titlebar. Resize from the bottom-right
-        corner. Minimize, maximize, and close with the buttons in the
-        titlebar.</p>
-      `,
-    },
-    {
-      title: "My Fine Art",
-      body: `
-        <p>The artistic side of my practice. <b>ArtPrize 2024 + 2025</b>
-        finalist; winner of the Artist Seed Grant in New Media (2025). Style:
-        <b>Pop Renaissance</b> — high and low, sacred and secular collapsed
-        into one image.</p>
-        <p>Open <b>Fine Art</b> from the desktop. The folder contains my
-        artist CV and, when artwork files are added, selected pieces with
-        statements.</p>
-      `,
-    },
-    {
-      title: "Balancē Creative",
-      body: `
-        <p>The commercial side. Co-founded studio in Moscow since 2020.
-        Full creative pipeline: ideation, branding, AI visuals, 3D, motion,
-        VFX. <b>1000+ projects shipped.</b></p>
-        <p>Selected clients: Aeroflot, Redmond, Winline, Nature Siberica,
-        Ozon Fresh, Dota 2, Critical Ops, IRI. Music videos for Brezhneva,
-        Bilan, Morgenshtern via MIR Studios.</p>
-        <p>Open <b>Balancē Creative</b> for the commercial CV, Brand Work,
-        and Music Industry folders.</p>
+        <p>Open <b>Fine Art</b> for my artistic practice (ArtPrize 2024 + 2025 finalist).</p>
+        <p>Open <b>Balancē Creative</b> for commercial work — brands, music, AI/3D pipelines.</p>
       `,
     },
     {
       title: "Get In Touch",
       body: `
-        <p>Open <b>Contact</b> from the desktop, or use the links below.</p>
-        <p>Email: <a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a><br>
-        LinkedIn: <a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a><br>
-        Instagram: <a href="https://instagram.com/dalledave" target="_blank" rel="noopener">@dalledave</a> (work) ·
-        <a href="https://instagram.com/mikdavidu" target="_blank" rel="noopener">@mikdavidu</a> (personal)<br>
-        Studio: <a href="https://balance-creative.com" target="_blank" rel="noopener">balance-creative.com</a></p>
+        <p><a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a></p>
+        <p><a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a></p>
+        <p><a href="https://instagram.com/dalledave" target="_blank" rel="noopener">@dalledave</a></p>
       `,
     },
     {
-      title: "Tips & easter eggs",
+      title: "Tips",
       body: `
-        <p>A few hidden things worth trying:</p>
-        <ul>
-          <li><b>Start &gt; Sleep</b> — bouncing screensaver. Tap to wake.</li>
-          <li><b>Start &gt; Settings &gt; Display Properties</b> — change your wallpaper for real.</li>
-          <li><b>Start &gt; Programs &gt; Accessories</b> — cascading submenu.</li>
-          <li>Drag-select multiple desktop icons with a marquee, then drag them as a group.</li>
-          <li>Double-click a window's titlebar to maximize it.</li>
-        </ul>
-        <p>You're done with the tour. Click <b>Close</b> to start exploring.</p>
+        <p>Drag windows by the titlebar. Drag icons to rearrange.</p>
+        <p>Try <b>Start &gt; Settings</b> to change the wallpaper, or <b>Start &gt; Sleep</b> for the screensaver.</p>
       `,
     },
   ];
+
+  // Win98-style flag logo (Microsoft 4-square waving flag pattern, recolored)
+  const FLAG_LOGO = `
+    <svg viewBox="0 0 200 70" xmlns="http://www.w3.org/2000/svg">
+      <g>
+        <polygon points="6,8 38,4 38,30 8,32"   fill="#e84a3a"/>
+        <polygon points="40,4 70,2 70,28 40,30" fill="#3ad67a"/>
+        <polygon points="8,34 38,32 38,58 10,60" fill="#3a8fd6"/>
+        <polygon points="40,32 70,30 70,56 40,58" fill="#f0d040"/>
+      </g>
+      <text x="80" y="36" font-family="Tahoma, sans-serif" font-size="22"
+            font-weight="700" fill="#000" letter-spacing="-0.5">Heaven</text>
+      <text x="80" y="56" font-family="Tahoma, sans-serif" font-size="18"
+            font-weight="700" fill="#e84a3a" letter-spacing="-0.5">OS</text>
+    </svg>
+  `;
 
   const wrap = document.createElement("div");
   wrap.className = "welcome";
   wrap.innerHTML = `
     <div class="welcome-body">
       <div class="welcome-side">
-        <div class="welcome-side-logo">
-          <div class="logo-mark">Heaven<sup>OS</sup></div>
-          <div class="logo-sub">a Heaven Inc. production</div>
-        </div>
+        <div class="welcome-side-logo">${FLAG_LOGO}</div>
         <div class="welcome-toc-label">CONTENTS</div>
         <ul class="welcome-toc" role="tablist"></ul>
       </div>
@@ -724,8 +690,8 @@ export function openWelcome() {
 
   const visited = new Set([0]);
 
-  // Each page gets a color-coded left bar in the sidebar (Win98 reference style)
-  const COLORS = ["#d63a3a", "#d63a3a", "#3a8fd6", "#d6a72a", "#3ad67a", "#a83ad6"];
+  // Color-coded left bars matching the Win98 reference: red, red, blue/green, yellow.
+  const COLORS = ["#e84a3a", "#3a8fd6", "#3ad67a", "#f0d040"];
   PAGES.forEach((p, i) => {
     const li = document.createElement("li");
     li.dataset.idx = String(i);
@@ -768,8 +734,8 @@ export function openWelcome() {
     icon: ICONS.notepad(14),
     iconHtml: true,
     content: wrap,
-    width: 580,
-    height: 400,
+    width: 540,
+    height: 340,
     flush: true,
   });
   closeBtn.addEventListener("click", () => closeWindow(id));
