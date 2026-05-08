@@ -62,25 +62,16 @@ function renderDesktopIcons() {
     })),
   ];
 
-  // Default-grid positioning for icons that don't have a saved position yet.
-  // Single column down the left edge, with a gentle wrap on tall stacks.
-  const COL_W = 96;
-  const ROW_H = 86;
-  const PAD_X = 12;
-  const PAD_Y = 12;
+  // Default-grid positioning for icons that don't have a saved position.
+  // Single column down the left edge.
   for (let i = 0; i < all.length; i++) {
     const meta = all[i];
     const li = makeIcon({ name: meta.name, iconHtml: meta.iconHtml, open: meta.open });
     const pos = saved[meta.name];
-    let x, y;
-    if (pos) {
-      [x, y] = pos;
-    } else {
-      const col = Math.floor(i / 6);
-      const row = i % 6;
-      x = PAD_X + col * COL_W;
-      y = PAD_Y + row * ROW_H;
-    }
+    const col = Math.floor(i / 6);
+    const row = i % 6;
+    const x = pos ? pos[0] : GRID_X0 + col * CELL_W;
+    const y = pos ? pos[1] : GRID_Y0 + row * CELL_H;
     li.style.left = x + "px";
     li.style.top  = y + "px";
     makeIconDraggable(li);
@@ -88,30 +79,47 @@ function renderDesktopIcons() {
   }
 }
 
+// Grid spec — desktop icons snap to this on release.
+const GRID_X0 = 12;
+const GRID_Y0 = 12;
+const CELL_W  = 96;
+const CELL_H  = 86;
+
+function snapToGrid(x, y) {
+  const col = Math.max(0, Math.round((x - GRID_X0) / CELL_W));
+  const row = Math.max(0, Math.round((y - GRID_Y0) / CELL_H));
+  return [GRID_X0 + col * CELL_W, GRID_Y0 + row * CELL_H];
+}
+
 function makeIconDraggable(li) {
   const desktop = document.getElementById("desktop");
-  let dragged, startX, startY, originX, originY;
 
   const begin = (clientX, clientY, isTouch) => {
-    dragged = false;
-    startX = clientX;
-    startY = clientY;
-    originX = li.offsetLeft;
-    originY = li.offsetTop;
+    // If THIS icon is part of a multi-selection, drag all selected icons together.
+    // Otherwise drag just this one.
+    const moveGroup = li.classList.contains("selected")
+      ? [...document.querySelectorAll(".desktop-icon.selected")]
+      : [li];
+    const startPositions = moveGroup.map(el => ({
+      el, x: el.offsetLeft, y: el.offsetTop,
+    }));
+    let dragged = false;
 
     const move = (cx, cy, e) => {
-      const dx = cx - startX;
-      const dy = cy - startY;
+      const dx = cx - clientX;
+      const dy = cy - clientY;
       if (!dragged && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
       dragged = true;
-      li.classList.add("dragging");
       if (e && e.cancelable) e.preventDefault();
       const dRect = desktop.getBoundingClientRect();
-      const w = li.offsetWidth, h = li.offsetHeight;
-      const nx = Math.max(0, Math.min(dRect.width  - w, originX + dx));
-      const ny = Math.max(0, Math.min(dRect.height - h, originY + dy));
-      li.style.left = nx + "px";
-      li.style.top  = ny + "px";
+      for (const sp of startPositions) {
+        sp.el.classList.add("dragging");
+        const w = sp.el.offsetWidth, h = sp.el.offsetHeight;
+        const nx = Math.max(0, Math.min(dRect.width  - w, sp.x + dx));
+        const ny = Math.max(0, Math.min(dRect.height - h, sp.y + dy));
+        sp.el.style.left = nx + "px";
+        sp.el.style.top  = ny + "px";
+      }
     };
     const onMouseMove = (e) => move(e.clientX, e.clientY, e);
     const onTouchMove = (e) => {
@@ -119,11 +127,21 @@ function makeIconDraggable(li) {
       if (p) move(p.clientX, p.clientY, e);
     };
     const cleanup = () => {
-      li.classList.remove("dragging");
+      for (const sp of startPositions) sp.el.classList.remove("dragging");
       if (dragged) {
-        saveIconPosition(li.querySelector(".icon-label").textContent, li.offsetLeft, li.offsetTop);
-        li.dataset.justDragged = "1";
-        setTimeout(() => delete li.dataset.justDragged, 50);
+        // Snap each to grid + persist
+        const dRect = desktop.getBoundingClientRect();
+        for (const sp of startPositions) {
+          const [sx, sy] = snapToGrid(sp.el.offsetLeft, sp.el.offsetTop);
+          const w = sp.el.offsetWidth, h = sp.el.offsetHeight;
+          const fx = Math.max(0, Math.min(dRect.width  - w, sx));
+          const fy = Math.max(0, Math.min(dRect.height - h, sy));
+          sp.el.style.left = fx + "px";
+          sp.el.style.top  = fy + "px";
+          saveIconPosition(sp.el.querySelector(".icon-label").textContent, fx, fy);
+          sp.el.dataset.justDragged = "1";
+          setTimeout(() => delete sp.el.dataset.justDragged, 50);
+        }
       }
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup",   cleanup);
@@ -266,10 +284,7 @@ function makeIcon({ name, iconHtml, open }) {
   li.appendChild(ic);
   li.appendChild(lbl);
 
-  // touch / coarse-pointer devices: single-tap opens.
-  // mouse / fine-pointer: single-click selects, double-click opens.
-  const isCoarse = () => matchMedia("(pointer: coarse)").matches;
-
+  // Classic Win98: single click selects, double click opens. Same on every device.
   li.addEventListener("dblclick", () => {
     if (li.dataset.justDragged === "1") return;
     open();
@@ -277,10 +292,11 @@ function makeIcon({ name, iconHtml, open }) {
   li.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
   });
-  li.addEventListener("click", () => {
+  li.addEventListener("click", (e) => {
     if (li.dataset.justDragged === "1") return;
-    if (isCoarse()) {
-      open();
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      // Toggle selection without clearing others
+      li.classList.toggle("selected");
     } else {
       document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
       li.classList.add("selected");
