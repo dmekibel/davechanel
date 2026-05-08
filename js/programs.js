@@ -5,7 +5,8 @@
 import { openWindow, closeWindow } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
-import { t } from "./i18n.js";
+
+const t = (s) => s;   // i18n removed; identity for now
 
 // ---- Notepad --------------------------------------------------------
 

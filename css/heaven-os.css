@@ -302,57 +302,6 @@ body {
 }
 .clock { font-size: 11px; }
 
-.lang-switch {
-  background: var(--chrome);
-  border: 1px solid;
-  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  padding: 0 8px;
-  height: 18px;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: var(--ui-font);
-  color: #000;
-  cursor: default;
-  letter-spacing: 0.4px;
-}
-.lang-switch:active {
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-}
-
-.lang-menu {
-  position: fixed;
-  background: var(--chrome);
-  border: 2px solid;
-  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  box-shadow: 2px 2px 0 var(--chrome-shadow);
-  padding: 2px;
-  font-family: var(--ui-font);
-  font-size: 11px;
-  z-index: 100002;
-  min-width: 160px;
-}
-.lang-menu .item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px 4px 6px;
-  cursor: default;
-}
-.lang-menu .item .abbr {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 16px;
-  background: #fff;
-  border: 1px solid;
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: 0.4px;
-}
-.lang-menu .item .name { flex: 1; }
-.lang-menu .item .check { color: #000; }
-.lang-menu .item:hover { background: var(--tb-active-1); color: #fff; }
-.lang-menu .item:hover .check { color: #fff; }
-
 /* Marquee selection (drag-to-select on desktop) */
 .marquee {
   position: absolute;

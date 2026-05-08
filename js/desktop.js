@@ -3,7 +3,6 @@
 import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
 import { ICONS, iconFor } from "./icons.js";
-import { t, getLang, setLang } from "./i18n.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -17,83 +16,11 @@ const DESKTOP_SHORTCUTS = [
 ];
 
 export function initDesktop() {
-  applyStaticTranslations();
+  document.title = "Heaven OS — David Mekibel";
   renderDesktopIcons();
   initStartMenu();
   initClock();
   initMarquee();
-  initLangSwitch();
-}
-
-function applyStaticTranslations() {
-  const startTxt = document.querySelector("#start-btn .start-text");
-  if (startTxt) startTxt.textContent = t("Start");
-  const startItems = {
-    "explorer":  "Heaven OS (browse all)",
-    "fine-art":  "Fine Art",
-    "balance":   "Balancē Creative",
-    "about":     "About Me",
-    "showreel":  "Showreel",
-    "contact":   "Contact",
-    "recycle":   "Recycle Bin",
-  };
-  document.querySelectorAll("#start-menu [data-program]").forEach(el => {
-    const k = startItems[el.dataset.program];
-    if (k) el.textContent = t(k);
-  });
-  document.title = "Heaven OS — David Mekibel";
-}
-
-function initLangSwitch() {
-  const btn = document.getElementById("lang-switch");
-  if (!btn) return;
-  btn.textContent = getLang().toUpperCase();
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    showLangMenu(btn);
-  });
-}
-
-function showLangMenu(btn) {
-  closeLangMenu();
-  const rect = btn.getBoundingClientRect();
-  const menu = document.createElement("div");
-  menu.className = "lang-menu";
-  menu.style.left = rect.left + "px";
-  menu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
-
-  const opts = [
-    { code: "en", abbr: "EN", name: "English" },
-    { code: "ru", abbr: "RU", name: "Русский" },
-  ];
-  for (const o of opts) {
-    const item = document.createElement("div");
-    item.className = "item" + (o.code === getLang() ? " current" : "");
-    item.innerHTML =
-      `<span class="abbr">${o.abbr}</span>` +
-      `<span class="name">${o.name}</span>` +
-      (o.code === getLang() ? `<span class="check">✓</span>` : "");
-    item.addEventListener("click", () => {
-      closeLangMenu();
-      setLang(o.code);
-    });
-    menu.appendChild(item);
-  }
-  document.body.appendChild(menu);
-
-  setTimeout(() => {
-    const closer = (e) => {
-      if (!menu.contains(e.target) && e.target !== btn) {
-        closeLangMenu();
-        document.removeEventListener("click", closer);
-      }
-    };
-    document.addEventListener("click", closer);
-  }, 0);
-}
-
-function closeLangMenu() {
-  document.querySelectorAll(".lang-menu").forEach(n => n.remove());
 }
 
 function renderDesktopIcons() {
@@ -103,7 +30,7 @@ function renderDesktopIcons() {
   // Heaven OS shortcut first
   for (const sc of DESKTOP_SHORTCUTS) {
     ul.appendChild(makeIcon({
-      name: t(sc.name),
+      name: sc.name,
       iconHtml: sc.iconHtml,
       open: () => openProgram(sc.program),
     }));
@@ -112,7 +39,7 @@ function renderDesktopIcons() {
   // Then file-system shortcuts
   for (const item of rootDesktopItems()) {
     ul.appendChild(makeIcon({
-      name: t(item.name),
+      name: item.name,
       iconHtml: iconFor(item, 32),
       open: () => {
         if (item.type === "folder") {

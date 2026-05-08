@@ -2,7 +2,7 @@
 // Shown once per browser session (sessionStorage flag), then revealed only
 // when the user clicks the user tile.
 
-import { t } from "./i18n.js";
+const t = (s) => s;   // i18n removed
 
 const KEY = "heaven-os.logged-in";
 
