@@ -724,11 +724,14 @@ export function openWelcome() {
 
   const visited = new Set([0]);
 
+  // Each page gets a color-coded left bar in the sidebar (Win98 reference style)
+  const COLORS = ["#d63a3a", "#d63a3a", "#3a8fd6", "#d6a72a", "#3ad67a", "#a83ad6"];
   PAGES.forEach((p, i) => {
     const li = document.createElement("li");
     li.dataset.idx = String(i);
+    li.style.setProperty("--bar", COLORS[i % COLORS.length]);
     li.innerHTML = `
-      <span class="toc-marker"></span>
+      <span class="toc-bar"></span>
       <span class="toc-label">${p.title}</span>
       <span class="toc-check">✓</span>
     `;
