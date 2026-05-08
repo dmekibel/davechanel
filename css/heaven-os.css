@@ -1,67 +1,130 @@
-/* === Welcome window ============================================== */
+/* === Welcome window (Win98 "Welcome to Windows 98" feel) ========== */
 
-.welcome { display: flex; flex-direction: column; height: 100%; background: var(--chrome); }
-.welcome-head {
-  background: linear-gradient(180deg, #00007f 0%, #1084d0 100%);
-  color: #fff;
-  padding: 12px 16px;
+.welcome {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  flex-direction: column;
+  height: 100%;
+  background: var(--chrome);
   font-family: var(--ui-font);
 }
-.welcome-logo {
-  font-family: "VT323", monospace;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  line-height: 1;
-}
-.welcome-logo sup {
-  font-size: 14px;
-  background: var(--gold);
-  color: #1a1a1a;
-  padding: 1px 5px;
-  margin-left: 4px;
-  vertical-align: 8px;
-}
-.welcome-tag { font-family: var(--ui-font); font-size: 22px; font-weight: 700; }
 .welcome-body {
   flex: 1;
   display: grid;
-  grid-template-columns: 170px 1fr;
+  grid-template-columns: 200px 1fr;
   min-height: 0;
 }
+
+/* Black sidebar — the Win98 "CONTENTS" panel */
+.welcome-side {
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+.welcome-side-logo {
+  background: #fff;
+  color: #000;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid #888;
+}
+.welcome-side-logo .logo-mark {
+  font-family: "VT323", monospace;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.5px;
+  color: #00007f;
+}
+.welcome-side-logo .logo-mark sup {
+  font-size: 14px;
+  margin-left: 3px;
+  background: var(--gold);
+  color: #1a1a1a;
+  padding: 1px 5px;
+  vertical-align: 9px;
+}
+.welcome-side-logo .logo-sub {
+  font-size: 10px;
+  margin-top: 2px;
+  color: #555;
+  letter-spacing: 0.3px;
+}
+.welcome-toc-label {
+  background: #000;
+  color: #aaa;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 8px 12px 4px;
+}
 .welcome-toc {
-  list-style: none; margin: 0; padding: 0;
-  background: #000; color: #ccc;
-  font-family: var(--ui-font); font-size: 12px;
-  border-right: 1px solid var(--chrome-dark);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #000;
+  flex: 1;
+  color: #fff;
+  font-size: 12px;
 }
 .welcome-toc li {
-  padding: 7px 12px;
+  display: grid;
+  grid-template-columns: 14px 1fr 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
   cursor: default;
-  border-bottom: 1px solid #1a1a1a;
+  position: relative;
 }
-.welcome-toc li:hover { color: #fff; }
+.welcome-toc li .toc-marker {
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent transparent;
+}
+.welcome-toc li .toc-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.welcome-toc li .toc-check {
+  font-size: 11px;
+  color: #d63a3a;
+  visibility: hidden;
+}
 .welcome-toc li.active {
-  background: #1f3f80;
+  background: #d63a3a;
   color: #fff;
   font-weight: 700;
-  border-left: 3px solid #ff8c5e;
-  padding-left: 9px;
+}
+.welcome-toc li.active .toc-marker {
+  border-color: transparent transparent transparent #fff;
+}
+.welcome-toc li.visited .toc-check { visibility: visible; }
+.welcome-toc li:hover:not(.active) { color: #ffba9a; }
+
+/* Right side: title strip + body */
+.welcome-right {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.welcome-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #00007f;
+  padding: 10px 18px 4px;
+  border-bottom: 1px solid #ccc;
+  letter-spacing: 0.3px;
 }
 .welcome-pane {
-  background: #fff;
-  padding: 14px 18px;
+  flex: 1;
+  padding: 12px 18px 14px;
   overflow: auto;
-  font-family: var(--ui-font);
   font-size: 12px;
   line-height: 1.5;
   color: #000;
 }
-.welcome-h { font-size: 16px; margin: 0 0 10px; color: #00007f; font-weight: 700; }
-.welcome-pane p { margin: 0 0 0.6em; }
+.welcome-pane p { margin: 0 0 0.7em; }
 .welcome-pane a { color: #1010a0; }
 .welcome-foot {
   border-top: 1px solid var(--chrome-dark);
@@ -71,6 +134,7 @@
   justify-content: space-between;
   font-size: 11px;
   background: var(--chrome);
+  gap: 8px;
 }
 .welcome-foot label,
 .welcome-foot .welcome-showcheck { display: inline-flex; align-items: center; gap: 6px; cursor: default; }
@@ -100,11 +164,25 @@
 .welcome-pane ul li { margin: 0 0 0.3em; }
 
 @media (max-width: 720px) {
-  .welcome-body { grid-template-columns: 130px 1fr; }
-  .welcome-toc li { padding: 6px 8px; font-size: 11px; }
-  .welcome-foot { flex-wrap: wrap; gap: 6px; }
+  .welcome-body { grid-template-columns: 150px 1fr; }
+  .welcome-side-logo { padding: 8px 10px 6px; }
+  .welcome-side-logo .logo-mark { font-size: 22px; }
+  .welcome-side-logo .logo-mark sup { font-size: 11px; vertical-align: 6px; }
+  .welcome-side-logo .logo-sub { font-size: 9px; }
+  .welcome-toc-label { padding: 6px 10px 2px; font-size: 9px; }
+  .welcome-toc li { padding: 6px 10px; font-size: 11px; gap: 6px; }
+  .welcome-title { font-size: 18px; padding: 8px 14px 4px; }
+  .welcome-pane { padding: 10px 14px; font-size: 11px; }
+  .welcome-foot { flex-wrap: wrap; gap: 6px; padding: 6px 10px; }
   .welcome-showcheck { font-size: 10px; }
   .welcome-btn { min-width: 60px; padding: 3px 8px; font-size: 10px; }
+}
+@media (max-width: 480px) {
+  .welcome-body { grid-template-columns: 110px 1fr; }
+  .welcome-side-logo .logo-mark { font-size: 18px; }
+  .welcome-toc li { padding: 5px 8px; font-size: 10px; }
+  .welcome-toc li .toc-marker { display: none; }
+  .welcome-toc li { grid-template-columns: 1fr 12px; }
 }
 
 /* === Settings (Display Properties tabbed dialog) ================== */
@@ -237,7 +315,7 @@
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 999999;
+  z-index: 2000000;     /* above the login overlay (1000000) */
   cursor: none;
   overflow: hidden;
   transition: opacity 0.22s ease;

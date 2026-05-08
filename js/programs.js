@@ -691,16 +691,22 @@ export function openWelcome() {
   const wrap = document.createElement("div");
   wrap.className = "welcome";
   wrap.innerHTML = `
-    <div class="welcome-head">
-      <div class="welcome-logo"><span>Heaven</span><sup>OS</sup></div>
-      <div class="welcome-tag">Welcome</div>
-    </div>
     <div class="welcome-body">
-      <ul class="welcome-toc" role="tablist"></ul>
-      <div class="welcome-pane"></div>
+      <div class="welcome-side">
+        <div class="welcome-side-logo">
+          <div class="logo-mark">Heaven<sup>OS</sup></div>
+          <div class="logo-sub">a Heaven Inc. production</div>
+        </div>
+        <div class="welcome-toc-label">CONTENTS</div>
+        <ul class="welcome-toc" role="tablist"></ul>
+      </div>
+      <div class="welcome-right">
+        <div class="welcome-title">Welcome</div>
+        <div class="welcome-pane"></div>
+      </div>
     </div>
     <div class="welcome-foot">
-      <label class="welcome-showcheck"><input type="checkbox" checked> Show this each time</label>
+      <label class="welcome-showcheck"><input type="checkbox" checked> Show this screen each time Heaven OS starts.</label>
       <div class="welcome-buttons">
         <button class="welcome-btn back"  type="button">&lt; Back</button>
         <button class="welcome-btn next"  type="button">Next &gt;</button>
@@ -711,22 +717,34 @@ export function openWelcome() {
 
   const toc       = wrap.querySelector(".welcome-toc");
   const pane      = wrap.querySelector(".welcome-pane");
+  const titleEl   = wrap.querySelector(".welcome-title");
   const backBtn   = wrap.querySelector(".welcome-btn.back");
   const nextBtn   = wrap.querySelector(".welcome-btn.next");
   const closeBtn  = wrap.querySelector(".welcome-btn.close");
 
+  const visited = new Set([0]);
+
   PAGES.forEach((p, i) => {
     const li = document.createElement("li");
     li.dataset.idx = String(i);
-    li.textContent = p.title;
+    li.innerHTML = `
+      <span class="toc-marker"></span>
+      <span class="toc-label">${p.title}</span>
+      <span class="toc-check">✓</span>
+    `;
     if (i === 0) li.classList.add("active");
     toc.appendChild(li);
   });
 
   let idx = 0;
   function render() {
-    toc.querySelectorAll("li").forEach((n, i) => n.classList.toggle("active", i === idx));
-    pane.innerHTML = `<h3 class="welcome-h">${PAGES[idx].title}</h3>${PAGES[idx].body}`;
+    visited.add(idx);
+    toc.querySelectorAll("li").forEach((n, i) => {
+      n.classList.toggle("active",  i === idx);
+      n.classList.toggle("visited", visited.has(i) && i !== idx);
+    });
+    titleEl.textContent = PAGES[idx].title;
+    pane.innerHTML = PAGES[idx].body;
     backBtn.toggleAttribute("disabled", idx === 0);
     nextBtn.toggleAttribute("disabled", idx === PAGES.length - 1);
   }
@@ -737,7 +755,7 @@ export function openWelcome() {
     idx = Number(li.dataset.idx);
     render();
   });
-  backBtn.addEventListener("click", () => { if (idx > 0) { idx--; render(); } });
+  backBtn.addEventListener("click", () => { if (idx > 0)               { idx--; render(); } });
   nextBtn.addEventListener("click", () => { if (idx < PAGES.length - 1) { idx++; render(); } });
 
   render();
