@@ -121,74 +121,83 @@
   text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
-/* User tile (XP-style: glowy, no hard borders) */
+/* User tile: XP-position, Win98 raised-button chrome to match the rest of the OS */
 .login-user {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  padding: 9px 22px 9px 9px;
-  background: transparent;
-  color: #fff;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 10px 22px 10px 10px;
+  background: var(--chrome);
+  color: #000;
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  cursor: default;
   text-align: left;
-  font-family: inherit;
-  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+  font-family: var(--ui-font);
+  box-shadow: 1px 1px 0 #000;
 }
 .login-user:hover,
 .login-user:focus-visible {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,255,255,0.45);
-  box-shadow: 0 0 14px rgba(255,255,255,0.22);
-  outline: none;
+  outline: 1px dotted #000;
+  outline-offset: -5px;
+}
+.login-user:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 11px 21px 9px 11px;
 }
 .login-avatar {
-  width: 56px; height: 56px;
+  width: 50px; height: 50px;
   background: #fff;
-  border: 3px solid rgba(255,255,255,0.7);
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
   display: grid; place-items: center;
-  flex: 0 0 56px;
+  flex: 0 0 50px;
   image-rendering: pixelated;
 }
-.login-avatar svg { display: block; width: 50px; height: 50px; }
+.login-avatar svg { display: block; width: 44px; height: 44px; }
 .login-meta { text-align: left; }
-.login-name { font-size: 18px; font-weight: 700; line-height: 1.1; }
+.login-name { font-size: 14px; font-weight: 700; line-height: 1.1; color: #000; }
 .login-intro {
-  font-size: 12px;
+  font-size: 11px;
   margin-top: 4px;
-  opacity: 0.9;
-  max-width: 280px;
+  color: #333;
+  max-width: 260px;
   line-height: 1.35;
 }
 
-/* Bottom shutdown + helper */
+/* Bottom shutdown + helper — Win98 raised button on the blue stripe */
 .login-shutdown {
-  background: transparent;
-  border: 1px solid transparent;
-  padding: 4px 10px;
-  font-family: inherit;
-  font-size: 12px;
+  background: var(--chrome);
+  color: #000;
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  padding: 4px 12px;
+  font-family: var(--ui-font);
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  color: #fff;
+  gap: 8px;
   cursor: default;
-  border-radius: 3px;
+  height: 28px;
 }
-.login-shutdown[disabled] { opacity: 0.85; }
-.login-shutdown:hover:not([disabled]) { background: rgba(255,255,255,0.1); }
+.login-shutdown[disabled] {
+  color: #555;
+  text-shadow: 1px 1px 0 var(--chrome-light);
+}
+.login-shutdown:not([disabled]):active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 5px 11px 3px 13px;
+}
 .login-shutdown .ic {
-  width: 22px; height: 22px;
+  width: 18px; height: 18px;
   display: grid; place-items: center;
   background: radial-gradient(circle at 35% 35%, #ff8c5e 0%, #d34a1e 70%, #8e2a08 100%);
   color: #fff;
   border-radius: 50%;
-  font-size: 14px;
-  border: 1px solid rgba(255,255,255,0.55);
-  box-shadow: 0 0 8px rgba(255,255,255,0.18);
+  font-size: 12px;
+  border: 1px solid #5a1a02;
 }
-.login-help { font-size: 11px; color: rgba(255,255,255,0.85); max-width: 50%; text-align: right; }
+.login-help { font-size: 11px; color: rgba(255,255,255,0.92); max-width: 50%; text-align: right; }
 
 @media (max-width: 720px) {
   .login-main {
