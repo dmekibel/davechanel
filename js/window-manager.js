@@ -309,3 +309,32 @@ export function closeWindow(id) {
 export function listOpenWindows() {
   return [...windows.values()].map(r => ({ id: r.id, title: r.title }));
 }
+
+// Re-fit windows on viewport changes (orientation flip, browser resize).
+// Windows that were larger than the new viewport get shrunk;
+// windows that ended up off-screen get clamped back.
+function reflowOnResize() {
+  const taskbarH = 30;
+  const margin = 8;
+  for (const rec of windows.values()) {
+    if (rec.maximized) {
+      rec.el.style.left = "0px";
+      rec.el.style.top  = "0px";
+      rec.el.style.width  = window.innerWidth + "px";
+      rec.el.style.height = (window.innerHeight - taskbarH) + "px";
+      continue;
+    }
+    const maxW = window.innerWidth  - margin * 2;
+    const maxH = window.innerHeight - taskbarH - margin * 2;
+    let w = Math.max(240, Math.min(rec.el.offsetWidth,  maxW));
+    let h = Math.max(140, Math.min(rec.el.offsetHeight, maxH));
+    let l = Math.max(margin, Math.min(rec.el.offsetLeft, window.innerWidth - w - margin));
+    let t = Math.max(margin, Math.min(rec.el.offsetTop,  window.innerHeight - taskbarH - h - margin));
+    rec.el.style.left   = l + "px";
+    rec.el.style.top    = t + "px";
+    rec.el.style.width  = w + "px";
+    rec.el.style.height = h + "px";
+  }
+}
+window.addEventListener("resize", reflowOnResize);
+window.addEventListener("orientationchange", () => setTimeout(reflowOnResize, 200));

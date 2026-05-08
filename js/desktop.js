@@ -3,6 +3,7 @@
 import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
 import { ICONS, iconFor } from "./icons.js";
+import { t, getLang, setLang } from "./i18n.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -16,9 +17,83 @@ const DESKTOP_SHORTCUTS = [
 ];
 
 export function initDesktop() {
+  applyStaticTranslations();
   renderDesktopIcons();
   initStartMenu();
   initClock();
+  initMarquee();
+  initLangSwitch();
+}
+
+function applyStaticTranslations() {
+  const startTxt = document.querySelector("#start-btn .start-text");
+  if (startTxt) startTxt.textContent = t("Start");
+  const startItems = {
+    "explorer":  "Heaven OS (browse all)",
+    "fine-art":  "Fine Art",
+    "balance":   "Balancē Creative",
+    "about":     "About Me",
+    "showreel":  "Showreel",
+    "contact":   "Contact",
+    "recycle":   "Recycle Bin",
+  };
+  document.querySelectorAll("#start-menu [data-program]").forEach(el => {
+    const k = startItems[el.dataset.program];
+    if (k) el.textContent = t(k);
+  });
+  document.title = "Heaven OS — David Mekibel";
+}
+
+function initLangSwitch() {
+  const btn = document.getElementById("lang-switch");
+  if (!btn) return;
+  btn.textContent = getLang().toUpperCase();
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showLangMenu(btn);
+  });
+}
+
+function showLangMenu(btn) {
+  closeLangMenu();
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement("div");
+  menu.className = "lang-menu";
+  menu.style.left = rect.left + "px";
+  menu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+
+  const opts = [
+    { code: "en", abbr: "EN", name: "English" },
+    { code: "ru", abbr: "RU", name: "Русский" },
+  ];
+  for (const o of opts) {
+    const item = document.createElement("div");
+    item.className = "item" + (o.code === getLang() ? " current" : "");
+    item.innerHTML =
+      `<span class="abbr">${o.abbr}</span>` +
+      `<span class="name">${o.name}</span>` +
+      (o.code === getLang() ? `<span class="check">✓</span>` : "");
+    item.addEventListener("click", () => {
+      closeLangMenu();
+      setLang(o.code);
+    });
+    menu.appendChild(item);
+  }
+  document.body.appendChild(menu);
+
+  setTimeout(() => {
+    const closer = (e) => {
+      if (!menu.contains(e.target) && e.target !== btn) {
+        closeLangMenu();
+        document.removeEventListener("click", closer);
+      }
+    };
+    document.addEventListener("click", closer);
+  }, 0);
+}
+
+function closeLangMenu() {
+  document.querySelectorAll(".lang-menu").forEach(n => n.remove());
 }
 
 function renderDesktopIcons() {
@@ -28,7 +103,7 @@ function renderDesktopIcons() {
   // Heaven OS shortcut first
   for (const sc of DESKTOP_SHORTCUTS) {
     ul.appendChild(makeIcon({
-      name: sc.name,
+      name: t(sc.name),
       iconHtml: sc.iconHtml,
       open: () => openProgram(sc.program),
     }));
@@ -37,7 +112,7 @@ function renderDesktopIcons() {
   // Then file-system shortcuts
   for (const item of rootDesktopItems()) {
     ul.appendChild(makeIcon({
-      name: item.name,
+      name: t(item.name),
       iconHtml: iconFor(item, 32),
       open: () => {
         if (item.type === "folder") {
@@ -49,12 +124,77 @@ function renderDesktopIcons() {
       },
     }));
   }
+}
 
-  // click on empty desktop deselects
-  document.getElementById("desktop").addEventListener("click", (e) => {
-    if (e.target.id === "desktop" || e.target.id === "desktop-icons" || e.target.id === "windows-root") {
-      document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
+function initMarquee() {
+  const desktopEl = document.getElementById("desktop");
+
+  desktopEl.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest(".desktop-icon")) return;
+    if (e.target.closest(".window")) return;
+
+    const dRect = desktopEl.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const x0 = startX - dRect.left;
+    const y0 = startY - dRect.top;
+    const additive = e.shiftKey;
+    let dragged = false;
+    let mq = null;
+
+    // Snapshot of which icons were already selected (for shift-additive behavior)
+    const initiallySelected = new Set(
+      [...desktopEl.querySelectorAll(".desktop-icon.selected")]
+    );
+
+    if (!additive) {
+      desktopEl.querySelectorAll(".desktop-icon.selected")
+        .forEach(n => n.classList.remove("selected"));
     }
+
+    const onMove = (ev) => {
+      if (!dragged) {
+        if (Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+        dragged = true;
+        mq = document.createElement("div");
+        mq.className = "marquee";
+        desktopEl.appendChild(mq);
+      }
+      const x1 = ev.clientX - dRect.left;
+      const y1 = ev.clientY - dRect.top;
+      const left = Math.min(x0, x1);
+      const top  = Math.min(y0, y1);
+      const w = Math.abs(x1 - x0);
+      const h = Math.abs(y1 - y0);
+      mq.style.left = left + "px";
+      mq.style.top = top + "px";
+      mq.style.width = w + "px";
+      mq.style.height = h + "px";
+
+      // Hit-test all desktop icons
+      const right = left + w, bottom = top + h;
+      desktopEl.querySelectorAll(".desktop-icon").forEach(icon => {
+        const r = icon.getBoundingClientRect();
+        const iL = r.left - dRect.left;
+        const iT = r.top - dRect.top;
+        const iR = r.right - dRect.left;
+        const iB = r.bottom - dRect.top;
+        const inMq = !(iR < left || iL > right || iB < top || iT > bottom);
+        if (additive) {
+          icon.classList.toggle("selected", initiallySelected.has(icon) || inMq);
+        } else {
+          icon.classList.toggle("selected", inMq);
+        }
+      });
+    };
+    const onUp = () => {
+      if (mq) mq.remove();
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
   });
 }
 

@@ -2,9 +2,10 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow } from "./window-manager.js";
+import { openWindow, closeWindow } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
+import { t } from "./i18n.js";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -116,23 +117,11 @@ export function openExplorer(startPath = []) {
   const wrap = document.createElement("div");
   wrap.className = "explorer";
 
-  // ---- Menu bar -----------------------------------------------------
+  // ---- Menu bar (functional dropdowns) -----------------------------
   const menubar = document.createElement("div");
   menubar.className = "exp-menubar";
-  for (const [label, accel] of [
-    ["File", "F"], ["Edit", "E"], ["View", "V"], ["Go", "G"],
-    ["Favorites", "a"], ["Tools", "T"], ["Help", "H"],
-  ]) {
-    const item = document.createElement("span");
-    item.className = "menu-item";
-    const i = label.indexOf(accel);
-    if (i >= 0) {
-      item.innerHTML = label.slice(0, i) + `<u>${label[i]}</u>` + label.slice(i + 1);
-    } else {
-      item.textContent = label;
-    }
-    menubar.appendChild(item);
-  }
+  // Defer building items until after the main render functions exist
+  // (we attach the menu defs below, since they reference goBack etc.).
 
   // ---- Toolbar ------------------------------------------------------
   const toolbar = document.createElement("div");
@@ -402,6 +391,147 @@ export function openExplorer(startPath = []) {
         wEl.setAttribute("aria-label", titleName);
       }
     }
+  }
+
+  // ---- Build the menu bar (now that render/goBack/etc are defined) ----
+  buildMenuBar();
+
+  function buildMenuBar() {
+    menubar.innerHTML = "";
+    const labelDefs = [
+      ["File", "F"], ["Edit", "E"], ["View", "V"], ["Go", "G"],
+      ["Favorites", "a"], ["Tools", "T"], ["Help", "H"],
+    ];
+    const menus = {
+      "File": [
+        { label: "Open", disabled: true, accel: "O" },
+        "sep",
+        { label: "Close", action: () => { if (winId != null) closeWindow(winId); }, accel: "C" },
+      ],
+      "Edit": [
+        { label: "Undo", disabled: true },
+        "sep",
+        { label: "Cut", disabled: true },
+        { label: "Copy", disabled: true },
+        { label: "Paste", disabled: true },
+        "sep",
+        { label: "Select All", action: selectAllTiles, accel: "A" },
+        { label: "Invert Selection", disabled: true },
+      ],
+      "View": [
+        { label: "Refresh", action: render, accel: "R" },
+        "sep",
+        { label: "Large Icons", action: () => {}, accel: "L" },
+        { label: "Small Icons", disabled: true },
+        { label: "List", disabled: true },
+        { label: "Details", disabled: true },
+      ],
+      "Go": [
+        { label: "Back",         action: goBack, accel: "B", disabledIf: () => histIdx <= 0 },
+        { label: "Forward",      action: goForward, accel: "F", disabledIf: () => histIdx >= history.length - 1 },
+        { label: "Up One Level", action: goUp, accel: "U", disabledIf: () => currentPath.length === 0 },
+        "sep",
+        { label: "Home",         action: () => navigateTo([]), accel: "H" },
+      ],
+      "Favorites": [
+        { label: "Add to Favorites", disabled: true },
+      ],
+      "Tools": [
+        { label: "Folder Options", disabled: true },
+      ],
+      "Help": [
+        { label: "About Heaven OS", action: openAbout, accel: "A" },
+      ],
+    };
+    for (const [label, accel] of labelDefs) {
+      const item = document.createElement("span");
+      item.className = "menu-item";
+      item.dataset.menu = label;
+      const ti = label.indexOf(accel);
+      const tLbl = t(label);
+      const acc = label[ti];
+      const ai = tLbl.indexOf(acc);
+      if (ai >= 0) {
+        item.innerHTML = tLbl.slice(0, ai) + `<u>${tLbl[ai]}</u>` + tLbl.slice(ai + 1);
+      } else {
+        item.textContent = tLbl;
+      }
+      item.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (item.classList.contains("open")) { closeAllDropdowns(); return; }
+        openDropdown(item, menus[label]);
+      });
+      menubar.appendChild(item);
+    }
+  }
+
+  function selectAllTiles() {
+    grid.querySelectorAll(".exp-tile").forEach(n => n.classList.add("selected"));
+  }
+  function openAbout() {
+    const div = document.createElement("div");
+    div.style.cssText = "padding:18px 22px;font-family:Tahoma,sans-serif;font-size:12px;line-height:1.5;color:#000;background:#fff;";
+    div.innerHTML = `
+      <div style="font-family:'VT323',monospace;font-size:32px;margin-bottom:8px;color:#00007f;">Heaven OS</div>
+      <p>A retro-styled portfolio of <b>David Mekibel</b> / Dave Chanel.</p>
+      <p>Russian-Israeli artist exploring the space between digital nostalgia, mythology, religion, and art history. Co-founder of Balancē Creative.</p>
+      <p style="margin-top:18px;color:#666;">Build v0.4 · 2026</p>
+    `;
+    openWindow({ title: t("About Heaven OS"), icon: ICONS.myComputer(14), iconHtml: true, content: div, width: 380, height: 280 });
+  }
+
+  function openDropdown(anchorEl, items) {
+    closeAllDropdowns();
+    anchorEl.classList.add("open");
+    const rect = anchorEl.getBoundingClientRect();
+    const dd = document.createElement("div");
+    dd.className = "menu-dropdown";
+    dd.style.left = rect.left + "px";
+    dd.style.top  = rect.bottom + "px";
+    for (const it of items) {
+      if (it === "sep") {
+        const s = document.createElement("div");
+        s.className = "sep";
+        dd.appendChild(s);
+        continue;
+      }
+      const isDisabled = it.disabled || (it.disabledIf && it.disabledIf());
+      const row = document.createElement("div");
+      row.className = "item" + (isDisabled ? " disabled" : "");
+      const lbl = t(it.label);
+      if (it.accel) {
+        const ai = lbl.indexOf(it.accel);
+        if (ai >= 0) {
+          row.innerHTML = lbl.slice(0, ai) + `<u>${lbl[ai]}</u>` + lbl.slice(ai + 1);
+        } else {
+          row.textContent = lbl;
+        }
+      } else {
+        row.textContent = lbl;
+      }
+      if (!isDisabled && it.action) {
+        row.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeAllDropdowns();
+          it.action();
+        });
+      }
+      dd.appendChild(row);
+    }
+    document.body.appendChild(dd);
+
+    const closer = (e) => {
+      if (!dd.contains(e.target) && e.target !== anchorEl) {
+        closeAllDropdowns();
+        document.removeEventListener("mousedown", closer);
+      }
+    };
+    setTimeout(() => document.addEventListener("mousedown", closer), 0);
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll(".menu-dropdown").forEach(n => n.remove());
+    document.querySelectorAll(".exp-menubar .menu-item.open").forEach(n => n.classList.remove("open"));
   }
 
   render();
