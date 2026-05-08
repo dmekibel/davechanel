@@ -577,11 +577,19 @@ export function openProgram(progId) {
     case "recycle":   return openExplorer(["Recycle Bin"]);
     case "explorer":  return openExplorer([]);
     case "logout":    return logout();
+    case "restart":   return restart();
     default:          return null;
   }
 }
 
 function logout() {
+  try { sessionStorage.removeItem("heaven-os.logged-in"); } catch (_) {}
+  window.location.reload();
+}
+
+function restart() {
+  // Same end state as logout (back to welcome screen) — kept as a separate
+  // entry for the system-menu flavor. Could fade or flash in the future.
   try { sessionStorage.removeItem("heaven-os.logged-in"); } catch (_) {}
   window.location.reload();
 }

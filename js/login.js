@@ -16,11 +16,6 @@ export function showLogin(onComplete) {
     const el = overlay.querySelector(sel);
     if (el) el.textContent = t(key);
   };
-  set(".login-tagline",          "To begin, click your user name");
-  set(".login-power-label",      "Turn off computer");
-  set(".login-help",             "After you log on, the desktop loads. There is no password.");
-  set(".login-intro",            "Russian-Israeli artist. Co-founder of Balancē Creative.");
-
   // Overlay is visible by default in HTML — no need to unhide it here.
 
   const userBtn = overlay.querySelector("#login-user");
