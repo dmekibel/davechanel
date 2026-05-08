@@ -230,10 +230,18 @@ export function openWindow({ title, icon, iconHtml = false, content, width = 520
   // Position — cap to viewport so windows always fit on small screens
   const vw = window.innerWidth;
   const vh = window.innerHeight - 30;     // taskbar reserve
-  const w  = Math.max(240, Math.min(width,  vw - 16));
-  const h  = Math.max(140, Math.min(height, vh - 16));
-  const cx = Math.max(8, (vw - w) / 2 + (id - 1) * 24);
-  const cy = Math.max(8, (vh - h) / 2 + (id - 1) * 24);
+  const isNarrow = vw < 720;
+  const minW = isNarrow ? 200 : 240;
+  const minH = isNarrow ? 140 : 140;
+  const w  = Math.max(minW, Math.min(width,  vw - 8));
+  const h  = Math.max(minH, Math.min(height, vh - 8));
+  // Cascade offset: subtle on desktop, none on mobile
+  const offset = isNarrow ? 0 : Math.min((id - 1) * 24, 96);
+  let cx = isNarrow ? Math.max(4, (vw - w) / 2) : Math.max(8, (vw - w) / 2 + offset);
+  let cy = Math.max(4, (vh - h) / 2 + (isNarrow ? 0 : offset));
+  // Final safety clamp so windows never start off-screen
+  cx = Math.min(cx, vw - w - 4);
+  cy = Math.min(cy, vh - h - 4);
   el.style.left   = (x ?? cx) + "px";
   el.style.top    = (y ?? cy) + "px";
   el.style.width  = w + "px";

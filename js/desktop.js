@@ -64,10 +64,8 @@ function renderDesktopIcons() {
   ];
 
   // Default-grid positioning for icons that don't have a saved position.
-  // Single column down the left edge.
-  // We clamp every position (saved or default) to the current viewport so
-  // positions persisted on a wider screen don't end up off-screen / hugging
-  // the right edge on a narrower screen.
+  // Items-per-column adapts to viewport height so icons never overflow
+  // bottom (or, on landscape mobile, fall under the taskbar).
   const desktopEl = document.getElementById("desktop");
   const dW = desktopEl?.clientWidth  || window.innerWidth;
   const dH = desktopEl?.clientHeight || (window.innerHeight - 30);
@@ -75,13 +73,14 @@ function renderDesktopIcons() {
   const ICON_H = 80;
   const maxX = Math.max(GRID_X0, dW - ICON_W - GRID_X0);
   const maxY = Math.max(GRID_Y0, dH - ICON_H - GRID_Y0);
+  const itemsPerCol = Math.max(3, Math.floor((dH - GRID_Y0 * 2) / CELL_H));
 
   for (let i = 0; i < all.length; i++) {
     const meta = all[i];
     const li = makeIcon({ name: meta.name, iconHtml: meta.iconHtml, open: meta.open });
     const pos = saved[meta.name];
-    const col = Math.floor(i / 6);
-    const row = i % 6;
+    const col = Math.floor(i / itemsPerCol);
+    const row = i % itemsPerCol;
     let x = pos ? pos[0] : GRID_X0 + col * CELL_W;
     let y = pos ? pos[1] : GRID_Y0 + row * CELL_H;
     x = Math.max(GRID_X0, Math.min(maxX, x));
