@@ -2,6 +2,7 @@
 
 import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
+import { ICONS, iconFor } from "./icons.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -11,7 +12,7 @@ const PROG_FOR = {
 
 // Synthetic desktop shortcuts that don't live in the FS but appear on the desktop.
 const DESKTOP_SHORTCUTS = [
-  { name: "Heaven OS", icon: "♁", program: "explorer" },   // opens explorer at root
+  { name: "My Computer", iconHtml: ICONS.myComputer(32), program: "explorer" },
 ];
 
 export function initDesktop() {
@@ -28,7 +29,7 @@ function renderDesktopIcons() {
   for (const sc of DESKTOP_SHORTCUTS) {
     ul.appendChild(makeIcon({
       name: sc.name,
-      icon: sc.icon,
+      iconHtml: sc.iconHtml,
       open: () => openProgram(sc.program),
     }));
   }
@@ -37,7 +38,7 @@ function renderDesktopIcons() {
   for (const item of rootDesktopItems()) {
     ul.appendChild(makeIcon({
       name: item.name,
-      icon: item.icon || (item.type === "folder" ? "▣" : "📄"),
+      iconHtml: iconFor(item, 32),
       open: () => {
         if (item.type === "folder") {
           const prog = PROG_FOR[item.name];
@@ -57,14 +58,14 @@ function renderDesktopIcons() {
   });
 }
 
-function makeIcon({ name, icon, open }) {
+function makeIcon({ name, iconHtml, open }) {
   const li = document.createElement("li");
   li.className = "desktop-icon";
   li.tabIndex = 0;
 
   const ic = document.createElement("div");
   ic.className = "icon-img";
-  ic.textContent = icon;
+  if (iconHtml) ic.innerHTML = iconHtml;
   const lbl = document.createElement("div");
   lbl.className = "icon-label";
   lbl.textContent = name;

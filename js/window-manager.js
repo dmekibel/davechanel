@@ -40,7 +40,8 @@ function makeTitlebar(rec) {
   if (rec.icon) {
     const ic = document.createElement("span");
     ic.className = "window-title-icon";
-    ic.textContent = rec.icon;
+    if (rec.iconHtml) ic.innerHTML = rec.icon;
+    else ic.textContent = rec.icon;
     titleEl.appendChild(ic);
   }
   const txt = document.createElement("span");
@@ -169,8 +170,11 @@ function makeTaskbarEntry(rec) {
   li.dataset.windowId = String(rec.id);
 
   const ic = document.createElement("span");
-  ic.textContent = rec.icon || "▣";
+  if (rec.iconHtml && rec.icon) ic.innerHTML = rec.icon;
+  else ic.textContent = rec.icon || "▣";
   ic.style.flex = "0 0 auto";
+  ic.style.display = "inline-flex";
+  ic.style.alignItems = "center";
   const lbl = document.createElement("span");
   lbl.textContent = rec.title;
   lbl.style.overflow = "hidden";
@@ -194,7 +198,7 @@ function makeTaskbarEntry(rec) {
   return li;
 }
 
-export function openWindow({ title, icon, content, width = 520, height = 380, x, y, flush = false }) {
+export function openWindow({ title, icon, iconHtml = false, content, width = 520, height = 380, x, y, flush = false }) {
   // If a window with this title is already open (single-instance per program),
   // just focus it instead of opening a duplicate.
   for (const rec of windows.values()) {
@@ -210,7 +214,7 @@ export function openWindow({ title, icon, content, width = 520, height = 380, x,
   el.setAttribute("role", "dialog");
   el.setAttribute("aria-label", title);
 
-  const rec = { id, el, title, icon, maximized: false, prev: null, taskbar: null };
+  const rec = { id, el, title, icon, iconHtml, maximized: false, prev: null, taskbar: null };
   windows.set(id, rec);
 
   // Position — cap to viewport so windows always fit on small screens

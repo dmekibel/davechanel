@@ -4,6 +4,7 @@
 
 import { openWindow } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
+import { ICONS, iconFor } from "./icons.js";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -52,7 +53,8 @@ export async function openNotepad(file) {
 
   return openWindow({
     title: file.name,
-    icon: file.icon || "📝",
+    icon: ICONS.notepad(14),
+    iconHtml: true,
     content: wrap,
     width: 580,
     height: 480,
@@ -85,7 +87,8 @@ export function openCompose() {
 
   return openWindow({
     title: "Contact",
-    icon: "✉",
+    icon: ICONS.mail(14),
+    iconHtml: true,
     content: wrap,
     width: 520,
     height: 360,
@@ -100,7 +103,8 @@ export function openShowreel(file) {
   wrap.textContent = "▶  SHOWREEL — coming soon";
   return openWindow({
     title: file?.name || "Showreel.mpg",
-    icon: "🎬",
+    icon: ICONS.movie(14),
+    iconHtml: true,
     content: wrap,
     width: 640,
     height: 400,
@@ -119,30 +123,47 @@ export function openExplorer(startPath = []) {
   const wrap = document.createElement("div");
   wrap.className = "explorer";
 
+  // ---- Menu bar -----------------------------------------------------
+  const menubar = document.createElement("div");
+  menubar.className = "exp-menubar";
+  for (const [label, accel] of [
+    ["File", "F"], ["Edit", "E"], ["View", "V"], ["Go", "G"],
+    ["Favorites", "a"], ["Tools", "T"], ["Help", "H"],
+  ]) {
+    const item = document.createElement("span");
+    item.className = "menu-item";
+    const i = label.indexOf(accel);
+    if (i >= 0) {
+      item.innerHTML = label.slice(0, i) + `<u>${label[i]}</u>` + label.slice(i + 1);
+    } else {
+      item.textContent = label;
+    }
+    menubar.appendChild(item);
+  }
+
   // ---- Toolbar ------------------------------------------------------
   const toolbar = document.createElement("div");
   toolbar.className = "exp-toolbar";
 
-  const mkTool = (label, arrow, onClick) => {
+  const mkTool = (label, iconSvg, onClick) => {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "exp-tool";
-    if (arrow) {
-      const a = document.createElement("span");
-      a.className = "arrow";
-      a.textContent = arrow;
-      b.appendChild(a);
-    }
+    const ic = document.createElement("span");
+    ic.className = "tool-ic";
+    ic.innerHTML = iconSvg;
+    b.appendChild(ic);
     const t = document.createElement("span");
+    t.className = "tool-lbl";
     t.textContent = label;
     b.appendChild(t);
     b.addEventListener("click", onClick);
     return b;
   };
 
-  const backBtn = mkTool("Back", "◀", () => goBack());
-  const fwdBtn  = mkTool("Forward", "▶", () => goForward());
-  const upBtn   = mkTool("Up", "▲", () => goUp());
+  const backBtn = mkTool("Back",    ICONS.arrowLeft(20),  () => goBack());
+  const fwdBtn  = mkTool("Forward", ICONS.arrowRight(20), () => goForward());
+  const upBtn   = mkTool("Up",      ICONS.arrowUp(20),    () => goUp());
 
   toolbar.appendChild(backBtn);
   toolbar.appendChild(fwdBtn);
@@ -181,6 +202,7 @@ export function openExplorer(startPath = []) {
   const sCount = document.createElement("span"); sCount.className = "panel"; status.appendChild(sCount);
   const sPath  = document.createElement("span"); sPath.className  = "panel flex"; status.appendChild(sPath);
 
+  wrap.appendChild(menubar);
   wrap.appendChild(toolbar);
   wrap.appendChild(addr);
   wrap.appendChild(body);
@@ -276,24 +298,28 @@ export function openExplorer(startPath = []) {
     tw.className = "twisty";
     if (node.type === "folder" && node.children?.length) {
       const key = node === FS ? "Heaven OS:" : pathKey(path);
-      tw.textContent = expanded.has(key) ? "−" : "+";
+      const isOpen = expanded.has(key);
+      tw.innerHTML = `<span class="twisty-box">${isOpen ? "−" : "+"}</span>`;
       tw.addEventListener("click", (e) => {
         e.stopPropagation();
         if (expanded.has(key)) expanded.delete(key);
         else expanded.add(key);
         renderTree();
       });
-    } else {
-      tw.textContent = "";
     }
     li.appendChild(tw);
 
     // icon + label
     const ic = document.createElement("span");
     ic.className = "icon";
-    ic.textContent = node.icon || (node.type === "folder" ? "📁" : "📄");
+    if (node === FS) {
+      ic.innerHTML = ICONS.myComputer(16);
+    } else {
+      ic.innerHTML = iconFor(node, 16);
+    }
     li.appendChild(ic);
     const lbl = document.createElement("span");
+    lbl.className = "tree-label";
     lbl.textContent = node === FS ? "Heaven OS" : node.name;
     li.appendChild(lbl);
 
@@ -318,7 +344,7 @@ export function openExplorer(startPath = []) {
     addrField.innerHTML = "";
     const ic = document.createElement("span");
     ic.className = "icon";
-    ic.textContent = node.icon || (node.type === "folder" ? "📁" : "📄");
+    ic.innerHTML = currentPath.length === 0 ? ICONS.myComputer(16) : iconFor(node, 16);
     addrField.appendChild(ic);
     const txt = document.createElement("span");
     txt.textContent = "Heaven OS:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
@@ -344,7 +370,7 @@ export function openExplorer(startPath = []) {
         tile.tabIndex = 0;
         const tIc = document.createElement("div");
         tIc.className = "ic";
-        tIc.textContent = child.icon || (child.type === "folder" ? "📁" : "📄");
+        tIc.innerHTML = iconFor(child, 32);
         const tLbl = document.createElement("div");
         tLbl.className = "lbl";
         tLbl.textContent = child.name;
@@ -387,9 +413,11 @@ export function openExplorer(startPath = []) {
 
   render();
 
+  const initialTitle = currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS";
   winId = openWindow({
-    title: currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS",
-    icon: "📁",
+    title: initialTitle,
+    icon: currentPath.length === 0 ? ICONS.myComputer(14) : iconFor(findByPath(currentPath), 14),
+    iconHtml: true,
     content: wrap,
     width: 760,
     height: 480,
