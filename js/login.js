@@ -36,4 +36,31 @@ export function showLogin(onComplete) {
   });
   // Auto-focus the user tile so Enter works immediately
   setTimeout(() => userBtn.focus(), 30);
+
+  // Wire Shut Down — show the classic Win98 "It is now safe to turn off
+  // your computer." screen. Tapping it returns to the welcome dialog.
+  const shutdownBtn = overlay.querySelector("#login-shutdown");
+  shutdownBtn?.addEventListener("click", showShutdownScreen);
+
+  // Wire Sleep — fire the bouncing-name screensaver right from the login.
+  const sleepBtn = overlay.querySelector("#login-sleep");
+  sleepBtn?.addEventListener("click", () => {
+    import("./screensaver.js").then(m => m.startScreensaver());
+  });
+}
+
+function showShutdownScreen() {
+  const layer = document.createElement("div");
+  layer.className = "shutdown-screen";
+  layer.innerHTML = `
+    <div class="shutdown-text">
+      It is now safe to turn off<br>your computer.
+      <div class="shutdown-hint">(Tap to return)</div>
+    </div>
+  `;
+  document.body.appendChild(layer);
+  setTimeout(() => {
+    layer.addEventListener("click", () => layer.remove(), { once: true });
+    layer.addEventListener("touchstart", () => layer.remove(), { once: true });
+  }, 250);
 }

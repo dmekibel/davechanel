@@ -72,18 +72,39 @@
   font-size: 11px;
   background: var(--chrome);
 }
-.welcome-foot label { display: inline-flex; align-items: center; gap: 6px; cursor: default; }
+.welcome-foot label,
+.welcome-foot .welcome-showcheck { display: inline-flex; align-items: center; gap: 6px; cursor: default; }
+.welcome-buttons { display: flex; gap: 4px; }
+.welcome-btn,
 .welcome-close {
   background: var(--chrome);
   border: 2px solid;
   border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  padding: 3px 16px;
+  padding: 3px 14px;
   font-family: var(--ui-font);
   font-size: 11px;
+  min-width: 70px;
   cursor: default;
+  color: #000;
 }
+.welcome-btn[disabled] {
+  color: #888;
+  text-shadow: 1px 1px 0 var(--chrome-light);
+}
+.welcome-btn:not([disabled]):active,
 .welcome-close:active {
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
+.welcome-btn.next:not([disabled]) { outline: 1px dotted #000; outline-offset: -4px; }
+.welcome-pane ul { margin: 0 0 0.6em; padding-left: 18px; }
+.welcome-pane ul li { margin: 0 0 0.3em; }
+
+@media (max-width: 720px) {
+  .welcome-body { grid-template-columns: 130px 1fr; }
+  .welcome-toc li { padding: 6px 8px; font-size: 11px; }
+  .welcome-foot { flex-wrap: wrap; gap: 6px; }
+  .welcome-showcheck { font-size: 10px; }
+  .welcome-btn { min-width: 60px; padding: 3px 8px; font-size: 10px; }
 }
 
 /* === Settings (Display Properties tabbed dialog) ================== */
@@ -162,6 +183,30 @@
   border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
 }
 .settings-text { padding: 6px 4px; line-height: 1.5; font-size: 12px; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  font-size: 12px;
+  color: #000;
+}
+.settings-label {
+  flex: 0 0 100px;
+  font-weight: 700;
+  color: #333;
+}
+.settings-select {
+  flex: 1;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 2px 4px;
+  font-family: var(--ui-font);
+  font-size: 12px;
+  height: 22px;
+}
+.settings-hint { padding: 6px 4px; font-size: 11px; color: #444; line-height: 1.4; }
 .settings-foot {
   padding: 8px 12px;
   display: flex;
@@ -358,6 +403,8 @@
   line-height: 1.35;
 }
 
+.login-bottom-actions { display: flex; gap: 8px; align-items: center; }
+
 /* Bottom shutdown + helper — Win98 raised button on the blue stripe */
 .login-shutdown {
   background: var(--chrome);
@@ -389,6 +436,40 @@
   border-radius: 50%;
   font-size: 12px;
   border: 1px solid #5a1a02;
+}
+.login-shutdown .ic.ic-sleep {
+  background: radial-gradient(circle at 35% 35%, #aac8ff 0%, #4a78d3 70%, #1a3aa0 100%);
+  border: 1px solid #1a3aa0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Win98 "It is now safe to turn off your computer." screen */
+.shutdown-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 1000001;
+  display: grid;
+  place-items: center;
+  cursor: default;
+}
+.shutdown-text {
+  color: #ff8a3a;
+  font-family: "Courier New", monospace;
+  font-size: clamp(20px, 4vw, 36px);
+  text-align: center;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  text-transform: capitalize;
+  text-shadow: 0 0 12px rgba(255, 138, 58, 0.4);
+}
+.shutdown-hint {
+  margin-top: 22px;
+  font-size: 12px;
+  color: #aa6020;
+  letter-spacing: 0.4px;
+  text-transform: none;
 }
 .login-help { font-size: 11px; color: rgba(255,255,255,0.92); max-width: 50%; text-align: right; }
 
@@ -458,12 +539,51 @@ body {
   font-family: var(--ui-font);
   font-size: 12px;
   color: var(--text);
-  background:
-    radial-gradient(ellipse at 50% 70%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%),
-    linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  background: #008080;
+}
+
+/* === Wallpapers (driven by body[data-wallpaper]) =================== */
+
+body[data-wallpaper="heaven-sky"],
+body:not([data-wallpaper]) {
+  background:
+    radial-gradient(ellipse at 50% 70%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%),
+    linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
+}
+body[data-wallpaper="teal"]   { background: #008080; }
+body[data-wallpaper="black"]  { background: #1a1a1a; }
+body[data-wallpaper="purple"] {
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255,200,255,0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #2a1a4d 0%, #5b3a8e 60%, #1a1a3a 100%);
+}
+body[data-wallpaper="clouds"] {
+  background:
+    url("assets/icons/clouds.jpg") repeat,
+    #6dbcf0;
+  image-rendering: pixelated;
+}
+
+/* Mini-desktop preview inside Settings respects the same data-wp values */
+.mini-desk[data-wp="heaven-sky"] {
+  background:
+    radial-gradient(ellipse at 50% 70%, rgba(255,255,255,0.55) 0%, transparent 55%),
+    linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
+}
+.mini-desk[data-wp="teal"]   { background: #008080; }
+.mini-desk[data-wp="black"]  { background: #1a1a1a; }
+.mini-desk[data-wp="purple"] {
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255,200,255,0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #2a1a4d 0%, #5b3a8e 60%, #1a1a3a 100%);
+}
+.mini-desk[data-wp="clouds"] {
+  background: url("assets/icons/clouds.jpg") repeat;
+  image-rendering: pixelated;
+  background-size: 80px;
 }
 
 /* === Desktop ======================================================= */
@@ -675,7 +795,8 @@ body {
   list-style: none;
   margin: 0;
 }
-.start-menu-items.cascade { min-width: 180px; }
+.start-menu-items.cascade { min-width: 150px; max-width: 220px; }
+.start-menu-items.cascade .sm-lbl { overflow: hidden; text-overflow: ellipsis; }
 .start-menu-items li {
   cursor: default;
   display: flex;
@@ -1171,6 +1292,41 @@ body {
   gap: 14px 12px;
   align-content: start;
 }
+/* View mode variations on the right pane */
+.exp-grid.view-large {
+  grid-template-columns: repeat(auto-fill, 88px);
+  gap: 14px 12px;
+}
+.exp-grid.view-small {
+  grid-template-columns: repeat(auto-fill, 130px);
+  gap: 6px 8px;
+}
+.exp-grid.view-small .exp-tile {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 2px 4px;
+  text-align: left;
+}
+.exp-grid.view-small .exp-tile .ic { width: 16px; height: 16px; }
+.exp-grid.view-small .exp-tile .ic svg { width: 16px; height: 16px; }
+.exp-grid.view-small .exp-tile .lbl { max-width: none; line-height: 1.1; }
+.exp-grid.view-list {
+  display: block;
+}
+.exp-grid.view-list .exp-tile {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 6px;
+  text-align: left;
+  border: 1px dotted transparent;
+}
+.exp-grid.view-list .exp-tile .ic { width: 16px; height: 16px; flex: 0 0 16px; }
+.exp-grid.view-list .exp-tile .ic svg { width: 16px; height: 16px; }
+.exp-grid.view-list .exp-tile .lbl { max-width: none; line-height: 1.1; }
 .exp-tile {
   display: flex;
   flex-direction: column;

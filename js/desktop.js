@@ -42,7 +42,11 @@ function renderDesktopIcons() {
   const ul = document.getElementById("desktop-icons");
   ul.innerHTML = "";
 
-  const saved = loadIconPositions();
+  // On narrow screens (mobile), ignore previously saved icon positions —
+  // they were almost certainly saved on a wider screen and would push
+  // icons against the right wall.
+  const isNarrow = window.innerWidth < 720;
+  const saved = isNarrow ? {} : loadIconPositions();
   const all = [
     ...DESKTOP_SHORTCUTS.map(sc => ({
       name: sc.name,

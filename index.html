@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/reset.css?v=9">
-  <link rel="stylesheet" href="css/heaven-os.css?v=9">
-  <link rel="stylesheet" href="css/animations.css?v=9">
+  <link rel="stylesheet" href="css/reset.css?v=10">
+  <link rel="stylesheet" href="css/heaven-os.css?v=10">
+  <link rel="stylesheet" href="css/animations.css?v=10">
 </head>
 <body>
   <main id="desktop" class="desktop" aria-label="Heaven OS desktop">
@@ -69,14 +69,20 @@
     </div>
 
     <div class="login-stripe bottom">
-      <button class="login-shutdown" type="button" disabled>
-        <span class="ic" aria-hidden="true">⏻</span>
-        <span>Shut Down</span>
-      </button>
+      <div class="login-bottom-actions">
+        <button id="login-shutdown" class="login-shutdown" type="button">
+          <span class="ic" aria-hidden="true">⏻</span>
+          <span>Shut Down</span>
+        </button>
+        <button id="login-sleep" class="login-shutdown" type="button">
+          <span class="ic ic-sleep" aria-hidden="true">☾</span>
+          <span>Sleep</span>
+        </button>
+      </div>
       <div class="login-help">No password required. Click your name to enter the desktop.</div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=9"></script>
+  <script type="module" src="js/main.js?v=10"></script>
 </body>
 </html>

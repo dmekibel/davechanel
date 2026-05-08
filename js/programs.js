@@ -6,6 +6,7 @@ import { openWindow, closeWindow } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver } from "./screensaver.js";
+import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 
 const t = (s) => s;   // i18n removed; identity for now
 
@@ -431,10 +432,10 @@ export function openExplorer(startPath = []) {
       "View": [
         { label: "Refresh", action: render, accel: "R" },
         "sep",
-        { label: "Large Icons", action: () => {}, accel: "L" },
-        { label: "Small Icons", disabled: true },
-        { label: "List", disabled: true },
-        { label: "Details", disabled: true },
+        { label: "Large Icons", action: () => setView("large"), accel: "L" },
+        { label: "Small Icons", action: () => setView("small"), accel: "m" },
+        { label: "List",        action: () => setView("list"),  accel: "L" },
+        { label: "Details",     disabled: true },
       ],
       "Go": [
         { label: "Back",         action: goBack, accel: "B", disabledIf: () => histIdx <= 0 },
@@ -606,6 +607,87 @@ function openStub(title, message) {
 }
 
 export function openWelcome() {
+  // Multi-page Win98-flavored Welcome / Quick Tour with Back / Next / Close.
+  const PAGES = [
+    {
+      title: "Welcome",
+      body: `
+        <p><b>Welcome to Heaven OS</b> — the personal portfolio of <b>David Mekibel</b>.</p>
+        <p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years
+        of digital art, a decade of complex 3D, and at the cutting edge of AI
+        image and video since the field existed.</p>
+        <p>This is a fully working retro desktop. You'll find my fine-art
+        practice, the studio's commercial work, my CVs, and how to reach me.
+        Click <b>Next</b> for a 60-second tour, or <b>Close</b> if you'd
+        rather poke around on your own.</p>
+      `,
+    },
+    {
+      title: "How to navigate",
+      body: `
+        <p><b>Desktop icons</b> open windows. <b>Single-click</b> selects,
+        <b>double-click</b> opens. You can drag icons around to rearrange.</p>
+        <p><b>My Computer</b> is the main file explorer. Browse the whole
+        site from there.</p>
+        <p><b>Start menu</b> (bottom-left) has Programs, Documents, Settings,
+        plus Sleep / Log Out / Restart.</p>
+        <p><b>Drag windows</b> by their titlebar. Resize from the bottom-right
+        corner. Minimize, maximize, and close with the buttons in the
+        titlebar.</p>
+      `,
+    },
+    {
+      title: "My Fine Art",
+      body: `
+        <p>The artistic side of my practice. <b>ArtPrize 2024 + 2025</b>
+        finalist; winner of the Artist Seed Grant in New Media (2025). Style:
+        <b>Pop Renaissance</b> — high and low, sacred and secular collapsed
+        into one image.</p>
+        <p>Open <b>Fine Art</b> from the desktop. The folder contains my
+        artist CV and, when artwork files are added, selected pieces with
+        statements.</p>
+      `,
+    },
+    {
+      title: "Balancē Creative",
+      body: `
+        <p>The commercial side. Co-founded studio in Moscow since 2020.
+        Full creative pipeline: ideation, branding, AI visuals, 3D, motion,
+        VFX. <b>1000+ projects shipped.</b></p>
+        <p>Selected clients: Aeroflot, Redmond, Winline, Nature Siberica,
+        Ozon Fresh, Dota 2, Critical Ops, IRI. Music videos for Brezhneva,
+        Bilan, Morgenshtern via MIR Studios.</p>
+        <p>Open <b>Balancē Creative</b> for the commercial CV, Brand Work,
+        and Music Industry folders.</p>
+      `,
+    },
+    {
+      title: "Get In Touch",
+      body: `
+        <p>Open <b>Contact</b> from the desktop, or use the links below.</p>
+        <p>Email: <a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a><br>
+        LinkedIn: <a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a><br>
+        Instagram: <a href="https://instagram.com/dalledave" target="_blank" rel="noopener">@dalledave</a> (work) ·
+        <a href="https://instagram.com/mikdavidu" target="_blank" rel="noopener">@mikdavidu</a> (personal)<br>
+        Studio: <a href="https://balance-creative.com" target="_blank" rel="noopener">balance-creative.com</a></p>
+      `,
+    },
+    {
+      title: "Tips & easter eggs",
+      body: `
+        <p>A few hidden things worth trying:</p>
+        <ul>
+          <li><b>Start &gt; Sleep</b> — bouncing screensaver. Tap to wake.</li>
+          <li><b>Start &gt; Settings &gt; Display Properties</b> — change your wallpaper for real.</li>
+          <li><b>Start &gt; Programs &gt; Accessories</b> — cascading submenu.</li>
+          <li>Drag-select multiple desktop icons with a marquee, then drag them as a group.</li>
+          <li>Double-click a window's titlebar to maximize it.</li>
+        </ul>
+        <p>You're done with the tour. Click <b>Close</b> to start exploring.</p>
+      `,
+    },
+  ];
+
   const wrap = document.createElement("div");
   wrap.className = "welcome";
   wrap.innerHTML = `
@@ -614,69 +696,69 @@ export function openWelcome() {
       <div class="welcome-tag">Welcome</div>
     </div>
     <div class="welcome-body">
-      <ul class="welcome-toc" role="tablist">
-        <li role="tab" data-id="intro"   class="active">Start Here</li>
-        <li role="tab" data-id="art">My Fine Art</li>
-        <li role="tab" data-id="studio">Balancē Creative</li>
-        <li role="tab" data-id="contact">Get In Touch</li>
-      </ul>
-      <div class="welcome-pane">
-        <h3 class="welcome-h">Welcome</h3>
-        <p>Welcome to <b>Heaven OS</b>, the personal portfolio of David Mekibel.</p>
-        <p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years of digital art, a decade of complex 3D, and at the cutting edge of AI image and video since the field existed.</p>
-        <p style="margin-top:14px;color:#444;font-size:11px;">Click an item on the left to learn more. Or close this window and explore via <b>My Computer</b>.</p>
-      </div>
+      <ul class="welcome-toc" role="tablist"></ul>
+      <div class="welcome-pane"></div>
     </div>
     <div class="welcome-foot">
-      <label><input type="checkbox" id="welcome-show" checked> Show this screen each time Heaven OS starts.</label>
-      <button class="welcome-close" type="button">Close</button>
+      <label class="welcome-showcheck"><input type="checkbox" checked> Show this each time</label>
+      <div class="welcome-buttons">
+        <button class="welcome-btn back"  type="button">&lt; Back</button>
+        <button class="welcome-btn next"  type="button">Next &gt;</button>
+        <button class="welcome-btn close" type="button">Close</button>
+      </div>
     </div>
   `;
+
+  const toc       = wrap.querySelector(".welcome-toc");
+  const pane      = wrap.querySelector(".welcome-pane");
+  const backBtn   = wrap.querySelector(".welcome-btn.back");
+  const nextBtn   = wrap.querySelector(".welcome-btn.next");
+  const closeBtn  = wrap.querySelector(".welcome-btn.close");
+
+  PAGES.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.dataset.idx = String(i);
+    li.textContent = p.title;
+    if (i === 0) li.classList.add("active");
+    toc.appendChild(li);
+  });
+
+  let idx = 0;
+  function render() {
+    toc.querySelectorAll("li").forEach((n, i) => n.classList.toggle("active", i === idx));
+    pane.innerHTML = `<h3 class="welcome-h">${PAGES[idx].title}</h3>${PAGES[idx].body}`;
+    backBtn.toggleAttribute("disabled", idx === 0);
+    nextBtn.toggleAttribute("disabled", idx === PAGES.length - 1);
+  }
+
+  toc.addEventListener("click", (e) => {
+    const li = e.target.closest("[data-idx]");
+    if (!li) return;
+    idx = Number(li.dataset.idx);
+    render();
+  });
+  backBtn.addEventListener("click", () => { if (idx > 0) { idx--; render(); } });
+  nextBtn.addEventListener("click", () => { if (idx < PAGES.length - 1) { idx++; render(); } });
+
+  render();
 
   const id = openWindow({
     title: "Welcome to Heaven OS",
     icon: ICONS.notepad(14),
     iconHtml: true,
     content: wrap,
-    width: 560,
-    height: 360,
+    width: 580,
+    height: 400,
     flush: true,
   });
-
-  // TOC interactions
-  const PANES = {
-    intro: {
-      h: "Welcome",
-      body: "<p>Welcome to <b>Heaven OS</b>, the personal portfolio of David Mekibel.</p><p>Russian-Israeli artist. Co-founder of Balancē Creative. Twenty years of digital art, a decade of complex 3D, and at the cutting edge of AI image and video since the field existed.</p>",
-    },
-    art: {
-      h: "Fine Art",
-      body: "<p>The fine-art side of my practice. ArtPrize 2024 + 2025 finalist; winner of the Artist Seed Grant in New Media in 2025.</p><p>Open <b>Fine Art</b> from the desktop or <b>My Computer</b> to browse selected works and the artist CV.</p>",
-    },
-    studio: {
-      h: "Balancē Creative",
-      body: "<p>Co-founded studio. Full creative pipeline for brands: ideation, branding, AI visuals, 3D, motion graphics, VFX. 1000+ projects shipped.</p><p>Open <b>Balancē Creative</b> for the studio CV, brand work, and music industry work via MIR Studios.</p>",
-    },
-    contact: {
-      h: "Get In Touch",
-      body: "<p>Email: <a href='mailto:dmekibel@gmail.com'>dmekibel@gmail.com</a></p><p>LinkedIn: <a href='https://www.linkedin.com/in/david-mekibel' target='_blank' rel='noopener'>linkedin.com/in/david-mekibel</a></p><p>Instagram: @dalledave (work) · @mikdavidu (personal)</p>",
-    },
-  };
-  const toc = wrap.querySelector(".welcome-toc");
-  const pane = wrap.querySelector(".welcome-pane");
-  toc.addEventListener("click", (e) => {
-    const li = e.target.closest("[data-id]");
-    if (!li) return;
-    toc.querySelectorAll("li").forEach(n => n.classList.toggle("active", n === li));
-    const p = PANES[li.dataset.id];
-    pane.innerHTML = `<h3 class="welcome-h">${p.h}</h3>${p.body}`;
-  });
-  wrap.querySelector(".welcome-close").addEventListener("click", () => closeWindow(id));
-
+  closeBtn.addEventListener("click", () => closeWindow(id));
   return id;
 }
 
 export function openSettings() {
+  const initialWp = getWallpaper();
+  let pendingWp = initialWp;
+
   const wrap = document.createElement("div");
   wrap.className = "settings";
   wrap.innerHTML = `
@@ -687,50 +769,78 @@ export function openSettings() {
       <button role="tab" data-tab="effects">Effects</button>
       <button role="tab" data-tab="settings">Settings</button>
     </div>
-    <div class="settings-body" data-pane="background">
-      <div class="settings-preview">
-        <div class="monitor">
-          <div class="monitor-screen">
-            <div class="mini-desk"></div>
-          </div>
-          <div class="monitor-stand"></div>
-          <div class="monitor-base"></div>
-        </div>
-      </div>
-      <p>Wallpaper / theme pickers coming in a later build.</p>
-    </div>
+    <div class="settings-body"></div>
     <div class="settings-foot">
-      <button class="settings-btn primary" type="button">OK</button>
-      <button class="settings-btn" type="button">Cancel</button>
-      <button class="settings-btn" type="button">Apply</button>
+      <button class="settings-btn primary" type="button" data-act="ok">OK</button>
+      <button class="settings-btn" type="button" data-act="cancel">Cancel</button>
+      <button class="settings-btn" type="button" data-act="apply">Apply</button>
     </div>
   `;
 
-  const PANES = {
-    background:  "<p>Wallpaper picker — choose a Heaven OS background. Coming soon.</p>",
-    screensaver: "<p>Pick a screensaver. Currently: <b>Bouncing David Mekibel</b>. Activated via Start &gt; Sleep.</p>",
-    appearance:  "<p>Color schemes (Win98, Heaven Inc., Custom). Coming soon.</p>",
-    effects:     "<p>Smooth menu fade, drop shadows, etc. Coming soon.</p>",
-    settings:    "<p><b>Display:</b> Default Monitor on Heaven Inc. RealityEngine</p><p><b>Colors:</b> True Color</p><p><b>Screen area:</b> auto-fit window</p>",
-  };
   const body = wrap.querySelector(".settings-body");
   const tabs = wrap.querySelector(".settings-tabs");
 
-  // Save the original preview HTML so we can restore on Background
-  const previewHTML = body.innerHTML;
+  function renderTab(tab) {
+    body.dataset.pane = tab;
+    if (tab === "background") {
+      body.innerHTML = `
+        <div class="settings-preview">
+          <div class="monitor">
+            <div class="monitor-screen">
+              <div class="mini-desk" data-wp="${pendingWp}"></div>
+            </div>
+            <div class="monitor-stand"></div>
+            <div class="monitor-base"></div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label class="settings-label">Wallpaper</label>
+          <select class="settings-select" id="wp-select">
+            ${WALLPAPERS.map(w => `<option value="${w.id}" ${w.id === pendingWp ? "selected" : ""}>${w.label}</option>`).join("")}
+          </select>
+        </div>
+        <p class="settings-hint">Pick a wallpaper, then click <b>Apply</b> or <b>OK</b>. <b>Cancel</b> reverts.</p>
+      `;
+      const sel = body.querySelector("#wp-select");
+      const desk = body.querySelector(".mini-desk");
+      sel.addEventListener("change", () => {
+        pendingWp = sel.value;
+        desk.dataset.wp = pendingWp;
+      });
+    } else if (tab === "screensaver") {
+      body.innerHTML = `
+        <div class="settings-row">
+          <label class="settings-label">Screen Saver</label>
+          <select class="settings-select" disabled>
+            <option>Bouncing David Mekibel</option>
+          </select>
+        </div>
+        <p class="settings-hint">Activate manually from <b>Start &gt; Sleep</b>. Idle auto-trigger is not wired.</p>
+      `;
+    } else if (tab === "appearance") {
+      body.innerHTML = `
+        <p class="settings-hint">Color schemes (Win98 / Heaven Inc.) — coming soon.</p>
+      `;
+    } else if (tab === "effects") {
+      body.innerHTML = `
+        <p class="settings-hint">Menu fade, drop shadows, smooth scroll — coming soon.</p>
+      `;
+    } else if (tab === "settings") {
+      body.innerHTML = `
+        <div class="settings-row"><span class="settings-label">Display</span><span>Default Monitor on Heaven Inc. RealityEngine</span></div>
+        <div class="settings-row"><span class="settings-label">Colors</span><span>True Color (24 bit)</span></div>
+        <div class="settings-row"><span class="settings-label">Screen area</span><span>fit to window</span></div>
+      `;
+    }
+  }
 
   tabs.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-tab]");
     if (!btn) return;
     tabs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === btn));
-    const tab = btn.dataset.tab;
-    if (tab === "background") {
-      body.innerHTML = previewHTML;
-    } else {
-      body.innerHTML = `<div class="settings-text">${PANES[tab] || ""}</div>`;
-    }
-    body.dataset.pane = tab;
+    renderTab(btn.dataset.tab);
   });
+  renderTab("background");
 
   const id = openWindow({
     title: "Display Properties",
@@ -738,11 +848,20 @@ export function openSettings() {
     iconHtml: true,
     content: wrap,
     width: 460,
-    height: 380,
+    height: 420,
     flush: true,
   });
-  wrap.querySelectorAll(".settings-foot .settings-btn").forEach(b => {
-    b.addEventListener("click", () => closeWindow(id));
+
+  wrap.querySelector('[data-act="ok"]').addEventListener("click", () => {
+    setWallpaper(pendingWp);
+    closeWindow(id);
+  });
+  wrap.querySelector('[data-act="cancel"]').addEventListener("click", () => {
+    setWallpaper(initialWp);
+    closeWindow(id);
+  });
+  wrap.querySelector('[data-act="apply"]').addEventListener("click", () => {
+    setWallpaper(pendingWp);
   });
   return id;
 }

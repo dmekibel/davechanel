@@ -2,9 +2,11 @@
 
 import { initDesktop } from "./desktop.js";
 import { shouldShowLogin, showLogin } from "./login.js";
+import { applyWallpaper } from "./wallpaper.js";
 
 function boot() {
   disableZoom();
+  applyWallpaper();
   if (shouldShowLogin()) {
     showLogin(initDesktop);
   } else {
