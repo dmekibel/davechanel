@@ -56,55 +56,45 @@ function renderDesktopIcons() {
 function initMarquee() {
   const desktopEl = document.getElementById("desktop");
 
-  desktopEl.addEventListener("mousedown", (e) => {
-    if (e.button !== 0) return;
-    if (e.target.closest(".desktop-icon")) return;
-    if (e.target.closest(".window")) return;
-
+  const start = (clientX, clientY, additive, isTouch) => {
     const dRect = desktopEl.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const x0 = startX - dRect.left;
-    const y0 = startY - dRect.top;
-    const additive = e.shiftKey;
+    const x0 = clientX - dRect.left;
+    const y0 = clientY - dRect.top;
     let dragged = false;
     let mq = null;
 
-    // Snapshot of which icons were already selected (for shift-additive behavior)
     const initiallySelected = new Set(
       [...desktopEl.querySelectorAll(".desktop-icon.selected")]
     );
-
     if (!additive) {
       desktopEl.querySelectorAll(".desktop-icon.selected")
         .forEach(n => n.classList.remove("selected"));
     }
 
-    const onMove = (ev) => {
+    const move = (cx, cy, e) => {
       if (!dragged) {
-        if (Math.abs(ev.clientX - startX) < 3 && Math.abs(ev.clientY - startY) < 3) return;
+        if (Math.abs(cx - clientX) < 2 && Math.abs(cy - clientY) < 2) return;
         dragged = true;
         mq = document.createElement("div");
         mq.className = "marquee";
         desktopEl.appendChild(mq);
       }
-      const x1 = ev.clientX - dRect.left;
-      const y1 = ev.clientY - dRect.top;
+      if (e && e.cancelable) e.preventDefault();
+      const x1 = cx - dRect.left;
+      const y1 = cy - dRect.top;
       const left = Math.min(x0, x1);
       const top  = Math.min(y0, y1);
       const w = Math.abs(x1 - x0);
       const h = Math.abs(y1 - y0);
-      mq.style.left = left + "px";
-      mq.style.top = top + "px";
-      mq.style.width = w + "px";
-      mq.style.height = h + "px";
-
-      // Hit-test all desktop icons
+      mq.style.left   = left + "px";
+      mq.style.top    = top  + "px";
+      mq.style.width  = w    + "px";
+      mq.style.height = h    + "px";
       const right = left + w, bottom = top + h;
       desktopEl.querySelectorAll(".desktop-icon").forEach(icon => {
         const r = icon.getBoundingClientRect();
-        const iL = r.left - dRect.left;
-        const iT = r.top - dRect.top;
+        const iL = r.left  - dRect.left;
+        const iT = r.top   - dRect.top;
         const iR = r.right - dRect.left;
         const iB = r.bottom - dRect.top;
         const inMq = !(iR < left || iL > right || iB < top || iT > bottom);
@@ -115,14 +105,49 @@ function initMarquee() {
         }
       });
     };
-    const onUp = () => {
-      if (mq) mq.remove();
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+
+    const onMouseMove = (e) => move(e.clientX, e.clientY, e);
+    const onTouchMove = (e) => {
+      const p = e.touches[0] || e.changedTouches[0];
+      if (p) move(p.clientX, p.clientY, e);
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const cleanup = () => {
+      if (mq) mq.remove();
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup",   cleanup);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend",  cleanup);
+      document.removeEventListener("touchcancel", cleanup);
+    };
+
+    if (isTouch) {
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend",  cleanup);
+      document.addEventListener("touchcancel", cleanup);
+    } else {
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup",   cleanup);
+    }
+  };
+
+  // Mouse
+  desktopEl.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest(".desktop-icon")) return;
+    if (e.target.closest(".window")) return;
+    if (e.target.closest(".taskbar")) return;
+    start(e.clientX, e.clientY, e.shiftKey, false);
   });
+
+  // Touch
+  desktopEl.addEventListener("touchstart", (e) => {
+    if (e.target.closest(".desktop-icon")) return;
+    if (e.target.closest(".window")) return;
+    if (e.target.closest(".taskbar")) return;
+    const p = e.touches[0];
+    if (!p) return;
+    start(p.clientX, p.clientY, false, true);
+  }, { passive: true });
 }
 
 function makeIcon({ name, iconHtml, open }) {

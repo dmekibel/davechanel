@@ -576,6 +576,12 @@ export function openProgram(progId) {
     case "contact":   return openCompose();
     case "recycle":   return openExplorer(["Recycle Bin"]);
     case "explorer":  return openExplorer([]);
+    case "logout":    return logout();
     default:          return null;
   }
+}
+
+function logout() {
+  try { sessionStorage.removeItem("heaven-os.logged-in"); } catch (_) {}
+  window.location.reload();
 }

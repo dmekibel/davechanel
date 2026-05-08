@@ -16,7 +16,14 @@ export const FS = {
       type: "folder",
       icon: "🖼",
       children: [
-        // Populate with David's art pieces in v0.3
+        {
+          name: "Fine Art CV.txt",
+          type: "file",
+          icon: "📄",
+          kind: "notepad",
+          src: "content/fine-art-cv.txt",
+        },
+        // Populate with David's art pieces in v0.6
         // e.g. ArtPrize 2024 (Madonna / Mnemosyne), ArtPrize 2025 winning piece,
         // Heaven Inc, Transhuman, Cyber Pink, etc.
       ],
@@ -26,6 +33,13 @@ export const FS = {
       type: "folder",
       icon: "◈",
       children: [
+        {
+          name: "Commercial CV.txt",
+          type: "file",
+          icon: "📄",
+          kind: "notepad",
+          src: "content/commercial-cv.txt",
+        },
         {
           name: "About the studio.txt",
           type: "file",
