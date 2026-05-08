@@ -262,7 +262,7 @@ export function minimize(id) {
 
 export function toggleMaximize(id) {
   const rec = windows.get(id);
-  if (!rec || isMobile()) return;
+  if (!rec) return;
   if (rec.maximized) {
     rec.el.classList.remove("maximized");
     if (rec.prev) {
