@@ -45,6 +45,52 @@
     </ul>
   </nav>
 
+  <!-- XP-style welcome / login screen (shown on first visit per session) -->
+  <div id="login-overlay" class="login-overlay" hidden>
+    <div class="login-stripe top"></div>
+
+    <div class="login-main">
+      <div class="login-left">
+        <div class="login-logo">
+          Heaven<span class="login-logo-sub">OS</span>
+        </div>
+        <div class="login-brand">a <b>Heaven Inc.</b> production</div>
+        <div class="login-tagline">To begin, click your user name</div>
+      </div>
+
+      <div class="login-divider" aria-hidden="true"></div>
+
+      <div class="login-right">
+        <button id="login-user" class="login-user" type="button">
+          <div class="login-avatar">
+            <svg viewBox="0 0 24 24" width="48" height="48" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0"  y="0"  width="24" height="24" fill="#fdd55d"/>
+              <rect x="8"  y="4"  width="8"  height="6" fill="#fcd5b8"/>
+              <rect x="9"  y="10" width="6"  height="2" fill="#fcd5b8"/>
+              <rect x="2"  y="14" width="20" height="10" fill="#1f3f80"/>
+              <rect x="6"  y="14" width="12" height="2"  fill="#fff"/>
+              <rect x="10" y="6"  width="1"  height="1" fill="#000"/>
+              <rect x="13" y="6"  width="1"  height="1" fill="#000"/>
+              <rect x="11" y="8"  width="2"  height="1" fill="#a86040"/>
+            </svg>
+          </div>
+          <div class="login-meta">
+            <div class="login-name">David Mekibel</div>
+            <div class="login-intro">Russian-Israeli artist. Co-founder of Balancē Creative.</div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="login-stripe bottom">
+      <div class="login-power" aria-hidden="true">
+        <span class="login-power-ic">⏻</span>
+        <span class="login-power-label">Turn off computer</span>
+      </div>
+      <div class="login-help">After you log on, the desktop loads. There is no password.</div>
+    </div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

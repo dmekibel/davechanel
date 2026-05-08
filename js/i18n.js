@@ -65,6 +65,12 @@ const RU = {
   "About the studio.txt": "О студии.txt",
   "Brand Work": "Бренды",
   "Music Industry": "Музыкальная индустрия",
+
+  // Login screen
+  "To begin, click your user name": "Чтобы начать, выберите имя пользователя",
+  "Turn off computer": "Выключить компьютер",
+  "Russian-Israeli artist. Co-founder of Balancē Creative.": "Русско-израильский художник. Сооснователь Balancē Creative.",
+  "After you log on, the desktop loads. There is no password.": "После входа загрузится рабочий стол. Пароля нет.",
 };
 
 const EN = {};   // identity (keys === values)

@@ -1,3 +1,138 @@
+/* === Welcome / login screen (XP-style) ============================ */
+
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #245edc 0%, #2862d3 50%, #1f53c0 100%);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000000;
+  font-family: "Tahoma", "Geneva", sans-serif;
+  color: #fff;
+  user-select: none;
+  transition: opacity 0.45s ease;
+}
+.login-overlay[hidden] { display: none; }
+.login-overlay.fade-out { opacity: 0; pointer-events: none; }
+
+.login-stripe {
+  background: linear-gradient(180deg, #5b8fff 0%, #4378e6 100%);
+  border-top:    1px solid rgba(255,255,255,0.5);
+  border-bottom: 1px solid rgba(0,0,0,0.25);
+  flex: 0 0 auto;
+}
+.login-stripe.top { height: 46px; }
+.login-stripe.bottom {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  font-size: 12px;
+  color: #f0f4ff;
+}
+
+.login-power {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.login-power-ic {
+  width: 22px; height: 22px;
+  background: radial-gradient(circle at 35% 35%, #ff8c5e 0%, #d34a1e 70%, #8e2a08 100%);
+  color: #fff;
+  font-size: 14px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow: 0 0 6px rgba(255,255,255,0.25);
+}
+.login-help { font-size: 11px; opacity: 0.85; max-width: 50%; text-align: right; }
+
+.login-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 2px 1fr;
+  align-items: center;
+  padding: 0 8%;
+  gap: 50px;
+}
+.login-left  { text-align: right; }
+.login-right { text-align: left; }
+.login-divider {
+  width: 2px; height: 60%;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.5) 35%, rgba(255,255,255,0.5) 65%, transparent 100%);
+}
+
+.login-logo {
+  font-family: "VT323", monospace;
+  font-size: 76px;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -1px;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.25);
+}
+.login-logo-sub {
+  font-size: 30px;
+  margin-left: 6px;
+  background: var(--gold, #d6a72a);
+  color: #1a1a1a;
+  padding: 2px 8px;
+  vertical-align: 12px;
+  font-weight: 700;
+  text-shadow: none;
+}
+.login-brand { font-size: 12px; opacity: 0.7; margin-top: 4px; letter-spacing: 0.6px; }
+.login-brand b { font-weight: 700; }
+.login-tagline { margin-top: 28px; font-size: 14px; opacity: 0.95; }
+
+.login-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 22px 8px 8px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid transparent;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.login-user:hover,
+.login-user:focus-visible {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.4);
+  box-shadow: 0 0 14px rgba(255,255,255,0.18);
+  outline: none;
+}
+.login-avatar {
+  width: 56px; height: 56px;
+  background: #fff;
+  border: 3px solid rgba(255,255,255,0.7);
+  display: grid; place-items: center;
+  image-rendering: pixelated;
+}
+.login-avatar svg { width: 100%; height: 100%; }
+.login-meta { text-align: left; }
+.login-name { font-size: 18px; font-weight: 700; line-height: 1.1; }
+.login-intro { font-size: 12px; margin-top: 4px; opacity: 0.9; max-width: 280px; line-height: 1.35; }
+
+@media (max-width: 720px) {
+  .login-main {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 0 24px;
+    text-align: center;
+  }
+  .login-left, .login-right { text-align: center; }
+  .login-divider { display: none; }
+  .login-logo { font-size: 56px; }
+  .login-logo-sub { font-size: 22px; vertical-align: 8px; }
+  .login-tagline { margin-top: 14px; font-size: 12px; }
+  .login-help { display: none; }
+  .login-stripe.bottom { justify-content: center; }
+}
+
 /* === Heaven OS — chrome ============================================ */
 
 :root {
