@@ -415,17 +415,8 @@ body {
 }
 .start-menu[hidden] { display: none; }
 .start-menu-rail {
-  width: 28px;
+  width: 22px;
   background: linear-gradient(180deg, #00007f 0%, #1084d0 100%);
-  color: #fff;
-  font-family: var(--pixel-font);
-  font-size: 22px;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  text-align: center;
-  padding: 8px 0;
-  letter-spacing: 1px;
-  font-weight: 700;
 }
 .start-menu-items { flex: 1; padding: 2px; font-size: 12px; }
 .start-menu-items li {
