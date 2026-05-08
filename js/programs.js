@@ -20,8 +20,8 @@ async function loadText(file) {
 }
 
 export async function openNotepad(file) {
-  const root = document.createElement("div");
-  root.className = "notepad";
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "display:flex;flex-direction:column;height:100%;";
 
   const menu = document.createElement("div");
   menu.className = "window-menubar";
@@ -31,25 +31,18 @@ export async function openNotepad(file) {
     span.textContent = m;
     menu.appendChild(span);
   }
-
-  const text = await loadText(file);
-  const pre = document.createElement("pre");
-  pre.style.margin = "0";
-  pre.textContent = text;
-  root.appendChild(pre);
-
-  // Window expects a single content element; wrap menu+notepad
-  const wrap = document.createElement("div");
-  wrap.style.display = "flex";
-  wrap.style.flexDirection = "column";
-  wrap.style.height = "100%";
   wrap.appendChild(menu);
-  const scroller = document.createElement("div");
-  scroller.style.flex = "1";
-  scroller.style.overflow = "auto";
-  scroller.style.background = "#fff";
-  scroller.appendChild(root);
-  wrap.appendChild(scroller);
+
+  // Scrollable notepad body (this is what gets the Win98 scrollbar)
+  const body = document.createElement("div");
+  body.className = "notepad";
+  body.style.flex = "1";
+  body.style.overflow = "auto";
+  body.style.minHeight = "0";
+  const pre = document.createElement("pre");
+  pre.textContent = await loadText(file);
+  body.appendChild(pre);
+  wrap.appendChild(body);
 
   return openWindow({
     title: file.name,

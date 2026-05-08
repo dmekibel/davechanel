@@ -315,6 +315,102 @@ body {
 }
 .window-content.flush { margin: 0; border: 0; background: var(--chrome); }
 
+/* === Win98 scrollbars (apply to anything that scrolls inside the OS) */
+.window-content,
+.window-content *,
+.notepad,
+.exp-tree,
+.exp-pane,
+.compose .body {
+  scrollbar-width: auto;
+  scrollbar-color: #c3c3c3 #ffffff;
+}
+.window-content::-webkit-scrollbar,
+.notepad::-webkit-scrollbar,
+.exp-tree::-webkit-scrollbar,
+.exp-pane::-webkit-scrollbar,
+.compose .body::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+.window-content::-webkit-scrollbar-track,
+.notepad::-webkit-scrollbar-track,
+.exp-tree::-webkit-scrollbar-track,
+.exp-pane::-webkit-scrollbar-track,
+.compose .body::-webkit-scrollbar-track {
+  background:
+    repeating-conic-gradient(#c3c3c3 0% 25%, #ffffff 0% 50%) 50% / 2px 2px;
+}
+.window-content::-webkit-scrollbar-corner,
+.exp-pane::-webkit-scrollbar-corner {
+  background: #c3c3c3;
+}
+.window-content::-webkit-scrollbar-thumb,
+.notepad::-webkit-scrollbar-thumb,
+.exp-tree::-webkit-scrollbar-thumb,
+.exp-pane::-webkit-scrollbar-thumb,
+.compose .body::-webkit-scrollbar-thumb {
+  background: #c3c3c3;
+  border: 2px solid;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-right-color: #5a5a5a;
+  border-bottom-color: #5a5a5a;
+  box-shadow: inset -1px -1px 0 #5a5a5a, inset 1px 1px 0 #dfdfdf;
+}
+.window-content::-webkit-scrollbar-button,
+.notepad::-webkit-scrollbar-button,
+.exp-tree::-webkit-scrollbar-button,
+.exp-pane::-webkit-scrollbar-button,
+.compose .body::-webkit-scrollbar-button {
+  display: block;
+  background: #c3c3c3;
+  width: 16px;
+  height: 16px;
+  border: 2px solid;
+  border-top-color: #ffffff;
+  border-left-color: #ffffff;
+  border-right-color: #5a5a5a;
+  border-bottom-color: #5a5a5a;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.window-content::-webkit-scrollbar-button:vertical:start {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M1 5 L4 2 L7 5 Z' fill='%23000'/></svg>");
+}
+.window-content::-webkit-scrollbar-button:vertical:end,
+.notepad::-webkit-scrollbar-button:vertical:end,
+.exp-pane::-webkit-scrollbar-button:vertical:end,
+.exp-tree::-webkit-scrollbar-button:vertical:end,
+.compose .body::-webkit-scrollbar-button:vertical:end {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M1 3 L4 6 L7 3 Z' fill='%23000'/></svg>");
+}
+.window-content::-webkit-scrollbar-button:vertical:start,
+.notepad::-webkit-scrollbar-button:vertical:start,
+.exp-pane::-webkit-scrollbar-button:vertical:start,
+.exp-tree::-webkit-scrollbar-button:vertical:start,
+.compose .body::-webkit-scrollbar-button:vertical:start {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M1 5 L4 2 L7 5 Z' fill='%23000'/></svg>");
+}
+.window-content::-webkit-scrollbar-button:horizontal:start,
+.exp-pane::-webkit-scrollbar-button:horizontal:start {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M5 1 L2 4 L5 7 Z' fill='%23000'/></svg>");
+}
+.window-content::-webkit-scrollbar-button:horizontal:end,
+.exp-pane::-webkit-scrollbar-button:horizontal:end {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'><path d='M3 1 L6 4 L3 7 Z' fill='%23000'/></svg>");
+}
+.window-content::-webkit-scrollbar-button:active,
+.notepad::-webkit-scrollbar-button:active,
+.exp-pane::-webkit-scrollbar-button:active,
+.exp-tree::-webkit-scrollbar-button:active,
+.compose .body::-webkit-scrollbar-button:active {
+  border-top-color: #5a5a5a;
+  border-left-color: #5a5a5a;
+  border-right-color: #ffffff;
+  border-bottom-color: #ffffff;
+}
+
 /* Resize handles (8 directions) */
 .resize-handle {
   position: absolute;
@@ -640,8 +736,22 @@ body {
     grid-template-columns: repeat(auto-fill, 80px);
     gap: 10px;
   }
-  /* keep windows as floating windows on mobile, just hide tiny resize handles */
+  /* On mobile only the bottom-right corner stays as a resize grip,
+     so it doesn't conflict with the min/max/close buttons. */
   .window .resize-handle { display: none; }
+  .window .rh-se {
+    display: block;
+    width: 22px;
+    height: 22px;
+    right: 0;
+    bottom: 0;
+    background:
+      repeating-linear-gradient(135deg,
+        transparent 0 3px,
+        rgba(0,0,0,0.55) 3px 4px,
+        transparent 4px 7px);
+    pointer-events: auto;
+  }
   /* tree shrinks on small screens */
   .exp-body { grid-template-columns: 130px 1fr; }
 }

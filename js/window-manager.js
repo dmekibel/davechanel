@@ -87,7 +87,12 @@ function makeResizeHandles(rec) {
     const h = document.createElement("div");
     h.className = `resize-handle rh-${d}`;
     h.dataset.dir = d;
-    h.addEventListener("mousedown", (e) => startResize(rec.id, d, e));
+    h.addEventListener("mousedown", (e) => startResize(rec.id, d, e, false));
+    h.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startResize(rec.id, d, e.touches[0], true);
+    }, { passive: false });
     frag.appendChild(h);
   }
   return frag;
@@ -121,11 +126,13 @@ function startDrag(id, ev, isTouch = false) {
   document.addEventListener(isTouch ? "touchend"  : "mouseup",   onUp);
 }
 
-function startResize(id, dir, ev) {
-  ev.preventDefault();
-  ev.stopPropagation();
+function startResize(id, dir, ev, isTouch = false) {
+  if (!isTouch) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
   const rec = windows.get(id);
-  if (!rec || rec.maximized || isMobile()) return;
+  if (!rec || rec.maximized) return;
   bringToFront(id);
   const startX = ev.clientX;
   const startY = ev.clientY;
@@ -136,8 +143,11 @@ function startResize(id, dir, ev) {
   const minW = 240, minH = 140;
 
   const onMove = (e) => {
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    if (isTouch && e.cancelable) e.preventDefault();
+    const p = isTouch ? (e.touches?.[0] || e.changedTouches?.[0]) : e;
+    if (!p) return;
+    const dx = p.clientX - startX;
+    const dy = p.clientY - startY;
     let w = startW, h = startH, l = startL, t = startT;
     if (dir.includes("e")) w = Math.max(minW, startW + dx);
     if (dir.includes("s")) h = Math.max(minH, startH + dy);
@@ -157,11 +167,11 @@ function startResize(id, dir, ev) {
     rec.el.style.top    = t + "px";
   };
   const onUp = () => {
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
+    document.removeEventListener(isTouch ? "touchmove" : "mousemove", onMove);
+    document.removeEventListener(isTouch ? "touchend"  : "mouseup",   onUp);
   };
-  document.addEventListener("mousemove", onMove);
-  document.addEventListener("mouseup", onUp);
+  document.addEventListener(isTouch ? "touchmove" : "mousemove", onMove, { passive: false });
+  document.addEventListener(isTouch ? "touchend"  : "mouseup",   onUp);
 }
 
 function makeTaskbarEntry(rec) {
