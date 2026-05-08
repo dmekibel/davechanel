@@ -28,7 +28,10 @@ function disableZoom() {
     }
   });
 
-  // Mobile: pinch with two fingers
+  // Mobile: pinch with two fingers — block both at start and during move
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
   document.addEventListener("touchmove", (e) => {
     if (e.touches.length > 1) e.preventDefault();
   }, { passive: false });

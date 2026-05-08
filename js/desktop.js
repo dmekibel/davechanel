@@ -25,16 +25,23 @@ export function initDesktop() {
   initReflow();
 }
 
-// Re-lay-out the desktop icon grid when the viewport changes (orientation
-// flip, browser resize). Icons that ended up off-screen get pushed back
-// into the new viable grid.
+// Re-lay-out the desktop icon grid only when the viewport ORIENTATION
+// changes — not on every resize tick (mobile Chrome fires resize on
+// address-bar collapse / keyboard show, which would cause flickery
+// re-renders that look like the page is zooming).
 function initReflow() {
   let timer = null;
+  const portraitMql = window.matchMedia("(orientation: portrait)");
+  let last = portraitMql.matches ? "p" : "l";
   const reflow = () => {
+    const cur = portraitMql.matches ? "p" : "l";
+    if (cur === last) return;
+    last = cur;
     clearTimeout(timer);
-    timer = setTimeout(() => renderDesktopIcons(), 180);
+    timer = setTimeout(() => renderDesktopIcons(), 220);
   };
-  window.addEventListener("resize", reflow);
+  if (portraitMql.addEventListener) portraitMql.addEventListener("change", reflow);
+  else if (portraitMql.addListener) portraitMql.addListener(reflow);
   window.addEventListener("orientationchange", reflow);
 }
 
