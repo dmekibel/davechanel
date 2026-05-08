@@ -42,11 +42,27 @@ function renderDesktopIcons() {
   const ul = document.getElementById("desktop-icons");
   ul.innerHTML = "";
 
-  // On narrow screens (mobile), ignore previously saved icon positions —
-  // they were almost certainly saved on a wider screen and would push
-  // icons against the right wall.
+  // Load saved positions, but only TRUST a position if it fits cleanly in
+  // the current viewport. Anything that would push an icon against (or past)
+  // the right or bottom edge gets discarded so we fall back to the default
+  // grid. This catches the common case where positions saved on a wider
+  // screen would otherwise hug the right wall on mobile.
+  const desktopEl_ = document.getElementById("desktop");
+  const dW_ = desktopEl_?.clientWidth  || window.innerWidth;
+  const dH_ = desktopEl_?.clientHeight || (window.innerHeight - 30);
   const isNarrow = window.innerWidth < 720;
-  const saved = isNarrow ? {} : loadIconPositions();
+  const ICON_W_ = 84, ICON_H_ = 80;
+  const rawSaved = isNarrow ? {} : loadIconPositions();
+  const saved = {};
+  for (const [name, p] of Object.entries(rawSaved)) {
+    if (!Array.isArray(p) || p.length !== 2) continue;
+    const [x, y] = p;
+    if (typeof x !== "number" || typeof y !== "number") continue;
+    if (x < 0 || y < 0) continue;
+    if (x > dW_ - ICON_W_ - 4) continue;   // would touch / pass right wall
+    if (y > dH_ - ICON_H_ - 4) continue;   // would touch / pass bottom
+    saved[name] = p;
+  }
   const all = [
     ...DESKTOP_SHORTCUTS.map(sc => ({
       name: sc.name,
@@ -317,6 +333,20 @@ function makeIcon({ name, iconHtml, open }) {
     } else {
       document.querySelectorAll(".desktop-icon.selected").forEach(n => n.classList.remove("selected"));
       li.classList.add("selected");
+    }
+  });
+  // Touch: manual double-tap detection — dblclick is unreliable on mobile.
+  let lastTap = 0;
+  li.addEventListener("touchend", (e) => {
+    if (li.dataset.justDragged === "1") return;
+    if (e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    if (now - lastTap < 350) {
+      lastTap = 0;
+      e.preventDefault();
+      open();
+    } else {
+      lastTap = now;
     }
   });
   return li;

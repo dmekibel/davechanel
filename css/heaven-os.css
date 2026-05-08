@@ -4,8 +4,27 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--chrome);
   font-family: var(--ui-font);
+  /* Iconic Win98 Welcome backdrop: clouds across the sky + a soft
+     mountain silhouette band at the bottom of the window. */
+  background:
+    /* Mountain silhouette band */
+    linear-gradient(180deg, transparent 78%, rgba(40,30,60,0.18) 78%, rgba(40,30,60,0.42) 100%),
+    /* Sky + clouds */
+    url("assets/icons/clouds.jpg") repeat-x left top / auto 100%,
+    #6dbcf0;
+  image-rendering: pixelated;
+  position: relative;
+}
+/* Mountain silhouette as a small SVG along the bottom */
+.welcome::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 36px;
+  height: 22px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 22' preserveAspectRatio='none'><polygon points='0,22 14,8 24,16 36,4 50,18 62,10 78,2 92,14 108,6 122,16 138,8 150,2 168,12 180,4 200,16 200,22' fill='%231a1830'/></svg>") repeat-x bottom / 200px 22px;
+  opacity: 0.55;
+  pointer-events: none;
 }
 .welcome-body {
   flex: 1;

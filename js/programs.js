@@ -374,13 +374,27 @@ export function openExplorer(startPath = []) {
           if (child.type === "folder") navigateTo([...currentPath, child.name]);
           else openFile(child);
         };
-        tile.addEventListener("click", () => {
+        const select = () => {
           grid.querySelectorAll(".exp-tile.selected").forEach(n => n.classList.remove("selected"));
           tile.classList.add("selected");
-        });
+        };
+        tile.addEventListener("click", select);
         tile.addEventListener("dblclick", open);
         tile.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
+        });
+        // Touch: manual double-tap detection (dblclick is unreliable on mobile)
+        let lastTap = 0;
+        tile.addEventListener("touchend", (e) => {
+          if (e.changedTouches.length !== 1) return;
+          const now = Date.now();
+          if (now - lastTap < 350) {
+            lastTap = 0;
+            e.preventDefault();
+            open();
+          } else {
+            lastTap = now;
+          }
         });
         grid.appendChild(tile);
       }
