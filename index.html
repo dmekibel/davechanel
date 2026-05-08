@@ -3,153 +3,45 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Heaven OS — Booting</title>
-  <meta name="description" content="Heaven OS, the portfolio of Dave Chanel / David Mekibel. Currently booting.">
+  <title>Heaven OS — David Mekibel</title>
+  <meta name="description" content="Heaven OS — the portfolio of David Mekibel / Dave Chanel. AI artist, creative director, co-founder of Balancē Creative.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font-family: "VT323", "Courier New", monospace;
-      color: #1a1a1a;
-      background:
-        radial-gradient(ellipse at 50% 65%, #ffffff 0%, rgba(255,255,255,0) 55%),
-        linear-gradient(180deg, #6dbcf0 0%, #aedcff 50%, #fff6c8 100%);
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      overflow: hidden;
-    }
-
-    .dialog {
-      width: min(440px, calc(100% - 32px));
-      background: #c3c3c3;
-      border: 2px solid;
-      border-color: #ffffff #5a5a5a #5a5a5a #ffffff;
-      box-shadow: 2px 2px 0 #000;
-      font-size: 22px;
-      line-height: 1.2;
-    }
-    .titlebar {
-      background: linear-gradient(90deg, #00007f 0%, #1084d0 100%);
-      color: #fff;
-      padding: 4px 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .titlebar-buttons { display: flex; gap: 2px; }
-    .tb-btn {
-      width: 18px; height: 16px;
-      background: #c3c3c3;
-      border: 1px solid;
-      border-color: #ffffff #5a5a5a #5a5a5a #ffffff;
-      color: #000;
-      font-family: "Tahoma", sans-serif;
-      font-size: 11px;
-      line-height: 1;
-      display: grid;
-      place-items: center;
-    }
-    .body {
-      padding: 18px 20px 20px;
-    }
-    .row { display: flex; gap: 14px; align-items: flex-start; }
-    .icon {
-      flex: 0 0 40px;
-      width: 40px; height: 40px;
-      background: #ffe9a8;
-      border: 2px solid #5a5a5a;
-      display: grid;
-      place-items: center;
-      font-size: 26px;
-      color: #b8860b;
-    }
-    h1 { margin: 0 0 6px; font-size: 26px; font-weight: 400; }
-    p { margin: 0; }
-    .meta { margin-top: 14px; font-size: 18px; color: #333; }
-    .meta b { color: #000; }
-    .actions {
-      margin-top: 18px;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .ok {
-      background: #c3c3c3;
-      border: 2px solid;
-      border-color: #ffffff #5a5a5a #5a5a5a #ffffff;
-      padding: 4px 22px;
-      font-family: inherit;
-      font-size: 20px;
-      cursor: default;
-    }
-
-    .taskbar {
-      position: fixed;
-      left: 0; right: 0; bottom: 0;
-      height: 30px;
-      background: #c3c3c3;
-      border-top: 2px solid #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 6px;
-      font-size: 18px;
-    }
-    .start {
-      background: #c3c3c3;
-      border: 2px solid;
-      border-color: #ffffff #5a5a5a #5a5a5a #ffffff;
-      padding: 1px 10px;
-      font-weight: 700;
-    }
-    .clock {
-      border: 1px solid;
-      border-color: #5a5a5a #ffffff #ffffff #5a5a5a;
-      padding: 1px 10px;
-    }
-  </style>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/heaven-os.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
-  <div class="dialog" role="dialog" aria-labelledby="t">
-    <div class="titlebar">
-      <span>Heaven OS</span>
-      <div class="titlebar-buttons">
-        <div class="tb-btn">_</div>
-        <div class="tb-btn">x</div>
-      </div>
+  <main id="desktop" class="desktop" aria-label="Heaven OS desktop">
+    <ul id="desktop-icons" class="desktop-icons" role="list"></ul>
+    <div id="windows-root" class="windows-root" aria-live="polite"></div>
+  </main>
+
+  <footer id="taskbar" class="taskbar" aria-label="Taskbar">
+    <button id="start-btn" class="start" type="button" aria-haspopup="menu" aria-expanded="false">
+      <span class="start-logo" aria-hidden="true">✦</span>
+      <span class="start-text">Start</span>
+    </button>
+    <ul id="taskbar-entries" class="taskbar-entries" role="list"></ul>
+    <div class="tray">
+      <span id="clock" class="clock" aria-label="Current time">--:--</span>
     </div>
-    <div class="body">
-      <div class="row">
-        <div class="icon" aria-hidden="true">i</div>
-        <div>
-          <h1 id="t">System is booting...</h1>
-          <p>Heaven OS is being installed.</p>
-          <p class="meta">User: <b>Dave Chanel</b><br>Build: 0.0.1 — preview</p>
-        </div>
-      </div>
-      <div class="actions"><button class="ok" type="button" disabled>OK</button></div>
-    </div>
-  </div>
-  <div class="taskbar" aria-hidden="true">
-    <div class="start">Start</div>
-    <div class="clock" id="clock">--:--</div>
-  </div>
-  <script>
-    (function () {
-      var el = document.getElementById("clock");
-      function tick() {
-        var d = new Date();
-        var h = d.getHours(), m = d.getMinutes();
-        el.textContent = (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
-      }
-      tick();
-      setInterval(tick, 30000);
-    })();
-  </script>
+  </footer>
+
+  <nav id="start-menu" class="start-menu" hidden>
+    <div class="start-menu-rail" aria-hidden="true">Heaven OS</div>
+    <ul class="start-menu-items" role="menu">
+      <li role="menuitem" data-program="fine-art">Fine Art</li>
+      <li role="menuitem" data-program="balance">Balancē Creative</li>
+      <li role="menuitem" data-program="about">About Me</li>
+      <li role="menuitem" data-program="showreel">Showreel</li>
+      <li role="menuitem" data-program="contact">Contact</li>
+      <li class="sep" role="separator"></li>
+      <li role="menuitem" data-program="recycle">Recycle Bin</li>
+    </ul>
+  </nav>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

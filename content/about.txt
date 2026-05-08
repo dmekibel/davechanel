@@ -1,0 +1,58 @@
+ABOUT ME.TXT
+============================================================
+Last modified: 05/08/2026
+
+Hi. I'm David Mekibel.
+
+A Russian-Israeli artist working in the space between
+digital nostalgia, mythology, religion, and art history.
+
+I've been making computer-based art since I was a kid,
+shaped by the visual world of Windows XP, 90s television,
+and the early 2000s internet. Those colors, textures, and
+moods became the foundation of how I see and how I make.
+Nostalgia isn't a theme in the work, it's the whole frame.
+
+I trained as a 3D artist (BVA, Emerson College, 2018) and
+worked professionally in 3D and motion. The practice has
+grown more painterly and symbolic over the years, blending
+pop culture, mythological references, and personal memory
+into a style I call Pop Renaissance.
+
+------------------------------------------------------------
+PROFESSIONAL EXPERIENCE
+------------------------------------------------------------
+2020 - now    Co-founder, AI Video Specialist
+              Balance Creative, Moscow
+              Full creative pipeline. AI visuals + 3D +
+              motion + VFX.
+
+2018 - now    Creative Director
+              MIR Studios, Moscow
+              Album covers, merch, and music videos for
+              top Russian musicians. Full-stack 3D
+              pipeline.
+
+2025          AI Production Specialist
+              Toaster Mag (6 months)
+              Intro animation for an award-winning web
+              series, fully AI-produced.
+
+------------------------------------------------------------
+SELECTED EXHIBITIONS
+------------------------------------------------------------
+2025  ArtPrize, Grand Rapids, MI, USA
+      Top 20 finalist
+      Winner, Artist Seed Grant, New Media
+
+2024  ArtPrize, Grand Rapids, MI, USA
+      Top 20 finalist
+
+2024  Fresh Paint Art Fair, Tel Aviv, IL
+
+2023  Cyber Pink, Kaiber House, Givataim, IL
+      Multimedia art event
+
+2022  Transhuman, Creators Studio, Jaffa, IL
+------------------------------------------------------------
+EOF
