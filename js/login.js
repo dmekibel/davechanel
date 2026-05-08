@@ -21,7 +21,7 @@ export function showLogin(onComplete) {
   set(".login-help",             "After you log on, the desktop loads. There is no password.");
   set(".login-intro",            "Russian-Israeli artist. Co-founder of Balancē Creative.");
 
-  overlay.hidden = false;
+  // Overlay is visible by default in HTML — no need to unhide it here.
 
   const userBtn = overlay.querySelector("#login-user");
   const finish = () => {
