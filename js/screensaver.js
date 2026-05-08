@@ -16,7 +16,7 @@ export function startScreensaver() {
 
   const logo = document.createElement("div");
   logo.className = "screensaver-logo";
-  logo.innerHTML = `Heaven<span class="ss-sub">OS</span>`;
+  logo.textContent = "David Mekibel";
   overlay.appendChild(logo);
 
   document.body.appendChild(overlay);

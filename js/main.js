@@ -36,13 +36,10 @@ function disableZoom() {
   document.addEventListener("gesturechange", (e) => e.preventDefault());
   document.addEventListener("gestureend",    (e) => e.preventDefault());
 
-  // Block double-tap zoom on iOS
-  let lastTouchEnd = 0;
-  document.addEventListener("touchend", (e) => {
-    const now = Date.now();
-    if (now - lastTouchEnd < 320) e.preventDefault();
-    lastTouchEnd = now;
-  }, { passive: false });
+  // Note: don't preventDefault on touchend for double-tap zoom — that
+  // would also suppress the synthesized click/dblclick that we need
+  // for opening icons. CSS `touch-action: pan-x pan-y` on body already
+  // disables double-tap-zoom at the gesture level.
 }
 
 if (document.readyState === "loading") {

@@ -33,189 +33,177 @@
   letter-spacing: 0;
 }
 
-/* === Welcome / login screen (composed XP layout, Win98 chrome) ===== */
+/* === Welcome / login screen (XP-style) ============================ */
 
 .login-overlay {
   position: fixed;
   inset: 0;
-  background: #008080;             /* classic Win98 teal desktop */
+  background: linear-gradient(180deg, #245edc 0%, #2862d3 50%, #1f53c0 100%);
   display: flex;
   flex-direction: column;
   z-index: 1000000;
-  font-family: var(--ui-font);
-  color: #000;
+  font-family: "Tahoma", "Geneva", sans-serif;
+  color: #fff;
   user-select: none;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.45s ease;
 }
 .login-overlay[hidden] { display: none; }
 .login-overlay.fade-out { opacity: 0; pointer-events: none; }
 
-/* --- Top + bottom stripes use Win98 chrome (gray with bevels) ---- */
 .login-stripe {
-  background: var(--chrome);
+  background: linear-gradient(180deg, #5b8fff 0%, #4378e6 100%);
+  border-top:    1px solid rgba(255,255,255,0.5);
+  border-bottom: 1px solid rgba(0,0,0,0.25);
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  flex: 0 0 auto;
-  font-size: 11px;
-  color: #000;
+  padding: 0 18px;
+  font-size: 12px;
+  color: #f0f4ff;
 }
-.login-stripe.top {
-  height: 36px;
-  border-bottom: 1px solid var(--chrome-dark);
-  box-shadow: 0 1px 0 var(--chrome-light);
-}
+.login-stripe.top { height: 46px; }
 .login-stripe.bottom {
-  height: 56px;
-  border-top: 1px solid var(--chrome-light);
-  box-shadow: 0 -1px 0 var(--chrome-dark) inset;
+  height: 60px;
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 .login-build-tag {
-  font-family: var(--pixel-font);
-  font-size: 18px;
+  font-family: "VT323", monospace;
+  font-size: 22px;
   font-weight: 700;
-  color: #00007f;
-  letter-spacing: 0.4px;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.35);
 }
-.login-build-meta { color: #333; }
+.login-build-meta { color: rgba(255,255,255,0.85); font-size: 11px; }
 
-/* --- Main split (logo on left / user tile on right) ---- */
 .login-main {
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 2px 1fr;
-  gap: 40px;
+  gap: 50px;
   align-items: center;
   padding: 0 8%;
-  background:
-    linear-gradient(180deg, transparent 60%, rgba(255,255,255,0.06) 100%),
-    #008080;
 }
-.login-left  { text-align: right; color: #fff; }
+.login-left  { text-align: right; }
 .login-right { text-align: left; }
 .login-divider {
   width: 2px;
-  height: 50%;
+  height: 60%;
   background: linear-gradient(180deg,
-    transparent 0%, rgba(0,0,0,0.35) 35%, rgba(0,0,0,0.35) 65%, transparent 100%);
-  box-shadow: 1px 0 0 rgba(255,255,255,0.25);
+    transparent 0%, rgba(255,255,255,0.5) 35%,
+    rgba(255,255,255,0.5) 65%, transparent 100%);
 }
 
 .login-logo {
   font-family: "VT323", monospace;
   font-size: 86px;
   font-weight: 700;
-  line-height: 0.9;
+  line-height: 0.92;
   letter-spacing: -1px;
-  text-shadow: 3px 3px 0 #000, 1px 1px 0 rgba(0,0,0,0.7);
   color: #fff;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
 }
 .login-logo sup {
-  font-size: 32px;
+  font-size: 30px;
   margin-left: 6px;
   background: var(--gold);
   color: #1a1a1a;
   padding: 2px 10px;
-  vertical-align: 24px;
+  vertical-align: 22px;
   text-shadow: none;
   font-weight: 700;
-  border: 2px solid;
-  border-color: #fff8c0 #5a3d00 #5a3d00 #fff8c0;
-  display: inline-block;
 }
 .login-tagline {
-  font-size: 13px;
-  margin-top: 22px;
+  font-size: 14px;
+  margin-top: 26px;
   opacity: 0.95;
-  text-shadow: 1px 1px 0 #000;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
-/* --- User tile: a Win98 raised button you click to log in ---- */
+/* User tile (XP-style: glowy, no hard borders) */
 .login-user {
   display: inline-flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 22px 10px 10px;
-  background: var(--chrome);
-  border: 2px solid;
-  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  cursor: default;
-  color: #000;
+  padding: 9px 22px 9px 9px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
   text-align: left;
-  font-family: var(--ui-font);
-  box-shadow: 1px 1px 0 #000;
+  font-family: inherit;
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
 }
-.login-user:hover { outline: 1px dotted #000; outline-offset: -5px; }
-.login-user:active {
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  padding: 11px 21px 9px 11px;
+.login-user:hover,
+.login-user:focus-visible {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.45);
+  box-shadow: 0 0 14px rgba(255,255,255,0.22);
+  outline: none;
 }
 .login-avatar {
-  width: 48px; height: 48px;
+  width: 56px; height: 56px;
   background: #fff;
-  border: 2px solid;
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  border: 3px solid rgba(255,255,255,0.7);
   display: grid; place-items: center;
-  flex: 0 0 48px;
+  flex: 0 0 56px;
   image-rendering: pixelated;
 }
-.login-avatar svg { display: block; width: 44px; height: 44px; }
+.login-avatar svg { display: block; width: 50px; height: 50px; }
 .login-meta { text-align: left; }
-.login-name { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.login-name { font-size: 18px; font-weight: 700; line-height: 1.1; }
 .login-intro {
-  font-size: 11px;
-  color: #333;
+  font-size: 12px;
   margin-top: 4px;
-  max-width: 240px;
+  opacity: 0.9;
+  max-width: 280px;
   line-height: 1.35;
 }
 
-/* --- Bottom shutdown + help ---- */
+/* Bottom shutdown + helper */
 .login-shutdown {
-  background: var(--chrome);
-  border: 2px solid;
-  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  padding: 4px 12px;
-  font-family: var(--ui-font);
-  font-size: 11px;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: #000;
+  gap: 10px;
+  color: #fff;
   cursor: default;
-  height: 26px;
+  border-radius: 3px;
 }
-.login-shutdown[disabled] {
-  color: #555;
-  text-shadow: 1px 1px 0 var(--chrome-light);
-}
+.login-shutdown[disabled] { opacity: 0.85; }
+.login-shutdown:hover:not([disabled]) { background: rgba(255,255,255,0.1); }
 .login-shutdown .ic {
-  width: 18px; height: 18px;
+  width: 22px; height: 22px;
   display: grid; place-items: center;
   background: radial-gradient(circle at 35% 35%, #ff8c5e 0%, #d34a1e 70%, #8e2a08 100%);
   color: #fff;
   border-radius: 50%;
-  font-size: 12px;
-  border: 1px solid #5a1a02;
+  font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.55);
+  box-shadow: 0 0 8px rgba(255,255,255,0.18);
 }
-.login-help { font-size: 11px; color: #000; max-width: 50%; text-align: right; }
+.login-help { font-size: 11px; color: rgba(255,255,255,0.85); max-width: 50%; text-align: right; }
 
 @media (max-width: 720px) {
   .login-main {
     grid-template-columns: 1fr;
     gap: 22px;
-    padding: 16px 24px;
+    padding: 0 24px;
     text-align: center;
   }
   .login-left, .login-right { text-align: center; }
   .login-divider { display: none; }
   .login-logo { font-size: 60px; }
   .login-logo sup { font-size: 22px; vertical-align: 14px; padding: 1px 6px; }
-  .login-tagline { margin-top: 12px; font-size: 12px; }
-  .login-stripe.top { height: 32px; padding: 0 12px; }
-  .login-stripe.bottom { padding: 8px 12px; }
+  .login-tagline { margin-top: 14px; font-size: 12px; }
+  .login-stripe.top { height: 38px; padding: 0 14px; }
+  .login-stripe.bottom { padding: 8px 14px; }
   .login-help { display: none; }
   .login-build-meta { display: none; }
 }
@@ -926,6 +914,7 @@ body {
   overflow: auto;
   padding: 10px;
   color: #000;
+  position: relative;     /* anchors the in-pane marquee */
 }
 .exp-grid {
   display: grid;

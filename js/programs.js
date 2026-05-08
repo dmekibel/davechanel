@@ -196,6 +196,14 @@ export function openExplorer(startPath = []) {
 
   let currentPath = [...startPath];
   let winId = null;
+  let currentView = "large";   // large | small | list
+
+  function setView(view) {
+    currentView = view;
+    grid.className = "exp-grid view-" + view;
+    render();
+  }
+  grid.classList.add("view-large");
 
   function pathKey(path) {
     return ["Heaven OS:", ...path].join("/");
