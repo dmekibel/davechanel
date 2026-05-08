@@ -33,118 +33,191 @@
   letter-spacing: 0;
 }
 
-/* === Welcome / login screen (Win98 logon dialog) =================== */
+/* === Welcome / login screen (composed XP layout, Win98 chrome) ===== */
 
 .login-overlay {
   position: fixed;
   inset: 0;
-  background: #008080;          /* classic Win98 teal desktop */
-  display: grid;
-  place-items: center;
+  background: #008080;             /* classic Win98 teal desktop */
+  display: flex;
+  flex-direction: column;
   z-index: 1000000;
-  font-family: "Tahoma", "Geneva", sans-serif;
+  font-family: var(--ui-font);
   color: #000;
   user-select: none;
   transition: opacity 0.35s ease;
-  padding: 16px;
 }
 .login-overlay[hidden] { display: none; }
 .login-overlay.fade-out { opacity: 0; pointer-events: none; }
 
-.login-dialog {
-  /* uses .window chrome: gray border with bevel + blue titlebar */
-  position: static;
-  width: 380px;
-  max-width: 100%;
-  min-width: 0;
-  height: auto;
-  min-height: 0;
-}
-
-.login-dialog .window-titlebar {
-  cursor: default;
-}
-
-.login-dialog-body {
+/* --- Top + bottom stripes use Win98 chrome (gray with bevels) ---- */
+.login-stripe {
   background: var(--chrome);
-  padding: 16px 16px 12px;
-  font-family: var(--ui-font);
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex: 0 0 auto;
+  font-size: 11px;
   color: #000;
 }
-
-.login-dialog .login-row {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  margin-bottom: 12px;
+.login-stripe.top {
+  height: 36px;
+  border-bottom: 1px solid var(--chrome-dark);
+  box-shadow: 0 1px 0 var(--chrome-light);
 }
-.login-dialog .login-avatar {
+.login-stripe.bottom {
+  height: 56px;
+  border-top: 1px solid var(--chrome-light);
+  box-shadow: 0 -1px 0 var(--chrome-dark) inset;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.login-build-tag {
+  font-family: var(--pixel-font);
+  font-size: 18px;
+  font-weight: 700;
+  color: #00007f;
+  letter-spacing: 0.4px;
+}
+.login-build-meta { color: #333; }
+
+/* --- Main split (logo on left / user tile on right) ---- */
+.login-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 2px 1fr;
+  gap: 40px;
+  align-items: center;
+  padding: 0 8%;
+  background:
+    linear-gradient(180deg, transparent 60%, rgba(255,255,255,0.06) 100%),
+    #008080;
+}
+.login-left  { text-align: right; color: #fff; }
+.login-right { text-align: left; }
+.login-divider {
+  width: 2px;
+  height: 50%;
+  background: linear-gradient(180deg,
+    transparent 0%, rgba(0,0,0,0.35) 35%, rgba(0,0,0,0.35) 65%, transparent 100%);
+  box-shadow: 1px 0 0 rgba(255,255,255,0.25);
+}
+
+.login-logo {
+  font-family: "VT323", monospace;
+  font-size: 86px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -1px;
+  text-shadow: 3px 3px 0 #000, 1px 1px 0 rgba(0,0,0,0.7);
+  color: #fff;
+}
+.login-logo sup {
+  font-size: 32px;
+  margin-left: 6px;
+  background: var(--gold);
+  color: #1a1a1a;
+  padding: 2px 10px;
+  vertical-align: 24px;
+  text-shadow: none;
+  font-weight: 700;
+  border: 2px solid;
+  border-color: #fff8c0 #5a3d00 #5a3d00 #fff8c0;
+  display: inline-block;
+}
+.login-tagline {
+  font-size: 13px;
+  margin-top: 22px;
+  opacity: 0.95;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* --- User tile: a Win98 raised button you click to log in ---- */
+.login-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px 10px 10px;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  cursor: default;
+  color: #000;
+  text-align: left;
+  font-family: var(--ui-font);
+  box-shadow: 1px 1px 0 #000;
+}
+.login-user:hover { outline: 1px dotted #000; outline-offset: -5px; }
+.login-user:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 11px 21px 9px 11px;
+}
+.login-avatar {
   width: 48px; height: 48px;
   background: #fff;
   border: 2px solid;
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  display: grid;
-  place-items: center;
+  display: grid; place-items: center;
   flex: 0 0 48px;
   image-rendering: pixelated;
 }
-.login-dialog .login-avatar svg { width: 44px; height: 44px; }
-.login-dialog .login-meta { flex: 1; min-width: 0; text-align: left; }
-.login-dialog .login-name {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.login-dialog .login-intro {
+.login-avatar svg { display: block; width: 44px; height: 44px; }
+.login-meta { text-align: left; }
+.login-name { font-size: 13px; font-weight: 700; line-height: 1.1; }
+.login-intro {
   font-size: 11px;
-  margin-top: 4px;
   color: #333;
+  margin-top: 4px;
+  max-width: 240px;
   line-height: 1.35;
 }
 
-.login-message {
-  background: #fff;
-  border: 1px solid;
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  padding: 8px 10px;
-  font-size: 12px;
-  margin: 6px 0 14px;
-  line-height: 1.4;
-}
-.login-message b { font-weight: 700; }
-
-.login-buttons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-.login-btn {
+/* --- Bottom shutdown + help ---- */
+.login-shutdown {
   background: var(--chrome);
   border: 2px solid;
   border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
-  padding: 4px 14px;
+  padding: 4px 12px;
   font-family: var(--ui-font);
   font-size: 11px;
-  min-width: 78px;
-  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: #000;
   cursor: default;
-  font-weight: 400;
+  height: 26px;
 }
-.login-btn.primary {
-  font-weight: 400;
-  outline: 1px dotted #000;
-  outline-offset: -4px;
-}
-.login-btn:not([disabled]):active {
-  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  padding: 5px 13px 3px 15px;
-}
-.login-btn[disabled] {
-  color: #888;
+.login-shutdown[disabled] {
+  color: #555;
   text-shadow: 1px 1px 0 var(--chrome-light);
-  cursor: default;
+}
+.login-shutdown .ic {
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 35%, #ff8c5e 0%, #d34a1e 70%, #8e2a08 100%);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  border: 1px solid #5a1a02;
+}
+.login-help { font-size: 11px; color: #000; max-width: 50%; text-align: right; }
+
+@media (max-width: 720px) {
+  .login-main {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 16px 24px;
+    text-align: center;
+  }
+  .login-left, .login-right { text-align: center; }
+  .login-divider { display: none; }
+  .login-logo { font-size: 60px; }
+  .login-logo sup { font-size: 22px; vertical-align: 14px; padding: 1px 6px; }
+  .login-tagline { margin-top: 12px; font-size: 12px; }
+  .login-stripe.top { height: 32px; padding: 0 12px; }
+  .login-stripe.bottom { padding: 8px 12px; }
+  .login-help { display: none; }
+  .login-build-meta { display: none; }
 }
 
 /* === Heaven OS — chrome ============================================ */
