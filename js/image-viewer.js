@@ -46,6 +46,10 @@ export function openImageViewer(arg1, title) {
       <canvas class="iv-canvas"></canvas>
       <button class="iv-nav iv-prev" aria-label="Previous">‹</button>
       <button class="iv-nav iv-next" aria-label="Next">›</button>
+      <div class="iv-navigator" hidden>
+        <canvas class="iv-nav-canvas" width="160" height="120"></canvas>
+        <div class="iv-nav-rect"></div>
+      </div>
       <div class="iv-empty">
         <p>No image loaded.</p>
         <button class="iv-open-empty">File → Open…</button>
@@ -63,6 +67,11 @@ export function openImageViewer(arg1, title) {
   const emptyEl  = wrap.querySelector(".iv-empty");
   const fileInp  = wrap.querySelector(".iv-file");
   const openEmpty = wrap.querySelector(".iv-open-empty");
+  const navEl    = wrap.querySelector(".iv-navigator");
+  const navCv    = wrap.querySelector(".iv-nav-canvas");
+  const navCtx   = navCv.getContext("2d");
+  const navRect  = wrap.querySelector(".iv-nav-rect");
+  const isTouch  = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
   let img = new Image();
   let scale = 1;
@@ -121,6 +130,46 @@ export function openImageViewer(arg1, title) {
     ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
     const cur = list[index];
     info.textContent = `${cur ? (cur.name + "  ") : ""}${img.naturalWidth}×${img.naturalHeight}  ${Math.round(scale * 100)}%`;
+    drawNavigator();
+  }
+
+  // Navigator (Photoshop-style mini-map). Visible only on desktop and only
+  // when the image is zoomed enough that pan is meaningful.
+  function fitScale() {
+    if (!loaded) return 1;
+    const w = stage.clientWidth, h = stage.clientHeight;
+    return Math.min(w / img.naturalWidth, h / img.naturalHeight, 1);
+  }
+  function drawNavigator() {
+    if (!loaded || isTouch) { navEl.hidden = true; return; }
+    const fs = fitScale();
+    if (scale <= fs * 1.05) { navEl.hidden = true; return; }
+    navEl.hidden = false;
+    const NW = navCv.width, NH = navCv.height;
+    navCtx.fillStyle = "#1a1a1a";
+    navCtx.fillRect(0, 0, NW, NH);
+    const nFit = Math.min(NW / img.naturalWidth, NH / img.naturalHeight);
+    const dw = img.naturalWidth  * nFit;
+    const dh = img.naturalHeight * nFit;
+    const ox = (NW - dw) / 2;
+    const oy = (NH - dh) / 2;
+    navCtx.imageSmoothingQuality = "low";
+    navCtx.drawImage(img, ox, oy, dw, dh);
+    // Viewport rect in image-space
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const vx = (-tx) / scale;          // image x of viewport left
+    const vy = (-ty) / scale;
+    const vw = w / scale;
+    const vh = h / scale;
+    const rL = ox + vx * nFit;
+    const rT = oy + vy * nFit;
+    const rW = vw * nFit;
+    const rH = vh * nFit;
+    navRect.style.left   = Math.max(ox, rL) + "px";
+    navRect.style.top    = Math.max(oy, rT) + "px";
+    navRect.style.width  = Math.min(dw, rW) + "px";
+    navRect.style.height = Math.min(dh, rH) + "px";
+    navEl._navMeta = { ox, oy, dw, dh, nFit };
   }
 
   function updateNavVisibility() {
@@ -190,16 +239,53 @@ export function openImageViewer(arg1, title) {
   canvas.addEventListener("mousedown", (e) => onDown(e.clientX, e.clientY));
   window.addEventListener("mousemove", (e) => onMove(e.clientX, e.clientY));
   window.addEventListener("mouseup", onUp);
+
+  // Touch: 1 finger = pan, 2 fingers = pinch-zoom (centered on midpoint)
+  let pinchStartDist = 0;
+  let pinchStartScale = 1;
+  let pinchAnchorImg = null;   // image-space anchor point we keep under the midpoint
+  function touchMidpoint(e) {
+    const r = canvas.getBoundingClientRect();
+    const a = e.touches[0], b = e.touches[1];
+    return {
+      x: (a.clientX + b.clientX) / 2 - r.left,
+      y: (a.clientY + b.clientY) / 2 - r.top,
+    };
+  }
+  function touchDistance(e) {
+    const a = e.touches[0], b = e.touches[1];
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
   canvas.addEventListener("touchstart", (e) => {
-    if (e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY);
+    if (e.touches.length === 1) {
+      onDown(e.touches[0].clientX, e.touches[0].clientY);
+    } else if (e.touches.length === 2) {
+      dragging = false;
+      pinchStartDist  = touchDistance(e);
+      pinchStartScale = scale;
+      const mid = touchMidpoint(e);
+      pinchAnchorImg  = { ix: (mid.x - tx) / scale, iy: (mid.y - ty) / scale };
+    }
   }, { passive: true });
   canvas.addEventListener("touchmove", (e) => {
-    if (e.touches.length === 1) {
+    if (e.touches.length === 2 && pinchStartDist > 0) {
+      if (e.cancelable) e.preventDefault();
+      const dist = touchDistance(e);
+      const mid = touchMidpoint(e);
+      scale = Math.max(0.05, Math.min(20, pinchStartScale * (dist / pinchStartDist)));
+      // Keep the original image-space anchor under the (moving) midpoint
+      tx = mid.x - pinchAnchorImg.ix * scale;
+      ty = mid.y - pinchAnchorImg.iy * scale;
+      draw();
+    } else if (e.touches.length === 1) {
       if (e.cancelable) e.preventDefault();
       onMove(e.touches[0].clientX, e.touches[0].clientY);
     }
   }, { passive: false });
-  canvas.addEventListener("touchend", onUp);
+  canvas.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) { pinchStartDist = 0; pinchAnchorImg = null; }
+    onUp();
+  });
 
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
@@ -260,6 +346,42 @@ export function openImageViewer(arg1, title) {
     { label: "Previous image", action: prev, accel: "←" },
     { label: "Next image",     action: next, accel: "→" },
   ]);
+
+  // Navigator drag — clicking the mini-map centers the main viewport there.
+  function navToImageCoords(clientX, clientY) {
+    const meta = navEl._navMeta;
+    if (!meta) return null;
+    const r = navCv.getBoundingClientRect();
+    const nx = clientX - r.left;
+    const ny = clientY - r.top;
+    // Convert nav-canvas px back to image-space px
+    return {
+      ix: (nx - meta.ox) / meta.nFit,
+      iy: (ny - meta.oy) / meta.nFit,
+    };
+  }
+  function centerImageOn(ix, iy) {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    tx = w / 2 - ix * scale;
+    ty = h / 2 - iy * scale;
+    draw();
+  }
+  let navDragging = false;
+  const onNavDown = (e) => {
+    navDragging = true;
+    const p = navToImageCoords(e.clientX, e.clientY);
+    if (p) centerImageOn(p.ix, p.iy);
+    e.preventDefault();
+  };
+  const onNavMove = (e) => {
+    if (!navDragging) return;
+    const p = navToImageCoords(e.clientX, e.clientY);
+    if (p) centerImageOn(p.ix, p.iy);
+  };
+  const onNavUp = () => { navDragging = false; };
+  navEl.addEventListener("mousedown", onNavDown);
+  window.addEventListener("mousemove", onNavMove);
+  window.addEventListener("mouseup", onNavUp);
 
   // React to window resize
   const ro = new ResizeObserver(() => { resize(); });

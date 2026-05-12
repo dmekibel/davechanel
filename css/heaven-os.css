@@ -612,6 +612,48 @@
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
 }
 
+/* Navigator panel (Photoshop-style mini-map) — desktop only. */
+.iv-navigator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 160px;
+  height: 120px;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.25);
+  cursor: crosshair;
+}
+.iv-nav-canvas { display: block; width: 160px; height: 120px; }
+.iv-nav-rect {
+  position: absolute;
+  border: 1px solid #ff3a3a;
+  background: rgba(255,58,58,0.12);
+  pointer-events: none;
+}
+
+/* Image thumbnails in folder view — replaces the generic picture icon. */
+.exp-tile.exp-tile-image .ic {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border: 1px solid #555;
+  overflow: hidden;
+}
+.exp-tile.exp-tile-image.large .ic { width: 64px; height: 64px; }
+.exp-tile.exp-tile-image .ic img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
 /* === Minesweeper ==================================================== */
 
 .ms {

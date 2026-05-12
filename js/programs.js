@@ -537,7 +537,18 @@ export function openExplorer(startPath = []) {
         tile.tabIndex = 0;
         const tIc = document.createElement("div");
         tIc.className = "ic";
-        tIc.innerHTML = iconFor(child, 32);
+        if (child.kind === "image" && child.src) {
+          // Real thumbnail of the file so David can tell which image is which.
+          tile.classList.add("exp-tile-image");
+          const im = document.createElement("img");
+          im.src = child.src;
+          im.alt = "";
+          im.loading = "lazy";
+          im.draggable = false;
+          tIc.appendChild(im);
+        } else {
+          tIc.innerHTML = iconFor(child, 32);
+        }
         const tLbl = document.createElement("div");
         tLbl.className = "lbl";
         tLbl.textContent = t(child.name);
