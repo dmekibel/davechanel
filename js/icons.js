@@ -77,6 +77,30 @@ const MOVIE = `
 const ARROW_LEFT  = `<path d="M11 3 L5 8 L11 13 L11 11 L8 8 L11 5 Z" fill="#000"/>`;
 const ARROW_RIGHT = `<path d="M5 3 L11 8 L5 13 L5 11 L8 8 L5 5 Z" fill="#000"/>`;
 const ARROW_UP    = `<path d="M3 11 L8 5 L13 11 L11 11 L8 8 L5 11 Z" fill="#000"/>`;
+const GEAR = `
+  <rect x="7" y="0" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="7" y="14" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="0" y="7" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="14" y="7" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="2" y="2" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="12" y="2" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="2" y="12" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="12" y="12" width="2" height="2" fill="#5a5a5a"/>
+  <rect x="3" y="3" width="10" height="10" fill="#c3c3c3" stroke="#5a5a5a" stroke-width="1"/>
+  <rect x="6" y="6" width="4" height="4" fill="#fff" stroke="#5a5a5a" stroke-width="1"/>
+`;
+const SEARCH = `
+  <circle cx="6" cy="6" r="4" fill="none" stroke="#000" stroke-width="1.5"/>
+  <path d="M9 9 L13 13" stroke="#000" stroke-width="2"/>
+`;
+const HELP = `
+  <rect x="2" y="1" width="12" height="14" fill="#fff" stroke="#000"/>
+  <text x="8" y="11" font-family="Tahoma,sans-serif" font-size="10" font-weight="700" fill="#0040a0" text-anchor="middle">?</text>
+`;
+const RUN = `
+  <rect x="2" y="2" width="12" height="12" fill="#fff" stroke="#000"/>
+  <path d="M4 11 L4 5 L6 5 L8 8 L10 5 L12 5 L12 11 L10 11 L10 7 L8 10 L6 7 L6 11 Z" fill="#000"/>
+`;
 
 export const ICONS = {
   folder:      (s = 16) => wrap(FOLDER, s),
@@ -92,6 +116,10 @@ export const ICONS = {
   arrowLeft:   (s = 16) => wrap(ARROW_LEFT, s),
   arrowRight:  (s = 16) => wrap(ARROW_RIGHT, s),
   arrowUp:     (s = 16) => wrap(ARROW_UP, s),
+  gear:        (s = 16) => wrap(GEAR, s),
+  search:      (s = 16) => wrap(SEARCH, s),
+  help:        (s = 16) => wrap(HELP, s),
+  run:         (s = 16) => wrap(RUN, s),
 };
 
 // Map a file-system node to its icon string.
