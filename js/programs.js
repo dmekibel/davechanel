@@ -274,7 +274,7 @@ export function openExplorer(startPath = []) {
         // selection (already done at start).
         if (!dragged) {
           const now = Date.now();
-          if (now - lastEmptyTap < 350) {
+          if (now - lastEmptyTap < 500) {
             lastEmptyTap = 0;
             showExplorerContextMenu(clientX, clientY);
           } else {
@@ -307,6 +307,10 @@ export function openExplorer(startPath = []) {
     paneEl.addEventListener("contextmenu", (e) => {
       if (e.target.closest(".exp-tile")) return;
       e.preventDefault();
+      showExplorerContextMenu(e.clientX, e.clientY);
+    });
+    paneEl.addEventListener("dblclick", (e) => {
+      if (e.target.closest(".exp-tile")) return;
       showExplorerContextMenu(e.clientX, e.clientY);
     });
   }

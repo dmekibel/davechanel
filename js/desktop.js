@@ -292,7 +292,7 @@ function initMarquee() {
       // DOUBLE tap on empty desktop = open the context menu.
       if (!wasDrag) {
         const now = Date.now();
-        if (now - lastEmptyTap < 350) {
+        if (now - lastEmptyTap < 500) {
           lastEmptyTap = 0;
           showDesktopContextMenu(clientX, clientY);
         } else {
@@ -317,6 +317,14 @@ function initMarquee() {
     if (e.target.closest(".window")) return;
     if (e.target.closest(".taskbar")) return;
     e.preventDefault();
+    showDesktopContextMenu(e.clientX, e.clientY);
+  });
+  // Native double-click on empty desktop also opens the menu (desktop only,
+  // mobile uses the touch double-tap path above).
+  desktopEl.addEventListener("dblclick", (e) => {
+    if (e.target.closest(".desktop-icon")) return;
+    if (e.target.closest(".window")) return;
+    if (e.target.closest(".taskbar")) return;
     showDesktopContextMenu(e.clientX, e.clientY);
   });
 
