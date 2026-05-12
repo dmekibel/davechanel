@@ -58,7 +58,10 @@ function showLangPopup(anchor) {
         `<span class="abbr">${o.code.toUpperCase()}</span>` +
         `<span class="name">${o.label}</span>` +
         (o.code === cur ? `<span class="check">✓</span>` : "");
-      item.addEventListener("click", () => setLang(o.code));
+      item.addEventListener("click", () => {
+        closeLangPopup();   // close BEFORE switching so the stale popup never lingers
+        setLang(o.code);
+      });
       menu.appendChild(item);
     }
     document.body.appendChild(menu);

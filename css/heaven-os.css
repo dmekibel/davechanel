@@ -721,6 +721,11 @@ html, body {
   text-size-adjust: 100%;
   overscroll-behavior: none;
 }
+html {
+  background-color: #000 !important;   /* black bezel for iOS notch safe-area side bands */
+  background-image: none !important;
+  min-height: 100vh;
+}
 
 body {
   font-family: var(--ui-font);
@@ -972,8 +977,14 @@ body[data-wallpaper="clouds"] {
 }
 .lang-popup .item .name { flex: 1; }
 .lang-popup .item .check { color: #000; }
-.lang-popup .item:hover { background: var(--tb-active-1); color: #fff; }
-.lang-popup .item:hover .check { color: #fff; }
+.lang-popup .item.current { background: var(--tb-active-1); color: #fff; }
+.lang-popup .item.current .check { color: #fff; }
+@media (hover: hover) {
+  .lang-popup .item:hover:not(.current) {
+    background: rgba(0, 0, 127, 0.25);
+    color: #000;
+  }
+}
 
 /* === Russian mode font override =================================== */
 /* The VT323 pixel font has weak/odd Cyrillic glyphs. In RU mode swap
@@ -1021,9 +1032,13 @@ body.lang-ru .notepad pre {
   font-family: "Tahoma", "Geneva", "DejaVu Sans", sans-serif !important;
 }
 body.lang-ru .desktop-icon {
+  /* VT323 (EN) at 18px ≈ Tahoma bold at 14-15px visually */
   text-shadow: 1px 1px 0 #000 !important;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  body.lang-ru .desktop-icon { font-size: 13px; }
 }
 body.lang-ru .login-logo {
   font-size: 56px !important;
