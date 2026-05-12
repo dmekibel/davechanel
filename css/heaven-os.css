@@ -647,7 +647,6 @@
   border: 1px solid #555;
   overflow: hidden;
 }
-.exp-tile.exp-tile-image.large .ic { width: 64px; height: 64px; }
 .exp-tile.exp-tile-image .ic img {
   max-width: 100%;
   max-height: 100%;
@@ -2259,10 +2258,18 @@ body.lang-ru .login-logo {
   align-content: start;
 }
 /* View mode variations on the right pane */
-.exp-grid.view-large {
+.exp-grid.view-medium {
   grid-template-columns: repeat(auto-fill, 88px);
   gap: 14px 12px;
 }
+.exp-grid.view-large {
+  grid-template-columns: repeat(auto-fill, 140px);
+  gap: 18px 14px;
+}
+.exp-grid.view-large .exp-tile .ic { width: 80px; height: 80px; }
+.exp-grid.view-large .exp-tile .ic svg { width: 80px; height: 80px; }
+.exp-grid.view-large .exp-tile-image .ic { width: 96px; height: 96px; }
+.exp-grid.view-large .exp-tile .lbl { font-size: 13px; }
 .exp-grid.view-small {
   grid-template-columns: repeat(auto-fill, 130px);
   gap: 6px 8px;

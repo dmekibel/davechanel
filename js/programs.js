@@ -231,14 +231,14 @@ export function openExplorer(startPath = []) {
 
   let currentPath = [...startPath];
   let winId = null;
-  let currentView = "large";   // large | small | list
+  let currentView = "medium";   // large | medium | small | list
 
   function setView(view) {
     currentView = view;
     grid.className = "exp-grid view-" + view;
     render();
   }
-  grid.classList.add("view-large");
+  grid.classList.add("view-medium");
 
   // ---- Marquee selection + tap-empty context menu (in the right pane) ----
   attachPaneMarquee(pane, grid, () => setView, () => currentView);
@@ -357,9 +357,10 @@ export function openExplorer(startPath = []) {
     showContextMenu(x, y, [
       { label: "Refresh",            action: () => render() },
       "sep",
-      { label: "View — Large Icons", action: () => setView("large") },
-      { label: "View — Small Icons", action: () => setView("small") },
-      { label: "View — List",        action: () => setView("list") },
+      { label: "View — Large Icons",  action: () => setView("large")  },
+      { label: "View — Medium Icons", action: () => setView("medium") },
+      { label: "View — Small Icons",  action: () => setView("small")  },
+      { label: "View — List",         action: () => setView("list")   },
       "sep",
       { label: "Display Properties...", action: () => openSettings() },
     ]);
@@ -631,9 +632,10 @@ export function openExplorer(startPath = []) {
       "View": [
         { label: "Refresh", action: render, accel: "R" },
         "sep",
-        { label: "Large Icons", action: () => setView("large"), accel: "L" },
-        { label: "Small Icons", action: () => setView("small"), accel: "m" },
-        { label: "List",        action: () => setView("list"),  accel: "L" },
+        { label: "Large Icons",  action: () => setView("large")  },
+        { label: "Medium Icons", action: () => setView("medium") },
+        { label: "Small Icons",  action: () => setView("small")  },
+        { label: "List",         action: () => setView("list")   },
         { label: "Details",     disabled: true },
       ],
       "Go": [
