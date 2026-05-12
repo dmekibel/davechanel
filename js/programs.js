@@ -1038,8 +1038,6 @@ export function openWelcome() {
     height: 340,
     flush: true,
   });
-  // On phones, maximize so the TOC has room and labels don't wrap weirdly.
-  if (window.innerWidth < 720) toggleMaximize(id);
   closeBtn.addEventListener("click", () => closeWindow(id));
   return id;
 }

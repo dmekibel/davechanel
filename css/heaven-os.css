@@ -965,10 +965,9 @@ body[data-wallpaper="clouds"] {
    most chrome elements over to Tahoma which has full Cyrillic support
    and stays in the Win98 visual language. Pure-Latin wordmarks like
    the login logo + screensaver keep VT323. */
-/* In RU mode, the pixel font VT323 has incomplete Cyrillic. Use
-   Pixelify Sans (full Cyrillic + pixel-art aesthetic) so the language
-   switch keeps the same visual character as English. Tahoma is the
-   ultimate fallback for older browsers / missing font load. */
+/* In RU mode, switch all chrome elements to Tahoma. It's what
+   Russian Win98 actually used — clean Cyrillic, no anti-alias
+   blurriness from pixel fonts at sub-pixel sizes on retina screens. */
 body.lang-ru .start-text,
 body.lang-ru .clock,
 body.lang-ru .start-menu-items,
@@ -1004,31 +1003,24 @@ body.lang-ru .desktop-icon,
 body.lang-ru .desktop-icon .icon-label,
 body.lang-ru .notepad,
 body.lang-ru .notepad pre {
-  font-family: "Pixelify Sans", "Tahoma", sans-serif !important;
-}
-/* The bold weight reads cleaner for tiny chrome text */
-body.lang-ru .start-text,
-body.lang-ru .desktop-icon,
-body.lang-ru .login-name,
-body.lang-ru .welcome-toc,
-body.lang-ru .welcome-title,
-body.lang-ru .login-logo {
-  font-weight: 700;
+  font-family: "Tahoma", "Geneva", "DejaVu Sans", sans-serif !important;
 }
 body.lang-ru .desktop-icon {
   text-shadow: 1px 1px 0 #000 !important;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 12px;
 }
 body.lang-ru .login-logo {
-  font-size: 64px !important;
+  font-size: 56px !important;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
 }
 @media (max-width: 720px) {
-  body.lang-ru .login-logo { font-size: 34px !important; }
+  body.lang-ru .login-logo { font-size: 30px !important; }
 }
 @media (max-width: 420px) {
-  body.lang-ru .login-logo { font-size: 26px !important; }
+  body.lang-ru .login-logo { font-size: 22px !important; }
 }
 
 /* Marquee selection (drag-to-select on desktop) */
