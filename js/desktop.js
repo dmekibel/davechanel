@@ -298,9 +298,9 @@ function initMarquee() {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend",  cleanup);
       document.removeEventListener("touchcancel", cleanup);
-      // Single tap on empty desktop = just deselect (already done above).
-      // DOUBLE tap on empty desktop = open the context menu.
-      if (!wasDrag) {
+      // Touch only: double-tap empty space = context menu (mouse uses
+      // right-click for that). Single tap still just deselects.
+      if (!wasDrag && isTouch) {
         const now = Date.now();
         if (now - lastEmptyTap < 500) {
           lastEmptyTap = 0;
@@ -321,20 +321,13 @@ function initMarquee() {
     }
   };
 
-  // Real right-click also opens the menu, as you'd expect on desktop
+  // Mouse desktop: right-click opens the context menu (no dblclick path —
+  // double-tap is reserved for touch devices).
   desktopEl.addEventListener("contextmenu", (e) => {
     if (e.target.closest(".desktop-icon")) return;
     if (e.target.closest(".window")) return;
     if (e.target.closest(".taskbar")) return;
     e.preventDefault();
-    showDesktopContextMenu(e.clientX, e.clientY);
-  });
-  // Native double-click on empty desktop also opens the menu (desktop only,
-  // mobile uses the touch double-tap path above).
-  desktopEl.addEventListener("dblclick", (e) => {
-    if (e.target.closest(".desktop-icon")) return;
-    if (e.target.closest(".window")) return;
-    if (e.target.closest(".taskbar")) return;
     showDesktopContextMenu(e.clientX, e.clientY);
   });
 

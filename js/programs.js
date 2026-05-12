@@ -9,6 +9,7 @@ import { startScreensaver } from "./screensaver.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 import { showContextMenu } from "./context-menu.js";
 import { t } from "./i18n.js";
+import { SCALES, getScale, setScale } from "./scale.js";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -299,9 +300,9 @@ export function openExplorer(startPath = []) {
         document.removeEventListener("touchmove", onTouchMove);
         document.removeEventListener("touchend",  cleanup);
         document.removeEventListener("touchcancel", cleanup);
-        // DOUBLE tap on empty pane → context menu. Single tap just clears
-        // selection (already done at start).
-        if (!dragged) {
+        // Touch only: double-tap empty pane → context menu (mouse uses
+        // right-click). Single tap still just clears selection.
+        if (!dragged && isTouchEv) {
           const now = Date.now();
           if (now - lastEmptyTap < 500) {
             lastEmptyTap = 0;
@@ -339,10 +340,6 @@ export function openExplorer(startPath = []) {
     paneEl.addEventListener("contextmenu", (e) => {
       if (e.target.closest(".exp-tile")) return;
       e.preventDefault();
-      showExplorerContextMenu(e.clientX, e.clientY);
-    });
-    paneEl.addEventListener("dblclick", (e) => {
-      if (e.target.closest(".exp-tile")) return;
       showExplorerContextMenu(e.clientX, e.clientY);
     });
   }
@@ -1122,10 +1119,22 @@ export function openSettings() {
       `;
     } else if (tab === "settings") {
       body.innerHTML = `
+        <div class="settings-row">
+          <span class="settings-label">UI Scale</span>
+          <div class="scale-select-slot"></div>
+        </div>
         <div class="settings-row"><span class="settings-label">Display</span><span>Default Monitor</span></div>
         <div class="settings-row"><span class="settings-label">Colors</span><span>True Color (24 bit)</span></div>
         <div class="settings-row"><span class="settings-label">Screen area</span><span>fit to window</span></div>
       `;
+      const slot = body.querySelector(".scale-select-slot");
+      const curScale = getScale();
+      const sel = makeWin98Select(
+        SCALES.map(s => ({ value: String(s), label: `${s}%` })),
+        String(curScale),
+        (val) => setScale(parseInt(val, 10))
+      );
+      slot.appendChild(sel);
     }
   }
 
