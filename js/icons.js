@@ -172,13 +172,9 @@ export function iconFor(node, size = 16) {
   if (!node) return ICONS.document(size);
   if (node === "myComputer") return ICONS.myComputer(size);
   if (node.type === "folder") {
-    switch (node.name) {
-      case "Recycle Bin":     return ICONS.recycle(size);
-      case "Fine Art":        return ICONS.picture(size);
-      case "Balancē Creative":return ICONS.briefcase(size);
-      case "Brand Work":      return ICONS.briefcase(size);
-      case "Music Industry":  return ICONS.movie(size);
-    }
+    // Folders always look like folders so it's obvious there's stuff inside.
+    // Recycle Bin is the one special case — it has its own iconic shape.
+    if (node.name === "Recycle Bin") return ICONS.recycle(size);
     return ICONS.folder(size);
   }
   switch (node.kind) {

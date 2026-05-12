@@ -360,7 +360,6 @@ export function openExplorer(startPath = []) {
       { label: "View — Large Icons",  action: () => setView("large")  },
       { label: "View — Medium Icons", action: () => setView("medium") },
       { label: "View — Small Icons",  action: () => setView("small")  },
-      { label: "View — List",         action: () => setView("list")   },
       "sep",
       { label: "Display Properties...", action: () => openSettings() },
     ]);
@@ -635,8 +634,7 @@ export function openExplorer(startPath = []) {
         { label: "Large Icons",  action: () => setView("large")  },
         { label: "Medium Icons", action: () => setView("medium") },
         { label: "Small Icons",  action: () => setView("small")  },
-        { label: "List",         action: () => setView("list")   },
-        { label: "Details",     disabled: true },
+        { label: "Details",      disabled: true },
       ],
       "Go": [
         { label: "Back",         action: goBack, accel: "B", disabledIf: () => histIdx <= 0 },
