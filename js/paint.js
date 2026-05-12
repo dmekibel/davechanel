@@ -359,6 +359,8 @@ export function openPaint() {
     e.preventDefault();
     const { x, y } = pos(e);
     startX = x; startY = y;
+    // Snapshot the canvas BEFORE this stroke so Undo can roll it back.
+    pushUndo();
     if (tool === "fill") { floodFill(x, y, color); return; }
     drawing = true;
     if (tool === "pencil") drawPoint(x, y);
