@@ -169,26 +169,17 @@
 .welcome-pane ul li { margin: 0 0 0.3em; }
 
 @media (max-width: 720px) {
-  .welcome-body { grid-template-columns: 150px 1fr; }
+  .welcome-body { grid-template-columns: 170px 1fr; }
   .welcome-side-logo { padding: 8px 10px 6px; }
-  .welcome-side-logo .logo-mark { font-size: 22px; }
-  .welcome-side-logo .logo-mark sup { font-size: 11px; vertical-align: 6px; }
-  .welcome-side-logo .logo-sub { font-size: 9px; }
   .welcome-toc-label { padding: 6px 10px 2px; font-size: 9px; }
-  .welcome-toc li { padding: 6px 10px; font-size: 11px; gap: 6px; }
+  .welcome-toc li { padding: 6px 10px 6px 0; font-size: 11px; gap: 6px; }
   .welcome-title { font-size: 18px; padding: 8px 14px 4px; }
   .welcome-pane { padding: 10px 14px; font-size: 11px; }
   .welcome-foot { flex-wrap: wrap; gap: 6px; padding: 6px 10px; }
   .welcome-showcheck { font-size: 10px; }
   .welcome-btn { min-width: 60px; padding: 3px 8px; font-size: 10px; }
 }
-@media (max-width: 480px) {
-  .welcome-body { grid-template-columns: 110px 1fr; }
-  .welcome-side-logo .logo-mark { font-size: 18px; }
-  .welcome-toc li { padding: 5px 8px; font-size: 10px; }
-  .welcome-toc li .toc-marker { display: none; }
-  .welcome-toc li { grid-template-columns: 1fr 12px; }
-}
+.welcome-toc { overflow: auto; }    /* contain if labels grow tall */
 
 /* === Settings (Display Properties tabbed dialog) ================== */
 
@@ -727,6 +718,12 @@ body {
 }
 
 /* === Wallpapers (driven by body[data-wallpaper]) =================== */
+
+/* The iPhone landscape safe-area side bands are OUTSIDE the document
+   viewport — content can never fill them. Paint <html> pure black so
+   any letterboxing reads as a deliberate device-bezel frame instead
+   of an ugly white gutter. */
+html { background-color: #000; }
 
 body[data-wallpaper="heaven-sky"],
 body:not([data-wallpaper]) {

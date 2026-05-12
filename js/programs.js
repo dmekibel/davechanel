@@ -2,7 +2,7 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow } from "./window-manager.js";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver } from "./screensaver.js";
@@ -877,14 +877,14 @@ export function openWelcome() {
       `,
     },
     {
-      title: "Discover My Work",
+      title: "My Work",
       body: `
         <p>Open <b>Fine Art</b> for my artistic practice (ArtPrize 2024 + 2025 finalist).</p>
         <p>Open <b>Balancē Creative</b> for commercial work — brands, music, AI/3D pipelines.</p>
       `,
     },
     {
-      title: "Get In Touch",
+      title: "Contact",
       body: `
         <p><a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a></p>
         <p><a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a></p>
@@ -901,7 +901,7 @@ export function openWelcome() {
   ];
   const PAGES_RU = [
     {
-      title: "Добро пожаловать",
+      title: "Привет",
       body: `
         <p>Добро пожаловать на сайт <b>Давида Мекибеля</b>.</p>
         <p>Расслабьтесь и пройдите краткий тур по разделам этого сайта.</p>
@@ -909,14 +909,14 @@ export function openWelcome() {
       `,
     },
     {
-      title: "Мои работы",
+      title: "Работы",
       body: `
         <p>Откройте <b>Изобразительное искусство</b> — финалист ArtPrize 2024 + 2025.</p>
         <p>Откройте <b>Balancē Creative</b> — коммерческие проекты: бренды, музыка, AI/3D-пайплайны.</p>
       `,
     },
     {
-      title: "Контакты",
+      title: "Связь",
       body: `
         <p><a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a></p>
         <p><a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a></p>
@@ -1038,6 +1038,8 @@ export function openWelcome() {
     height: 340,
     flush: true,
   });
+  // On phones, maximize so the TOC has room and labels don't wrap weirdly.
+  if (window.innerWidth < 720) toggleMaximize(id);
   closeBtn.addEventListener("click", () => closeWindow(id));
   return id;
 }

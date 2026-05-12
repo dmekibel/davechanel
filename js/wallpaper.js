@@ -23,5 +23,8 @@ export function setWallpaper(id) {
 
 export function applyWallpaper() {
   const id = getWallpaper();
-  document.body.dataset.wallpaper = id;
+  // Apply to BOTH html and body so the iPhone landscape safe-area
+  // side bands match the desktop color (no white gutters on the sides).
+  document.documentElement.dataset.wallpaper = id;
+  if (document.body) document.body.dataset.wallpaper = id;
 }
