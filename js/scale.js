@@ -1,9 +1,8 @@
-// UI scale — applied to <body> via CSS `zoom` (well-behaved on Chrome/Edge
-// desktop, which is the target audience for scaling). Touch devices keep
-// scale=100: iOS WebKit's `zoom` is buggy with fixed-positioned children,
-// and `transform: scale()` causes the taskbar to disappear inside the
-// transformed body, so neither approach is safe to expose on touch.
-// The OS pinch-zoom on touch fills the same use case anyway.
+// UI scale — applied to <body> via CSS `zoom`. Works correctly across
+// Chrome, Edge, Safari, and iOS for visual scaling AND keeps fixed-
+// positioned chrome (taskbar, etc.) visible. Pointer-event coords on
+// iOS WebKit can drift slightly at extreme zoom (marquee origin offset),
+// which is why mobile defaults to 100% — but the user can opt in.
 
 const KEY = "site.scale";
 export const SCALES = [75, 90, 100, 110, 125, 150, 175, 200];
@@ -13,7 +12,6 @@ export function isTouchDevice() {
 }
 
 export function getScale() {
-  if (isTouchDevice()) return 100;
   try {
     const stored = localStorage.getItem(KEY);
     if (stored != null) {
@@ -21,8 +19,9 @@ export function getScale() {
       if (SCALES.includes(v)) return v;
     }
   } catch (_) {}
-  // Default 110% on desktop.
-  return 110;
+  // Default: 110% on desktops (pointer: fine), 100% on touch.
+  if (typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches) return 110;
+  return 100;
 }
 
 export function setScale(v) {

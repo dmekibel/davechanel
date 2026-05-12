@@ -1127,13 +1127,11 @@ export function openSettings() {
         <p class="settings-hint">Menu fade, drop shadows, smooth scroll — coming soon.</p>
       `;
     } else if (tab === "settings") {
-      const touch = isTouchDevice();
       body.innerHTML = `
         <div class="settings-row">
           <span class="settings-label">UI Scale</span>
           <div class="scale-select-slot"></div>
         </div>
-        ${touch ? `<div class="settings-hint">On touch devices, use the system pinch-zoom for scaling.</div>` : ""}
         <div class="settings-row"><span class="settings-label">Display</span><span>Default Monitor</span></div>
         <div class="settings-row"><span class="settings-label">Colors</span><span>True Color (24 bit)</span></div>
         <div class="settings-row"><span class="settings-label">Screen area</span><span>fit to window</span></div>
@@ -1143,8 +1141,7 @@ export function openSettings() {
       const sel = makeWin98Select(
         SCALES.map(s => ({ value: String(s), label: `${s}%` })),
         String(curScale),
-        (val) => setScale(parseInt(val, 10)),
-        { disabled: touch }
+        (val) => setScale(parseInt(val, 10))
       );
       slot.appendChild(sel);
     }
