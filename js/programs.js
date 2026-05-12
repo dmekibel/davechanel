@@ -635,6 +635,76 @@ function openStub(title, message) {
   return openWindow({ title, icon: ICONS.notepad(14), iconHtml: true, content: div, width: 360, height: 200 });
 }
 
+// Win98-styled combobox to replace the native <select> (which renders as
+// the OS-native picker on iOS / Android, breaking the retro look).
+function makeWin98Select(options, initial, onChange, opts = {}) {
+  const root = document.createElement("div");
+  root.className = "ws-select" + (opts.disabled ? " disabled" : "");
+  root.tabIndex = opts.disabled ? -1 : 0;
+  let current = options.find(o => o.value === initial) || options[0];
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "ws-value";
+  valueEl.textContent = current.label;
+
+  const arrow = document.createElement("button");
+  arrow.type = "button";
+  arrow.className = "ws-arrow";
+  arrow.tabIndex = -1;
+  arrow.innerHTML = `<span aria-hidden="true">▼</span>`;
+  if (opts.disabled) arrow.disabled = true;
+
+  const listEl = document.createElement("ul");
+  listEl.className = "ws-options";
+  listEl.hidden = true;
+  for (const o of options) {
+    const li = document.createElement("li");
+    li.dataset.value = o.value;
+    li.textContent = o.label;
+    if (o.value === current.value) li.classList.add("selected");
+    li.addEventListener("click", (e) => {
+      e.stopPropagation();
+      current = o;
+      valueEl.textContent = o.label;
+      listEl.querySelectorAll("li.selected").forEach(n => n.classList.remove("selected"));
+      li.classList.add("selected");
+      close();
+      onChange(o.value);
+    });
+    listEl.appendChild(li);
+  }
+
+  root.appendChild(valueEl);
+  root.appendChild(arrow);
+  root.appendChild(listEl);
+
+  function open() {
+    if (opts.disabled) return;
+    listEl.hidden = false;
+    setTimeout(() => document.addEventListener("click", outsideClose), 0);
+  }
+  function close() {
+    listEl.hidden = true;
+    document.removeEventListener("click", outsideClose);
+  }
+  function outsideClose(e) {
+    if (!root.contains(e.target)) close();
+  }
+  const toggle = (e) => {
+    e.stopPropagation();
+    if (listEl.hidden) open();
+    else close();
+  };
+  valueEl.addEventListener("click", toggle);
+  arrow.addEventListener("click", toggle);
+  root.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(e); }
+    if (e.key === "Escape") close();
+  });
+
+  return root;
+}
+
 export function openWelcome() {
   // 4 short pages — matches the Win98 reference (4 contents items).
   const PAGES = [
@@ -811,28 +881,36 @@ export function openSettings() {
         </div>
         <div class="settings-row">
           <label class="settings-label">Wallpaper</label>
-          <select class="settings-select" id="wp-select">
-            ${WALLPAPERS.map(w => `<option value="${w.id}" ${w.id === pendingWp ? "selected" : ""}>${w.label}</option>`).join("")}
-          </select>
+          <div class="wp-select-slot"></div>
         </div>
         <p class="settings-hint">Pick a wallpaper, then click <b>Apply</b> or <b>OK</b>. <b>Cancel</b> reverts.</p>
       `;
-      const sel = body.querySelector("#wp-select");
+      const slot = body.querySelector(".wp-select-slot");
       const desk = body.querySelector(".mini-desk");
-      sel.addEventListener("change", () => {
-        pendingWp = sel.value;
-        desk.dataset.wp = pendingWp;
-      });
+      const sel = makeWin98Select(
+        WALLPAPERS.map(w => ({ value: w.id, label: w.label })),
+        pendingWp,
+        (val) => {
+          pendingWp = val;
+          desk.dataset.wp = pendingWp;
+        }
+      );
+      slot.appendChild(sel);
     } else if (tab === "screensaver") {
       body.innerHTML = `
         <div class="settings-row">
           <label class="settings-label">Screen Saver</label>
-          <select class="settings-select" disabled>
-            <option>Bouncing David Mekibel</option>
-          </select>
+          <div class="ss-select-slot"></div>
         </div>
         <p class="settings-hint">Activate manually from <b>Start &gt; Sleep</b>. Idle auto-trigger is not wired.</p>
       `;
+      const slot = body.querySelector(".ss-select-slot");
+      slot.appendChild(makeWin98Select(
+        [{ value: "bouncing", label: "Bouncing David Mekibel" }],
+        "bouncing",
+        () => {},
+        { disabled: true }
+      ));
     } else if (tab === "appearance") {
       body.innerHTML = `
         <p class="settings-hint">Color schemes (Win98 / Heaven Inc.) — coming soon.</p>

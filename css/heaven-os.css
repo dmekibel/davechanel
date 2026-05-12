@@ -278,15 +278,85 @@
   font-weight: 700;
   color: #333;
 }
-.settings-select {
+.settings-select,
+.wp-select-slot,
+.ss-select-slot {
   flex: 1;
+  display: flex;
+}
+
+/* Win98-style custom combobox (replaces native <select>) */
+.ws-select {
+  flex: 1;
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
   background: #fff;
   border: 2px solid;
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
-  padding: 2px 4px;
   font-family: var(--ui-font);
   font-size: 12px;
   height: 22px;
+  cursor: default;
+  user-select: none;
+  color: #000;
+}
+.ws-select:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+.ws-select.disabled { color: #888; }
+.ws-select .ws-value {
+  flex: 1;
+  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ws-select .ws-arrow {
+  width: 18px;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  border-left-color: var(--chrome-light);
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  color: #000;
+  cursor: default;
+  margin: -2px -2px -2px 0;
+  flex: 0 0 18px;
+}
+.ws-select .ws-arrow:active:not([disabled]) {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
+.ws-select .ws-arrow[disabled] { color: #888; }
+.ws-select .ws-options {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: -2px;
+  right: -2px;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  box-shadow: 2px 2px 0 var(--chrome-shadow);
+  list-style: none;
+  margin: 0;
+  padding: 1px;
+  max-height: 180px;
+  overflow: auto;
+  z-index: 100002;
+  font-size: 12px;
+}
+.ws-select .ws-options li {
+  padding: 3px 8px;
+  cursor: default;
+  white-space: nowrap;
+  color: #000;
+}
+.ws-select .ws-options li:hover,
+.ws-select .ws-options li.selected {
+  background: var(--tb-active-1);
+  color: #fff;
 }
 .settings-hint { padding: 6px 4px; font-size: 11px; color: #444; line-height: 1.4; }
 .settings-foot {
