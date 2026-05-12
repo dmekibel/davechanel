@@ -7,6 +7,8 @@ import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
 import { openPaint } from "./paint.js";
+import { openImageViewer } from "./image-viewer.js";
+import { openMinesweeper } from "./minesweeper.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 import { showContextMenu } from "./context-menu.js";
 import { currentZoom } from "./scale.js";
@@ -783,6 +785,8 @@ export function openProgram(progId) {
     case "restart":      return restart();
     case "sleep":        return startScreensaver();
     case "paint":        return openPaint();
+    case "image-viewer": return openImageViewer("", "Image Viewer");
+    case "minesweeper":  return openMinesweeper();
     case "welcome":      return openWelcome();
     case "settings":     return openSettings();
     case "control-panel":return openSettings();

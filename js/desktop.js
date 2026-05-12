@@ -16,8 +16,10 @@ const PROG_FOR = {
 
 // Synthetic desktop shortcuts that don't live in the FS but appear on the desktop.
 const DESKTOP_SHORTCUTS = [
-  { name: "My Computer", iconHtml: ICONS.myComputer(32), program: "explorer" },
-  { name: "Paint",       iconHtml: ICONS.paint(32),      program: "paint"    },
+  { name: "My Computer",   iconHtml: ICONS.myComputer(32),  program: "explorer"     },
+  { name: "Paint",         iconHtml: ICONS.paint(32),       program: "paint"        },
+  { name: "Image Viewer",  iconHtml: ICONS.picture(32),     program: "image-viewer" },
+  { name: "Minesweeper",   iconHtml: ICONS.minesweeper(32), program: "minesweeper"  },
 ];
 
 export function initDesktop() {

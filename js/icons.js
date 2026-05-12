@@ -59,6 +59,16 @@ const PAINT = `
   <path d="M11 11 L13 9 L15 11 L13 13 Z" fill="#cdcdcd" stroke="#000"/>
   <rect x="4" y="13" width="8" height="2" fill="#cdcdcd" stroke="#000"/>
 `;
+const MINESWEEPER = `
+  <rect x="1" y="1" width="14" height="14" fill="#c3c3c3" stroke="#000"/>
+  <rect x="2" y="2" width="12" height="12" fill="#808080"/>
+  <circle cx="8" cy="8" r="3.5" fill="#000"/>
+  <rect x="7" y="3" width="2" height="2" fill="#000"/>
+  <rect x="3" y="7" width="2" height="2" fill="#000"/>
+  <rect x="11" y="7" width="2" height="2" fill="#000"/>
+  <rect x="7" y="11" width="2" height="2" fill="#000"/>
+  <rect x="6" y="6" width="1" height="1" fill="#fff"/>
+`;
 const BRIEFCASE = `
   <rect x="6" y="3" width="4" height="2" fill="none" stroke="#000"/>
   <rect x="1" y="5" width="14" height="9" fill="#704020" stroke="#000"/>
@@ -141,6 +151,7 @@ export const ICONS = {
   recycle:     (s = 16) => wrap(RECYCLE, s),
   picture:     (s = 16) => wrap(PICTURE, s),
   paint:       (s = 16) => wrap(PAINT, s),
+  minesweeper: (s = 16) => wrap(MINESWEEPER, s),
   briefcase:   (s = 16) => wrap(BRIEFCASE, s),
   mail:        (s = 16) => wrap(MAIL, s),
   movie:       (s = 16) => wrap(MOVIE, s),

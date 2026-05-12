@@ -122,6 +122,84 @@ function win98Info(message, title) {
   win98Confirm(message, title, () => {}, { okOnly: true });
 }
 
+// Sensible default canvas dimensions based on the viewport.
+function defaultCanvasSize() {
+  const vw = Math.max(window.innerWidth, document.documentElement.clientWidth);
+  const vh = Math.max(window.innerHeight, document.documentElement.clientHeight);
+  const portrait = vh > vw;
+  if (vw < 700) return portrait ? { w: 320, h: 480 } : { w: 560, h: 320 };
+  return { w: 800, h: 560 };
+}
+
+// Win98-styled canvas-attributes dialog. onOk receives {w, h}.
+function canvasSizeDialog(initial, onOk) {
+  const back = document.createElement("div");
+  back.className = "win98-confirm-backdrop";
+  const dlg = document.createElement("div");
+  dlg.className = "win98-confirm canvas-attr-dlg";
+  dlg.innerHTML = `
+    <div class="win98-confirm-title">Image Attributes</div>
+    <div class="canvas-attr-body">
+      <div class="canvas-attr-row">
+        <label>Width: <input type="number" class="ca-w" min="16" max="4096" step="1"></label>
+        <label>Height: <input type="number" class="ca-h" min="16" max="4096" step="1"></label>
+      </div>
+      <div class="canvas-attr-presets">
+        <button data-preset="fit">Fit window</button>
+        <button data-preset="320,480">320 × 480</button>
+        <button data-preset="640,480">640 × 480</button>
+        <button data-preset="800,600">800 × 600</button>
+        <button data-preset="1024,768">1024 × 768</button>
+      </div>
+    </div>
+    <div class="win98-confirm-buttons">
+      <button class="win98-confirm-btn win98-confirm-ok">OK</button>
+      <button class="win98-confirm-btn win98-confirm-cancel">Cancel</button>
+    </div>
+  `;
+  const wIn = dlg.querySelector(".ca-w");
+  const hIn = dlg.querySelector(".ca-h");
+  wIn.value = initial.w;
+  hIn.value = initial.h;
+  dlg.querySelectorAll(".canvas-attr-presets button").forEach(b => {
+    b.addEventListener("click", () => {
+      const p = b.dataset.preset;
+      if (p === "fit") {
+        const fit = fitCanvasSizeToWindow();
+        wIn.value = fit.w;
+        hIn.value = fit.h;
+      } else {
+        const [w, h] = p.split(",").map(Number);
+        wIn.value = w;
+        hIn.value = h;
+      }
+    });
+  });
+  back.appendChild(dlg);
+  document.body.appendChild(back);
+  const cleanup = () => back.remove();
+  dlg.querySelector(".win98-confirm-ok").addEventListener("click", () => {
+    const w = Math.max(16, Math.min(4096, parseInt(wIn.value, 10) || initial.w));
+    const h = Math.max(16, Math.min(4096, parseInt(hIn.value, 10) || initial.h));
+    cleanup();
+    onOk({ w, h });
+  });
+  dlg.querySelector(".win98-confirm-cancel").addEventListener("click", cleanup);
+  back.addEventListener("click", (e) => { if (e.target === back) cleanup(); });
+}
+
+// Compute the canvas size that fits within the current paint window, if open.
+function fitCanvasSizeToWindow() {
+  const wrapEl = document.querySelector(".paint-canvas-wrap");
+  if (wrapEl) {
+    return {
+      w: Math.max(16, Math.floor(wrapEl.clientWidth  - 16)),
+      h: Math.max(16, Math.floor(wrapEl.clientHeight - 16)),
+    };
+  }
+  return defaultCanvasSize();
+}
+
 // Win98 confirm dialog — replaces native confirm() so the OS illusion holds.
 function win98Confirm(message, title, onOk, opts = {}) {
   const back = document.createElement("div");
@@ -154,7 +232,8 @@ const PALETTE = [
   "#ffffff","#c3c3c3","#ff0000","#ffff00","#00ff00","#00ffff","#0000ff","#ff00ff",
 ];
 
-export function openPaint() {
+export function openPaint(opts = {}) {
+  const initial = opts && (opts.w && opts.h) ? { w: opts.w, h: opts.h } : defaultCanvasSize();
   const wrap = document.createElement("div");
   wrap.className = "paint";
   wrap.innerHTML = `
@@ -177,8 +256,8 @@ export function openPaint() {
       <span class="pt-sep"></span>
       <button class="pt-btn pt-undo"  title="Undo (Ctrl+Z)" aria-label="Undo">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-          <path d="M3 8 Q3 4 8 4 L12 4" stroke="#000" stroke-width="1.5" fill="none"/>
-          <path d="M5 6 L3 8 L5 10" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3.5 6 Q8 1.5 13 6 Q13 9 9 9" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M1.5 4 L3.5 6 L5.5 4" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <span class="pt-sep"></span>
@@ -187,7 +266,7 @@ export function openPaint() {
     <div class="paint-main">
       <div class="paint-palette"></div>
       <div class="paint-canvas-wrap">
-        <canvas class="paint-canvas" width="600" height="400"></canvas>
+        <canvas class="paint-canvas" width="${initial.w}" height="${initial.h}"></canvas>
       </div>
     </div>
     <div class="paint-status">
@@ -261,12 +340,33 @@ export function openPaint() {
 
   // Actions
   function doUndo() { undo(); }
+  function resizeCanvas(w, h) {
+    pushUndo();
+    canvas.width  = w;
+    canvas.height = h;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+  }
   function doNew() {
-    win98Confirm("Clear the whole canvas?", "Paint", () => {
-      pushUndo();
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    });
+    canvasSizeDialog(
+      { w: canvas.width, h: canvas.height },
+      ({ w, h }) => resizeCanvas(w, h),
+    );
+  }
+  function doAttributes() {
+    canvasSizeDialog(
+      { w: canvas.width, h: canvas.height },
+      ({ w, h }) => {
+        // Preserve existing image when only resizing (Image > Attributes)
+        const old = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        pushUndo();
+        canvas.width  = w;
+        canvas.height = h;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.putImageData(old, 0, 0);
+      },
+    );
   }
   function doExport() {
     canvas.toBlob(blob => {
@@ -312,7 +412,7 @@ export function openPaint() {
       { label: "Clear Image",   action: doNew },
     ]},
     { label: "Image", items: [
-      { label: "Attributes...", action: () => win98Info("Canvas size picker — coming soon.", "Image Attributes") },
+      { label: "Attributes...", action: doAttributes },
     ]},
     { label: "Help", items: [
       { label: "About Paint",   action: () => win98Info("Paint — a tiny in-page MS Paint clone.", "About Paint") },

@@ -383,6 +383,47 @@
 .win98-confirm-btn:active {
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
 }
+
+/* Canvas-attributes dialog (Paint > Image > Attributes / File > New) */
+.canvas-attr-dlg { min-width: 320px; }
+.canvas-attr-body { padding: 14px 18px 8px; }
+.canvas-attr-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.canvas-attr-row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.canvas-attr-row input {
+  width: 80px;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 2px 4px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+}
+.canvas-attr-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.canvas-attr-presets button {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  padding: 2px 8px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  cursor: default;
+}
+.canvas-attr-presets button:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
 .ws-select .ws-value {
   flex: 1;
   padding: 2px 6px;
@@ -462,6 +503,155 @@
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
   padding: 5px 15px 3px 17px;
 }
+
+/* === Image Viewer =================================================== */
+
+.iv {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--chrome);
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+}
+.iv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--chrome-dark);
+}
+.iv-btn {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  padding: 2px 10px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  cursor: default;
+  color: #000;
+  min-width: 28px;
+}
+.iv-btn:active { border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark); }
+.iv-spacer { flex: 1; }
+.iv-info { color: #333; font-size: 11px; padding-right: 4px; }
+.iv-stage {
+  flex: 1;
+  background: #1a1a1a;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+.iv-canvas {
+  display: block;
+  cursor: grab;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.iv-canvas:active { cursor: grabbing; }
+
+/* === Minesweeper ==================================================== */
+
+.ms {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--chrome);
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+  padding: 0;
+}
+.ms-menubar {
+  display: flex;
+  padding: 2px 4px 0;
+  border-bottom: 1px solid var(--chrome-dark);
+  height: 22px;
+}
+.ms-menu {
+  background: transparent;
+  border: 0;
+  padding: 2px 8px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+  cursor: default;
+}
+@media (hover: hover) {
+  .ms-menu:hover { background: var(--tb-active-1); color: #fff; }
+}
+.ms-frame {
+  padding: 8px;
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  margin: 8px;
+  background: var(--chrome);
+}
+.ms-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 4px 6px;
+  margin-bottom: 8px;
+}
+.ms-counter {
+  background: #000;
+  color: #ff2020;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  padding: 0 6px;
+  border: 1px solid #444;
+  min-width: 48px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+.ms-face {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: default;
+  padding: 0;
+}
+.ms-face:active { border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark); }
+.ms-board {
+  display: grid;
+  gap: 0;
+  background: var(--chrome-dark);
+  padding: 2px;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
+.ms-cell {
+  width: 18px;
+  height: 18px;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  font-family: var(--ui-font);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  text-align: center;
+  color: #000;
+  cursor: default;
+  user-select: none;
+}
+.ms-cell.revealed {
+  border: 1px solid var(--chrome-dark);
+  background: var(--chrome);
+}
+.ms-cell.mine { background: #d63a1e; color: #000; }
+.ms-cell.flag { color: #d63a1e; }
+.ms-drop { font-family: var(--ui-font); font-size: 11px; color: #000; }
 
 /* === Paint app ==================================================== */
 
