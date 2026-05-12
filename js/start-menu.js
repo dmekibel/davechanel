@@ -5,6 +5,7 @@
 import { ICONS, iconFor } from "./icons.js";
 import { openProgram, openFile } from "./programs.js";
 import { findByPath } from "./file-system.js";
+import { t } from "./i18n.js";
 
 const ARROW = `▶`;
 
@@ -82,7 +83,7 @@ function makeMenuList(items, depth) {
 
     const lbl = document.createElement("span");
     lbl.className = "sm-lbl";
-    lbl.textContent = it.label;
+    lbl.textContent = t(it.label);
     li.appendChild(lbl);
 
     if (it.children) {

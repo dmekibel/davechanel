@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/reset.css?v=26">
-  <link rel="stylesheet" href="css/heaven-os.css?v=26">
-  <link rel="stylesheet" href="css/animations.css?v=26">
+  <link rel="stylesheet" href="css/reset.css?v=27">
+  <link rel="stylesheet" href="css/heaven-os.css?v=27">
+  <link rel="stylesheet" href="css/animations.css?v=27">
 </head>
 <body>
   <main id="desktop" class="desktop" aria-label="Desktop">
@@ -21,10 +21,21 @@
   <footer id="taskbar" class="taskbar" aria-label="Taskbar">
     <button id="start-btn" class="start" type="button" aria-haspopup="menu" aria-expanded="false">
       <span class="start-logo" aria-hidden="true">✦</span>
-      <span class="start-text">Start</span>
+      <span class="start-text" data-i18n="Start">Start</span>
     </button>
     <ul id="taskbar-entries" class="taskbar-entries" role="list"></ul>
     <div class="tray">
+      <button id="lang-globe" class="tray-globe" type="button" aria-label="Switch language">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.5" fill="#4a90d9" stroke="#000" stroke-width="1"/>
+          <path d="M1.5 8 H14.5" stroke="#000" fill="none" stroke-width="0.8"/>
+          <path d="M8 1.5 V14.5" stroke="#000" fill="none" stroke-width="0.8"/>
+          <path d="M2.5 5 Q8 7 13.5 5" stroke="#000" fill="none" stroke-width="0.8"/>
+          <path d="M2.5 11 Q8 9 13.5 11" stroke="#000" fill="none" stroke-width="0.8"/>
+          <ellipse cx="8" cy="8" rx="2.5" ry="6.5" fill="none" stroke="#000" stroke-width="0.8"/>
+        </svg>
+        <span class="lang-code">EN</span>
+      </button>
       <span id="clock" class="clock" aria-label="Current time">--:--</span>
     </div>
   </footer>
@@ -41,9 +52,9 @@
     <div class="login-main">
       <div class="login-left">
         <div class="login-logo">David Mekibel</div>
-        <div class="login-lead">portfolio website.</div>
-        <div class="login-sub">Commercial and fine art work.</div>
-        <div class="login-tagline">To begin, click your user</div>
+        <div class="login-lead"    data-i18n="portfolio website.">portfolio website.</div>
+        <div class="login-sub"     data-i18n="Commercial and fine art work.">Commercial and fine art work.</div>
+        <div class="login-tagline" data-i18n="To begin, click your user">To begin, click your user</div>
       </div>
 
       <div class="login-divider" aria-hidden="true"></div>
@@ -68,17 +79,17 @@
       <div class="login-bottom-actions">
         <button id="login-shutdown" class="login-shutdown" type="button">
           <span class="ic" aria-hidden="true">⏻</span>
-          <span>Shut Down</span>
+          <span data-i18n="Shut Down">Shut Down</span>
         </button>
         <button id="login-sleep" class="login-shutdown" type="button">
           <span class="ic ic-sleep" aria-hidden="true">☾</span>
-          <span>Sleep</span>
+          <span data-i18n="Sleep">Sleep</span>
         </button>
       </div>
-      <div class="login-help">No password required. Click your name to enter the desktop.</div>
+      <div class="login-help" data-i18n="No password required. Click your name to enter the desktop.">No password required. Click your name to enter the desktop.</div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=26"></script>
+  <script type="module" src="js/main.js?v=27"></script>
 </body>
 </html>

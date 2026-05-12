@@ -8,8 +8,7 @@ import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver } from "./screensaver.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 import { showContextMenu } from "./context-menu.js";
-
-const t = (s) => s;   // i18n removed; identity for now
+import { t } from "./i18n.js";
 
 // ---- Notepad --------------------------------------------------------
 

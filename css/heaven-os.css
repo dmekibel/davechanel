@@ -889,13 +889,104 @@ body[data-wallpaper="clouds"] {
   height: 22px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   padding: 0 6px 0 4px;
   border: 1px solid;
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
   font-family: var(--ui-font);
 }
 .clock { font-size: 11px; }
+
+.tray-globe {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0 4px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #000;
+  cursor: default;
+  font-family: var(--ui-font);
+}
+.tray-globe:hover {
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+}
+.tray-globe:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
+.tray-globe svg { display: block; }
+.tray-globe .lang-code { letter-spacing: 0.4px; }
+
+.lang-popup {
+  position: fixed;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  box-shadow: 2px 2px 0 var(--chrome-shadow);
+  padding: 2px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  z-index: 100002;
+  min-width: 160px;
+}
+.lang-popup .item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px 5px 6px;
+  cursor: default;
+}
+.lang-popup .item .abbr {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 16px;
+  background: #fff;
+  border: 1px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+.lang-popup .item .name { flex: 1; }
+.lang-popup .item .check { color: #000; }
+.lang-popup .item:hover { background: var(--tb-active-1); color: #fff; }
+.lang-popup .item:hover .check { color: #fff; }
+
+/* === Russian mode font override =================================== */
+/* The VT323 pixel font has weak/odd Cyrillic glyphs. In RU mode swap
+   most chrome elements over to Tahoma which has full Cyrillic support
+   and stays in the Win98 visual language. Pure-Latin wordmarks like
+   the login logo + screensaver keep VT323. */
+body.lang-ru .start-text,
+body.lang-ru .clock,
+body.lang-ru .start-menu-items,
+body.lang-ru .start-menu-items .sm-lbl,
+body.lang-ru .ctx-menu,
+body.lang-ru .menu-dropdown,
+body.lang-ru .exp-menubar,
+body.lang-ru .exp-toolbar,
+body.lang-ru .exp-address,
+body.lang-ru .exp-tree,
+body.lang-ru .exp-pane,
+body.lang-ru .exp-statusbar,
+body.lang-ru .welcome-toc,
+body.lang-ru .welcome-title,
+body.lang-ru .welcome-pane,
+body.lang-ru .welcome-foot,
+body.lang-ru .settings-tabs,
+body.lang-ru .settings-body,
+body.lang-ru .settings-foot,
+body.lang-ru .window-titlebar,
+body.lang-ru .login-lead,
+body.lang-ru .login-sub,
+body.lang-ru .login-tagline,
+body.lang-ru .login-help,
+body.lang-ru .login-shutdown,
+body.lang-ru .login-build-meta {
+  font-family: "Tahoma", "Geneva", "DejaVu Sans", sans-serif !important;
+}
 
 /* Marquee selection (drag-to-select on desktop) */
 .marquee {
