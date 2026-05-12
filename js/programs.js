@@ -546,7 +546,7 @@ export function openExplorer(startPath = []) {
 
         const open = () => {
           if (child.type === "folder") navigateTo([...currentPath, child.name]);
-          else openFile(child);
+          else openFile(child, node);
         };
         const select = () => {
           grid.querySelectorAll(".exp-tile.selected").forEach(n => n.classList.remove("selected"));
@@ -760,12 +760,21 @@ export function openExplorer(startPath = []) {
 
 // ---- Generic file opener -------------------------------------------
 
-export function openFile(file) {
+export function openFile(file, parentFolder) {
   switch (file.kind) {
     case "notepad": return openNotepad(file);
     case "compose": return openCompose();
     case "media":   return openShowreel(file);
-    case "image":   return openImageViewer(file.src, file.name);
+    case "image": {
+      // If we know the parent folder, pass all its images as a list
+      // so prev/next arrows can navigate through them.
+      if (parentFolder && Array.isArray(parentFolder.children)) {
+        const images = parentFolder.children.filter(c => c.kind === "image");
+        const idx = Math.max(0, images.findIndex(c => c === file));
+        return openImageViewer({ list: images.map(c => ({ src: c.src, name: c.name })), index: idx, title: file.name });
+      }
+      return openImageViewer(file.src, file.name);
+    }
     case "html":    return openNotepad(file);
     default:        return openNotepad(file);
   }

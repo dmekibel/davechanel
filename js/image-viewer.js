@@ -1,16 +1,39 @@
 // Image Viewer — pan/zoom canvas-backed preview app.
-// Renders fine-art images via <canvas> so right-click "Save image as"
-// disappears, blocks contextmenu / drag / selection. (This is a
-// deterrent — anything on screen can still be screenshotted, but most
-// casual visitors won't bother.)
+// Renders images via <canvas> so right-click "Save image as" disappears,
+// blocks contextmenu / drag / selection. (Deterrent only — anything on
+// screen can be screenshotted.)
+//
+// Public API:
+//   openImageViewer(src, title)
+//   openImageViewer({ list, index })   // list: [{src, name}], index: 0..n-1
 
-import { openWindow } from "./window-manager.js";
+import { openWindow, closeWindow } from "./window-manager.js";
 import { ICONS } from "./icons.js";
 
-export function openImageViewer(src, title) {
+export function openImageViewer(arg1, title) {
+  // Normalize the argument shape into { list, index }.
+  let list, index;
+  if (arg1 && typeof arg1 === "object" && Array.isArray(arg1.list)) {
+    list = arg1.list.slice();
+    index = Math.max(0, Math.min(list.length - 1, arg1.index || 0));
+    title = arg1.title || (list[index] && list[index].name) || "Image Viewer";
+  } else if (typeof arg1 === "string") {
+    list = arg1 ? [{ src: arg1, name: title || "Image" }] : [];
+    index = 0;
+    title = title || (list[0] && list[0].name) || "Image Viewer";
+  } else {
+    list = [];
+    index = 0;
+    title = title || "Image Viewer";
+  }
+
   const wrap = document.createElement("div");
   wrap.className = "iv";
   wrap.innerHTML = `
+    <div class="iv-menubar">
+      <button class="iv-menu" data-menu="file">File</button>
+      <button class="iv-menu" data-menu="view">View</button>
+    </div>
     <div class="iv-toolbar">
       <button class="iv-btn iv-zoom-out" title="Zoom out">−</button>
       <button class="iv-btn iv-zoom-in"  title="Zoom in">+</button>
@@ -21,17 +44,29 @@ export function openImageViewer(src, title) {
     </div>
     <div class="iv-stage">
       <canvas class="iv-canvas"></canvas>
+      <button class="iv-nav iv-prev" aria-label="Previous">‹</button>
+      <button class="iv-nav iv-next" aria-label="Next">›</button>
+      <div class="iv-empty">
+        <p>No image loaded.</p>
+        <button class="iv-open-empty">File → Open…</button>
+      </div>
     </div>
+    <input class="iv-file" type="file" accept="image/*" multiple hidden>
   `;
 
-  const stage = wrap.querySelector(".iv-stage");
-  const canvas = wrap.querySelector(".iv-canvas");
-  const ctx = canvas.getContext("2d", { alpha: true });
-  const info = wrap.querySelector(".iv-info");
+  const stage    = wrap.querySelector(".iv-stage");
+  const canvas   = wrap.querySelector(".iv-canvas");
+  const ctx      = canvas.getContext("2d", { alpha: true });
+  const info     = wrap.querySelector(".iv-info");
+  const prevBtn  = wrap.querySelector(".iv-prev");
+  const nextBtn  = wrap.querySelector(".iv-next");
+  const emptyEl  = wrap.querySelector(".iv-empty");
+  const fileInp  = wrap.querySelector(".iv-file");
+  const openEmpty = wrap.querySelector(".iv-open-empty");
 
   let img = new Image();
   let scale = 1;
-  let tx = 0, ty = 0;     // translation
+  let tx = 0, ty = 0;
   let loaded = false;
 
   // Anti-copy deterrents
@@ -69,7 +104,6 @@ export function openImageViewer(src, title) {
     const w = stage.clientWidth, h = stage.clientHeight;
     const cx = center ? center.x : w / 2;
     const cy = center ? center.y : h / 2;
-    // Keep the point under the cursor fixed during zoom.
     const ix = (cx - tx) / scale;
     const iy = (cy - ty) / scale;
     scale = next;
@@ -85,10 +119,62 @@ export function openImageViewer(src, title) {
     if (!loaded) return;
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
-    info.textContent = `${img.naturalWidth}×${img.naturalHeight}  ${Math.round(scale * 100)}%`;
+    const cur = list[index];
+    info.textContent = `${cur ? (cur.name + "  ") : ""}${img.naturalWidth}×${img.naturalHeight}  ${Math.round(scale * 100)}%`;
   }
 
-  // Pan with drag (mouse + touch)
+  function updateNavVisibility() {
+    const hasMany = list.length > 1;
+    prevBtn.hidden = !hasMany;
+    nextBtn.hidden = !hasMany;
+    emptyEl.hidden = list.length > 0;
+  }
+
+  function loadCurrent() {
+    if (!list.length || index < 0 || index >= list.length) {
+      loaded = false;
+      updateNavVisibility();
+      draw();
+      return;
+    }
+    const cur = list[index];
+    setTitle(cur.name || "Image Viewer");
+    loaded = false;
+    img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      loaded = true;
+      setTimeout(() => { resize(); fit(); }, 0);
+    };
+    img.onerror = () => {
+      loaded = false;
+      info.textContent = "Failed to load image.";
+      draw();
+    };
+    img.src = cur.src;
+    updateNavVisibility();
+  }
+
+  function setTitle(t) {
+    const winEl = wrap.closest(".window");
+    if (winEl) {
+      const titleEl = winEl.querySelector(".window-titlebar .title");
+      if (titleEl) titleEl.textContent = t;
+    }
+  }
+
+  function prev() {
+    if (list.length < 2) return;
+    index = (index - 1 + list.length) % list.length;
+    loadCurrent();
+  }
+  function next() {
+    if (list.length < 2) return;
+    index = (index + 1) % list.length;
+    loadCurrent();
+  }
+
+  // Pan with drag
   let dragging = false;
   let lastX = 0, lastY = 0;
   const onDown = (cx, cy) => { dragging = true; lastX = cx; lastY = cy; };
@@ -115,7 +201,6 @@ export function openImageViewer(src, title) {
   }, { passive: false });
   canvas.addEventListener("touchend", onUp);
 
-  // Wheel zoom
   canvas.addEventListener("wheel", (e) => {
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
@@ -128,31 +213,115 @@ export function openImageViewer(src, title) {
   wrap.querySelector(".iv-zoom-out").addEventListener("click", () => setScale(scale / 1.25));
   wrap.querySelector(".iv-fit").addEventListener("click",      fit);
   wrap.querySelector(".iv-actual").addEventListener("click",   () => setScale(1));
+  prevBtn.addEventListener("click", (e) => { e.stopPropagation(); prev(); });
+  nextBtn.addEventListener("click", (e) => { e.stopPropagation(); next(); });
 
-  // Load the image
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    loaded = true;
-    setTimeout(() => { resize(); fit(); }, 0);
-  };
-  img.onerror = () => {
-    loaded = false;
-    info.textContent = "Failed to load image.";
-    draw();
-  };
-  img.src = src;
+  // Keyboard arrows
+  function keyHandler(e) {
+    if (!wrap.isConnected) {
+      document.removeEventListener("keydown", keyHandler);
+      return;
+    }
+    if (e.key === "ArrowLeft")  { e.preventDefault(); prev(); }
+    if (e.key === "ArrowRight") { e.preventDefault(); next(); }
+  }
+  document.addEventListener("keydown", keyHandler);
+
+  // File > Open — pick local images
+  function openLocal() { fileInp.click(); }
+  fileInp.addEventListener("change", () => {
+    const files = [...(fileInp.files || [])].filter(f => /^image\//.test(f.type));
+    if (!files.length) return;
+    const items = files.map(f => ({ src: URL.createObjectURL(f), name: f.name }));
+    list = items;
+    index = 0;
+    loadCurrent();
+    fileInp.value = "";
+  });
+  openEmpty.addEventListener("click", openLocal);
+
+  // Menu bar
+  const menubar = wrap.querySelector(".iv-menubar");
+  buildIvMenu(menubar.querySelector('[data-menu="file"]'), [
+    { label: "Open…",  action: openLocal,  accel: "Ctrl+O" },
+    "sep",
+    { label: "Close",  action: () => {
+      const winEl = wrap.closest(".window");
+      if (winEl) closeWindow(parseInt(winEl.dataset.id, 10));
+    } },
+  ]);
+  buildIvMenu(menubar.querySelector('[data-menu="view"]'), [
+    { label: "Zoom in",       action: () => setScale(scale * 1.25), accel: "+" },
+    { label: "Zoom out",      action: () => setScale(scale / 1.25), accel: "−" },
+    "sep",
+    { label: "Fit to window", action: fit },
+    { label: "Actual size",   action: () => setScale(1) },
+    "sep",
+    { label: "Previous image", action: prev, accel: "←" },
+    { label: "Next image",     action: next, accel: "→" },
+  ]);
 
   // React to window resize
   const ro = new ResizeObserver(() => { resize(); });
   setTimeout(() => ro.observe(stage), 0);
 
-  return openWindow({
-    title: title || "Image Viewer",
+  const winId = openWindow({
+    title,
     icon: ICONS.picture(14),
     iconHtml: true,
     content: wrap,
     width: 720,
     height: 540,
     flush: true,
+  });
+
+  // Kick off after the window mounts so .iv-stage has a real size.
+  setTimeout(loadCurrent, 0);
+
+  return winId;
+}
+
+// Tiny menu dropdown helper — same style as Paint's menubar but local to
+// this module so the file is self-contained.
+function buildIvMenu(btn, items) {
+  let openDrop = null;
+  const close = () => {
+    if (openDrop) { openDrop.remove(); openDrop = null; }
+    btn.classList.remove("open");
+    document.removeEventListener("click", outsideClose, true);
+  };
+  const outsideClose = (e) => {
+    if (!btn.contains(e.target) && (!openDrop || !openDrop.contains(e.target))) close();
+  };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (openDrop) { close(); return; }
+    btn.classList.add("open");
+    const drop = document.createElement("div");
+    drop.className = "pm-drop";
+    for (const it of items) {
+      if (it === "sep") {
+        const sep = document.createElement("div");
+        sep.className = "pm-sep";
+        drop.appendChild(sep);
+        continue;
+      }
+      const row = document.createElement("div");
+      row.className = "pm-item";
+      row.innerHTML = `<span class="pm-lbl">${it.label}</span>${it.accel ? `<span class="pm-accel">${it.accel}</span>` : ""}`;
+      row.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        close();
+        it.action();
+      });
+      drop.appendChild(row);
+    }
+    const r = btn.getBoundingClientRect();
+    drop.style.position = "fixed";
+    drop.style.left = r.left + "px";
+    drop.style.top  = r.bottom + "px";
+    document.body.appendChild(drop);
+    openDrop = drop;
+    document.addEventListener("click", outsideClose, true);
   });
 }

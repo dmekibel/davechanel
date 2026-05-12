@@ -15,11 +15,12 @@ const PROG_FOR = {
 };
 
 // Synthetic desktop shortcuts that don't live in the FS but appear on the desktop.
+// Image Viewer is intentionally NOT a desktop shortcut — it opens automatically
+// when you tap an image file inside My Computer.
 const DESKTOP_SHORTCUTS = [
-  { name: "My Computer",   iconHtml: ICONS.myComputer(32),  program: "explorer"     },
-  { name: "Paint",         iconHtml: ICONS.paint(32),       program: "paint"        },
-  { name: "Image Viewer",  iconHtml: ICONS.picture(32),     program: "image-viewer" },
-  { name: "Minesweeper",   iconHtml: ICONS.minesweeper(32), program: "minesweeper"  },
+  { name: "My Computer", iconHtml: ICONS.myComputer(32),  program: "explorer"    },
+  { name: "Paint",       iconHtml: ICONS.paint(32),       program: "paint"       },
+  { name: "Minesweeper", iconHtml: ICONS.minesweeper(32), program: "minesweeper" },
 ];
 
 export function initDesktop() {

@@ -23,11 +23,16 @@ const TREE = [
       {
         type: "submenu", label: "Accessories", icon: ICONS.folder(16),
         children: [
-          { type: "item", program: "paint",        label: "Paint",         icon: ICONS.paint(16)       },
-          { type: "item", program: "image-viewer", label: "Image Viewer",  icon: ICONS.picture(16)     },
-          { type: "item", program: "minesweeper",  label: "Minesweeper",   icon: ICONS.minesweeper(16) },
-          { type: "item", program: "welcome",      label: "Welcome",       icon: ICONS.notepad(16)     },
-          { type: "item", program: "sleep",        label: "Screensaver",   icon: ICONS.movie(16)       },
+          { type: "item", program: "paint",        label: "Paint",         icon: ICONS.paint(16)   },
+          { type: "item", program: "image-viewer", label: "Image Viewer",  icon: ICONS.picture(16) },
+          { type: "item", program: "welcome",      label: "Welcome",       icon: ICONS.notepad(16) },
+          { type: "item", program: "sleep",        label: "Screensaver",   icon: ICONS.movie(16)   },
+        ],
+      },
+      {
+        type: "submenu", label: "Games", icon: ICONS.folder(16),
+        children: [
+          { type: "item", program: "minesweeper", label: "Minesweeper", icon: ICONS.minesweeper(16) },
         ],
       },
     ],

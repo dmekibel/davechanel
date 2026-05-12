@@ -515,6 +515,26 @@
   font-size: 11px;
   color: #000;
 }
+.iv-menubar {
+  display: flex;
+  padding: 2px 4px 0;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--chrome-dark);
+  height: 22px;
+}
+.iv-menu {
+  background: transparent;
+  border: 0;
+  padding: 2px 8px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+  cursor: default;
+}
+.iv-menu.open { background: var(--tb-active-1); color: #fff; }
+@media (hover: hover) {
+  .iv-menu:hover { background: var(--tb-active-1); color: #fff; }
+}
 .iv-toolbar {
   display: flex;
   align-items: center;
@@ -550,6 +570,47 @@
   user-select: none;
 }
 .iv-canvas:active { cursor: grabbing; }
+.iv-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 56px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-size: 28px;
+  line-height: 1;
+  cursor: default;
+  user-select: none;
+}
+.iv-nav:active { background: rgba(0,0,0,0.65); }
+.iv-prev { left: 8px;  border-radius: 0 4px 4px 0; }
+.iv-next { right: 8px; border-radius: 4px 0 0 4px; }
+.iv-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #ddd;
+  font-size: 12px;
+}
+.iv-empty button {
+  background: var(--chrome);
+  color: #000;
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  padding: 4px 14px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  cursor: default;
+}
+.iv-empty button:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
 
 /* === Minesweeper ==================================================== */
 
