@@ -223,6 +223,7 @@ function makeIconDraggable(li) {
 
 function initMarquee() {
   const desktopEl = document.getElementById("desktop");
+  let lastEmptyTap = 0;   // for desktop empty-area double-click → context menu
 
   const start = (clientX, clientY, additive, isTouch) => {
     const dRect = desktopEl.getBoundingClientRect();
@@ -287,10 +288,16 @@ function initMarquee() {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend",  cleanup);
       document.removeEventListener("touchcancel", cleanup);
-      // If the user just tapped empty desktop (no drag), open the desktop
-      // context menu at that point (mobile-friendly substitute for right-click).
+      // Single tap on empty desktop = just deselect (already done above).
+      // DOUBLE tap on empty desktop = open the context menu.
       if (!wasDrag) {
-        showDesktopContextMenu(clientX, clientY);
+        const now = Date.now();
+        if (now - lastEmptyTap < 350) {
+          lastEmptyTap = 0;
+          showDesktopContextMenu(clientX, clientY);
+        } else {
+          lastEmptyTap = now;
+        }
       }
     };
 

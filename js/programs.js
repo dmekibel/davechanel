@@ -211,6 +211,7 @@ export function openExplorer(startPath = []) {
   attachPaneMarquee(pane, grid, () => setView, () => currentView);
 
   function attachPaneMarquee(paneEl, gridEl, getSetView, getCurView) {
+    let lastEmptyTap = 0;
     const start = (clientX, clientY, isTouchEv) => {
       if (paneEl.scrollLeft || paneEl.scrollTop) { /* still proceed */ }
       const pRect = paneEl.getBoundingClientRect();
@@ -269,9 +270,16 @@ export function openExplorer(startPath = []) {
         document.removeEventListener("touchmove", onTouchMove);
         document.removeEventListener("touchend",  cleanup);
         document.removeEventListener("touchcancel", cleanup);
-        // Tap (no drag) on empty pane → open context menu
+        // DOUBLE tap on empty pane → context menu. Single tap just clears
+        // selection (already done at start).
         if (!dragged) {
-          showExplorerContextMenu(clientX, clientY);
+          const now = Date.now();
+          if (now - lastEmptyTap < 350) {
+            lastEmptyTap = 0;
+            showExplorerContextMenu(clientX, clientY);
+          } else {
+            lastEmptyTap = now;
+          }
         }
       };
 
