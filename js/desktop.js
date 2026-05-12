@@ -263,26 +263,29 @@ function initMarquee() {
         desktopEl.appendChild(mq);
       }
       if (e && e.cancelable) e.preventDefault();
-      const x1 = cx - dRect.left;
-      const y1 = cy - dRect.top;
-      const left = Math.min(x0, x1);
-      const top  = Math.min(y0, y1);
-      const w = Math.abs(x1 - x0);
-      const h = Math.abs(y1 - y0);
-      // Pointer deltas are post-zoom; CSS positioning inside .desktop is in
-      // body-internal (pre-zoom) px. Divide so the marquee tracks the cursor.
+      // Work entirely in BODY-INTERNAL coords. Pointer deltas arrive post-
+      // zoom; offsetLeft/Top/Width/Height are always pre-zoom. Mixing the
+      // two (as we did before) was wrong on iOS WebKit where rect & offset
+      // can disagree.
       const z = currentZoom();
-      mq.style.left   = (left / z) + "px";
-      mq.style.top    = (top  / z) + "px";
-      mq.style.width  = (w    / z) + "px";
-      mq.style.height = (h    / z) + "px";
+      const xb1 = (cx - dRect.left) / z;
+      const yb1 = (cy - dRect.top)  / z;
+      const xb0 = x0 / z;
+      const yb0 = y0 / z;
+      const left = Math.min(xb0, xb1);
+      const top  = Math.min(yb0, yb1);
+      const w = Math.abs(xb1 - xb0);
+      const h = Math.abs(yb1 - yb0);
+      mq.style.left   = left + "px";
+      mq.style.top    = top  + "px";
+      mq.style.width  = w    + "px";
+      mq.style.height = h    + "px";
       const right = left + w, bottom = top + h;
       desktopEl.querySelectorAll(".desktop-icon").forEach(icon => {
-        const r = icon.getBoundingClientRect();
-        const iL = r.left  - dRect.left;
-        const iT = r.top   - dRect.top;
-        const iR = r.right - dRect.left;
-        const iB = r.bottom - dRect.top;
+        const iL = icon.offsetLeft;
+        const iT = icon.offsetTop;
+        const iR = iL + icon.offsetWidth;
+        const iB = iT + icon.offsetHeight;
         const inMq = !(iR < left || iL > right || iB < top || iT > bottom);
         if (additive) {
           icon.classList.toggle("selected", initiallySelected.has(icon) || inMq);

@@ -282,12 +282,14 @@ export function openExplorer(startPath = []) {
         mq.style.height = h    + "px";
 
         const right = left + w, bottom = top + h;
+        // Use offset coords (always pre-zoom / body-internal) so this stays
+        // consistent on iOS WebKit where getBoundingClientRect can disagree
+        // with offset values inside a zoomed body.
         paneEl.querySelectorAll(".exp-tile").forEach(tile => {
-          const r = tile.getBoundingClientRect();
-          const tL = (r.left   - pRect.left) / z + paneEl.scrollLeft;
-          const tT = (r.top    - pRect.top)  / z + paneEl.scrollTop;
-          const tR = (r.right  - pRect.left) / z + paneEl.scrollLeft;
-          const tB = (r.bottom - pRect.top)  / z + paneEl.scrollTop;
+          const tL = tile.offsetLeft;
+          const tT = tile.offsetTop;
+          const tR = tL + tile.offsetWidth;
+          const tB = tT + tile.offsetHeight;
           const inMq = !(tR < left || tL > right || tB < top || tT > bottom);
           tile.classList.toggle("selected", inMq);
         });

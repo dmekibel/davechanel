@@ -5,7 +5,7 @@
 // which is why mobile defaults to 100% — but the user can opt in.
 
 const KEY = "site.scale";
-export const SCALES = [75, 90, 100, 110, 125, 150, 175, 200];
+export const SCALES = [75, 90, 100, 110, 125, 150];
 
 export function isTouchDevice() {
   return typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
