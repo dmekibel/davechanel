@@ -115,7 +115,7 @@ export function openExplorer(startPath = []) {
   // History for Back / Forward
   const history = [[...startPath]];
   let histIdx = 0;
-  const expanded = new Set(["Heaven OS:"]);  // tree nodes that are expanded
+  const expanded = new Set(["Mekibel:"]);  // tree nodes that are expanded
 
   // Container
   const wrap = document.createElement("div");
@@ -332,7 +332,7 @@ export function openExplorer(startPath = []) {
   }
 
   function pathKey(path) {
-    return ["Heaven OS:", ...path].join("/");
+    return ["Mekibel:", ...path].join("/");
   }
 
   function pushHistory(path) {
@@ -367,7 +367,7 @@ export function openExplorer(startPath = []) {
     currentPath = [...path];
     pushHistory(currentPath);
     // ensure ancestors are expanded
-    let acc = "Heaven OS:";
+    let acc = "Mekibel:";
     expanded.add(acc);
     for (const seg of currentPath) {
       acc += "/" + seg;
@@ -382,7 +382,7 @@ export function openExplorer(startPath = []) {
     tree.innerHTML = "";
     const ul = document.createElement("ul");
     ul.appendChild(treeRow(FS, [], 0));
-    if (expanded.has("Heaven OS:")) {
+    if (expanded.has("Mekibel:")) {
       const childrenUl = document.createElement("ul");
       for (const child of FS.children) {
         renderTreeNode(child, [child.name], 1, childrenUl);
@@ -415,7 +415,7 @@ export function openExplorer(startPath = []) {
     const tw = document.createElement("span");
     tw.className = "twisty";
     if (node.type === "folder" && node.children?.length) {
-      const key = node === FS ? "Heaven OS:" : pathKey(path);
+      const key = node === FS ? "Mekibel:" : pathKey(path);
       const isOpen = expanded.has(key);
       tw.innerHTML = `<span class="twisty-box">${isOpen ? "−" : "+"}</span>`;
       tw.addEventListener("click", (e) => {
@@ -438,7 +438,7 @@ export function openExplorer(startPath = []) {
     li.appendChild(ic);
     const lbl = document.createElement("span");
     lbl.className = "tree-label";
-    lbl.textContent = node === FS ? "Heaven OS" : node.name;
+    lbl.textContent = node === FS ? "Mekibel" : node.name;
     li.appendChild(lbl);
 
     li.addEventListener("click", () => {
@@ -471,7 +471,7 @@ export function openExplorer(startPath = []) {
 
   function render() {
     const node = findByPath(currentPath) || FS;
-    const titleName = currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS";
+    const titleName = currentPath.length ? currentPath[currentPath.length - 1] : "Mekibel";
 
     // address
     addrField.innerHTML = "";
@@ -480,7 +480,7 @@ export function openExplorer(startPath = []) {
     ic.innerHTML = currentPath.length === 0 ? ICONS.myComputer(16) : iconFor(node, 16);
     addrField.appendChild(ic);
     const txt = document.createElement("span");
-    txt.textContent = "Heaven OS:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
+    txt.textContent = "Mekibel:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
     addrField.appendChild(txt);
 
     // toolbar enable/disable
@@ -542,7 +542,7 @@ export function openExplorer(startPath = []) {
 
     // status
     sCount.textContent = `${items.length} object(s)`;
-    sPath.textContent  = "Heaven OS:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
+    sPath.textContent  = "Mekibel:" + (currentPath.length ? "\\" + currentPath.join("\\") : "");
 
     // tree
     renderTree();
@@ -605,7 +605,7 @@ export function openExplorer(startPath = []) {
         { label: "Folder Options", disabled: true },
       ],
       "Help": [
-        { label: "About Heaven OS", action: openAbout, accel: "A" },
+        { label: "About this portfolio", action: openAbout, accel: "A" },
       ],
     };
     for (const [label, accel] of labelDefs) {
@@ -637,12 +637,12 @@ export function openExplorer(startPath = []) {
     const div = document.createElement("div");
     div.style.cssText = "padding:18px 22px;font-family:Tahoma,sans-serif;font-size:12px;line-height:1.5;color:#000;background:#fff;";
     div.innerHTML = `
-      <div style="font-family:'VT323',monospace;font-size:32px;margin-bottom:8px;color:#00007f;">Heaven OS</div>
-      <p>A retro-styled portfolio of <b>David Mekibel</b> / Dave Chanel.</p>
-      <p>Russian-Israeli artist exploring the space between digital nostalgia, mythology, religion, and art history. Co-founder of Balancē Creative.</p>
-      <p style="margin-top:18px;color:#666;">Build v0.4 · 2026</p>
+      <div style="font-family:'VT323',monospace;font-size:32px;margin-bottom:8px;color:#00007f;">Mekibel</div>
+      <p>A retro-styled portfolio of <b>David Mekibel</b>.</p>
+      <p>Russian-Israeli artist. Co-founder of Balancē Creative.</p>
+      <p style="margin-top:18px;color:#666;">2026</p>
     `;
-    openWindow({ title: t("About Heaven OS"), icon: ICONS.myComputer(14), iconHtml: true, content: div, width: 380, height: 280 });
+    openWindow({ title: t("About this portfolio"), icon: ICONS.myComputer(14), iconHtml: true, content: div, width: 380, height: 280 });
   }
 
   function openDropdown(anchorEl, items) {
@@ -701,7 +701,7 @@ export function openExplorer(startPath = []) {
 
   render();
 
-  const initialTitle = currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS";
+  const initialTitle = currentPath.length ? currentPath[currentPath.length - 1] : "Mekibel";
   winId = openWindow({
     title: initialTitle,
     icon: currentPath.length === 0 ? ICONS.myComputer(14) : iconFor(findByPath(currentPath), 14),
@@ -712,7 +712,7 @@ export function openExplorer(startPath = []) {
     flush: true,
   });
   // tag the window so we can find it later for title updates
-  const wEl = [...document.querySelectorAll(".window")].find(el => el.getAttribute("aria-label") === (currentPath.length ? currentPath[currentPath.length - 1] : "Heaven OS"));
+  const wEl = [...document.querySelectorAll(".window")].find(el => el.getAttribute("aria-label") === (currentPath.length ? currentPath[currentPath.length - 1] : "Mekibel"));
   if (wEl) wEl.dataset.winId = String(winId);
   return winId;
 }
@@ -747,7 +747,7 @@ export function openProgram(progId) {
     case "settings":     return openSettings();
     case "control-panel":return openSettings();
     case "find":         return openStub("Find Files",  "Find / search isn't wired up yet.");
-    case "help":         return openStub("Heaven OS Help", "Help system isn't wired up yet. Check the file explorer for now.");
+    case "help":         return openStub("Help", "Help system isn't wired up yet. Check the file explorer for now.");
     case "run":          return openStub("Run", "There's nothing to run. This isn't a real OS.");
     default:             return null;
   }
@@ -836,7 +836,7 @@ export function openWelcome() {
     {
       title: "Welcome",
       body: `
-        <p>Welcome to the world of <b>Heaven OS</b> — the portfolio of David Mekibel.</p>
+        <p>Welcome to the portfolio of <b>David Mekibel</b>.</p>
         <p>Sit back and relax as you take a brief tour of the options available on this screen.</p>
         <p>If you want to explore an option, just click it.</p>
       `,
@@ -875,9 +875,9 @@ export function openWelcome() {
         <polygon points="40,32 70,30 70,56 40,58" fill="#f0d040"/>
       </g>
       <text x="80" y="36" font-family="Tahoma, sans-serif" font-size="22"
-            font-weight="700" fill="#000" letter-spacing="-0.5">Heaven</text>
+            font-weight="700" fill="#000" letter-spacing="-0.5">David</text>
       <text x="80" y="56" font-family="Tahoma, sans-serif" font-size="18"
-            font-weight="700" fill="#e84a3a" letter-spacing="-0.5">OS</text>
+            font-weight="700" fill="#e84a3a" letter-spacing="-0.5">Mekibel</text>
     </svg>
   `;
 
@@ -896,7 +896,7 @@ export function openWelcome() {
       </div>
     </div>
     <div class="welcome-foot">
-      <label class="welcome-showcheck"><input type="checkbox" checked> Show this screen each time Heaven OS starts.</label>
+      <label class="welcome-showcheck"><input type="checkbox" checked> Show this screen each time the site loads.</label>
       <div class="welcome-buttons">
         <button class="welcome-btn back"  type="button">&lt; Back</button>
         <button class="welcome-btn next"  type="button">Next &gt;</button>
@@ -954,7 +954,7 @@ export function openWelcome() {
   render();
 
   const id = openWindow({
-    title: "Welcome to Heaven OS",
+    title: "Welcome",
     icon: ICONS.notepad(14),
     iconHtml: true,
     content: wrap,
@@ -1038,7 +1038,7 @@ export function openSettings() {
       ));
     } else if (tab === "appearance") {
       body.innerHTML = `
-        <p class="settings-hint">Color schemes (Win98 / Heaven Inc.) — coming soon.</p>
+        <p class="settings-hint">Color schemes — coming soon.</p>
       `;
     } else if (tab === "effects") {
       body.innerHTML = `
@@ -1046,7 +1046,7 @@ export function openSettings() {
       `;
     } else if (tab === "settings") {
       body.innerHTML = `
-        <div class="settings-row"><span class="settings-label">Display</span><span>Default Monitor on Heaven Inc. RealityEngine</span></div>
+        <div class="settings-row"><span class="settings-label">Display</span><span>Default Monitor</span></div>
         <div class="settings-row"><span class="settings-label">Colors</span><span>True Color (24 bit)</span></div>
         <div class="settings-row"><span class="settings-label">Screen area</span><span>fit to window</span></div>
       `;

@@ -7,7 +7,7 @@
 // data is the payload (string, url, html, or folder path).
 
 export const FS = {
-  name: "Heaven OS",
+  name: "Mekibel",
   type: "folder",
   icon: "♁",
   children: [

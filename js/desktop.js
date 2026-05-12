@@ -18,7 +18,7 @@ const DESKTOP_SHORTCUTS = [
 ];
 
 export function initDesktop() {
-  document.title = "Heaven OS — David Mekibel";
+  document.title = "David Mekibel";
   renderDesktopIcons();
   initStartMenu();
   initClock();
@@ -363,7 +363,7 @@ function showDesktopContextMenu(x, y) {
       } },
     "sep",
     { label: "Display Properties...",  action: () => openProgram("settings") },
-    { label: "About Heaven OS",        action: () => openProgram("welcome") },
+    { label: "About this portfolio",   action: () => openProgram("welcome") },
   ]);
 }
 

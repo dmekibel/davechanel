@@ -4,16 +4,16 @@
 const KEY = "heaven-os.wallpaper";
 
 export const WALLPAPERS = [
-  { id: "heaven-sky", label: "Heaven Sky (default)" },
-  { id: "teal",       label: "Classic Win98 Teal" },
+  { id: "teal",       label: "Classic Win98 Teal (default)" },
+  { id: "heaven-sky", label: "Sky" },
   { id: "clouds",     label: "Pixel Clouds" },
   { id: "purple",     label: "Purple Twilight" },
   { id: "black",      label: "Black" },
 ];
 
 export function getWallpaper() {
-  try { return localStorage.getItem(KEY) || "heaven-sky"; }
-  catch (_) { return "heaven-sky"; }
+  try { return localStorage.getItem(KEY) || "teal"; }
+  catch (_) { return "teal"; }
 }
 
 export function setWallpaper(id) {
