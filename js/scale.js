@@ -1,7 +1,4 @@
 // UI scale — CSS transform applied to <body>. Persists in localStorage.
-// Touch devices always render at 100% (the OS pinch-zoom handles user scaling
-// natively; layered scale on touch screws up coordinate math and never reads
-// well next to system gestures).
 
 const KEY = "site.scale";
 export const SCALES = [75, 90, 100, 110, 125, 150, 175, 200];
@@ -11,7 +8,6 @@ export function isTouchDevice() {
 }
 
 export function getScale() {
-  if (isTouchDevice()) return 100;
   try {
     const stored = localStorage.getItem(KEY);
     if (stored != null) {
@@ -19,8 +15,9 @@ export function getScale() {
       if (SCALES.includes(v)) return v;
     }
   } catch (_) {}
-  // Default 110% on desktops.
-  return 110;
+  // Default: 110% on desktops (pointer: fine), 100% on touch devices.
+  if (typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches) return 110;
+  return 100;
 }
 
 export function setScale(v) {
