@@ -42,6 +42,7 @@ function showLangPopup(anchor) {
     const rect = anchor.getBoundingClientRect();
     const menu = document.createElement("div");
     menu.className = "lang-popup";
+    menu.style.visibility = "hidden";    // measure before clamp
     menu.style.left = rect.left + "px";
     menu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
     const opts = [
@@ -59,6 +60,15 @@ function showLangPopup(anchor) {
       menu.appendChild(item);
     }
     document.body.appendChild(menu);
+    // Clamp inside viewport so the popup never gets cut off (login screen is
+    // bottom-right so it overflows the right edge by default).
+    const r = menu.getBoundingClientRect();
+    let left = rect.left;
+    if (left + r.width > window.innerWidth - 4) {
+      left = Math.max(4, window.innerWidth - r.width - 4);
+    }
+    menu.style.left = left + "px";
+    menu.style.visibility = "";
     setTimeout(() => {
       const closer = (e) => {
         if (!menu.contains(e.target) && e.target !== anchor) {
