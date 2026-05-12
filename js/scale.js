@@ -1,4 +1,9 @@
-// UI scale — CSS transform applied to <body>. Persists in localStorage.
+// UI scale — applied to <body> via CSS `zoom` (well-behaved on Chrome/Edge
+// desktop, which is the target audience for scaling). Touch devices keep
+// scale=100: iOS WebKit's `zoom` is buggy with fixed-positioned children,
+// and `transform: scale()` causes the taskbar to disappear inside the
+// transformed body, so neither approach is safe to expose on touch.
+// The OS pinch-zoom on touch fills the same use case anyway.
 
 const KEY = "site.scale";
 export const SCALES = [75, 90, 100, 110, 125, 150, 175, 200];
@@ -8,6 +13,7 @@ export function isTouchDevice() {
 }
 
 export function getScale() {
+  if (isTouchDevice()) return 100;
   try {
     const stored = localStorage.getItem(KEY);
     if (stored != null) {
@@ -15,9 +21,8 @@ export function getScale() {
       if (SCALES.includes(v)) return v;
     }
   } catch (_) {}
-  // Default: 110% on desktops (pointer: fine), 100% on touch devices.
-  if (typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches) return 110;
-  return 100;
+  // Default 110% on desktop.
+  return 110;
 }
 
 export function setScale(v) {
@@ -29,21 +34,14 @@ export function setScale(v) {
 export function applyScale() {
   if (!document.body) return;
   const z = getScale() / 100;
-  // Use CSS transform (not the non-standard `zoom`, which is buggy on iOS
-  // Safari). Compensate body's box so it visually fills the viewport.
   const b = document.body;
-  b.style.transformOrigin = "top left";
-  if (z === 1) {
-    b.style.transform = "";
-    b.style.width  = "";
-    b.style.height = "";
-  } else {
-    b.style.transform = `scale(${z})`;
-    b.style.width  = `${(100 / z).toFixed(4)}vw`;
-    b.style.height = `${(100 / z).toFixed(4)}vh`;
-  }
-  // Clear legacy zoom in case an older build set it.
-  b.style.zoom = "";
+  // Wipe any transform-scale leftover from v0.37 so old visitors don't
+  // see a doubly-scaled UI when this build deploys.
+  b.style.transform = "";
+  b.style.transformOrigin = "";
+  b.style.width  = "";
+  b.style.height = "";
+  b.style.zoom = z === 1 ? "" : z.toFixed(2);
 }
 
 // Current scale multiplier applied to <body>. Used by code that mixes
