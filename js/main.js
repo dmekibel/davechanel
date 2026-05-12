@@ -39,14 +39,20 @@ function initLangGlobe() {
 
 function showLangPopup(anchor) {
   closeLangPopup();
-  import("./i18n.js").then(({ getLang, setLang }) => {
+  Promise.all([import("./i18n.js"), import("./scale.js")]).then(([{ getLang, setLang }, { currentZoom }]) => {
     const cur = getLang();
     const rect = anchor.getBoundingClientRect();
+    // rect is post-transform viewport coords; CSS positioning is body-internal.
+    const z = currentZoom();
+    const rectLeft = rect.left / z;
+    const rectTop  = rect.top  / z;
+    const vw = window.innerWidth  / z;
+    const vh = window.innerHeight / z;
     const menu = document.createElement("div");
     menu.className = "lang-popup";
     menu.style.visibility = "hidden";    // measure before clamp
-    menu.style.left = rect.left + "px";
-    menu.style.bottom = (window.innerHeight - rect.top + 4) + "px";
+    menu.style.left = rectLeft + "px";
+    menu.style.bottom = (vh - rectTop + 4) + "px";
     const opts = [
       { code: "en", label: "English" },
       { code: "ru", label: "Русский" },
@@ -68,9 +74,10 @@ function showLangPopup(anchor) {
     // Clamp inside viewport so the popup never gets cut off (login screen is
     // bottom-right so it overflows the right edge by default).
     const r = menu.getBoundingClientRect();
-    let left = rect.left;
-    if (left + r.width > window.innerWidth - 4) {
-      left = Math.max(4, window.innerWidth - r.width - 4);
+    const rW = r.width / z;
+    let left = rectLeft;
+    if (left + rW > vw - 4) {
+      left = Math.max(4, vw - rW - 4);
     }
     menu.style.left = left + "px";
     menu.style.visibility = "";

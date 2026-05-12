@@ -1,5 +1,7 @@
-// Heaven OS — window manager
+// Window manager
 // Vanilla JS. No deps. Each Window is a real DOM node managed by this module.
+
+import { currentZoom } from "./scale.js";
 
 const root = () => document.getElementById("windows-root");
 const taskbarEntries = () => document.getElementById("taskbar-entries");
@@ -107,14 +109,15 @@ function startDrag(id, ev, isTouch = false) {
   const origLeft = rec.el.offsetLeft;
   const origTop  = rec.el.offsetTop;
 
+  const z = currentZoom();
   const onMove = (e) => {
     const p = isTouch ? (e.touches ? e.touches[0] : e) : e;
-    let nx = origLeft + (p.clientX - startX);
-    let ny = origTop  + (p.clientY - startY);
+    let nx = origLeft + (p.clientX - startX) / z;
+    let ny = origTop  + (p.clientY - startY) / z;
     // keep titlebar reachable
     const tbH = 30;
-    nx = Math.max(-rec.el.offsetWidth + 80, Math.min(window.innerWidth - 40, nx));
-    ny = Math.max(0, Math.min(window.innerHeight - tbH - 22, ny));
+    nx = Math.max(-rec.el.offsetWidth + 80, Math.min(window.innerWidth / z - 40, nx));
+    ny = Math.max(0, Math.min(window.innerHeight / z - tbH - 22, ny));
     rec.el.style.left = nx + "px";
     rec.el.style.top  = ny + "px";
   };
@@ -142,12 +145,13 @@ function startResize(id, dir, ev, isTouch = false) {
   const startT = rec.el.offsetTop;
   const minW = 240, minH = 140;
 
+  const z = currentZoom();
   const onMove = (e) => {
     if (isTouch && e.cancelable) e.preventDefault();
     const p = isTouch ? (e.touches?.[0] || e.changedTouches?.[0]) : e;
     if (!p) return;
-    const dx = p.clientX - startX;
-    const dy = p.clientY - startY;
+    const dx = (p.clientX - startX) / z;
+    const dy = (p.clientY - startY) / z;
     let w = startW, h = startH, l = startL, t = startT;
     if (dir.includes("e")) w = Math.max(minW, startW + dx);
     if (dir.includes("s")) h = Math.max(minH, startH + dy);
@@ -229,9 +233,11 @@ export function openWindow({ title, icon, iconHtml = false, content, width = 520
 
   // Position — cap to viewport so windows always fit on small screens.
   // Use the real taskbar height (it grows with iOS safe-area-inset-bottom).
-  const vw = window.innerWidth;
+  // window.innerWidth/Height are unscaled viewport; convert to body-internal.
+  const _z = currentZoom();
+  const vw = window.innerWidth  / _z;
   const taskbarH = document.getElementById("taskbar")?.offsetHeight || 30;
-  const vh = window.innerHeight - taskbarH;
+  const vh = window.innerHeight / _z - taskbarH;
   const isNarrow = vw < 720;
   const minW = isNarrow ? 200 : 240;
   const minH = isNarrow ? 140 : 140;
@@ -300,10 +306,11 @@ export function toggleMaximize(id) {
       height: rec.el.style.height,
     };
     rec.el.classList.add("maximized");
+    const z = currentZoom();
     rec.el.style.left = "0px";
     rec.el.style.top  = "0px";
-    rec.el.style.width  = window.innerWidth + "px";
-    rec.el.style.height = (window.innerHeight - 30) + "px";
+    rec.el.style.width  = (window.innerWidth  / z) + "px";
+    rec.el.style.height = ((window.innerHeight / z) - 30) + "px";
     rec.maximized = true;
   }
 }
@@ -326,20 +333,23 @@ export function listOpenWindows() {
 function reflowOnResize() {
   const taskbarH = document.getElementById("taskbar")?.offsetHeight || 30;
   const margin = 8;
+  const z = currentZoom();
+  const vw = window.innerWidth  / z;   // body-internal viewport width
+  const vh = window.innerHeight / z;
   for (const rec of windows.values()) {
     if (rec.maximized) {
       rec.el.style.left = "0px";
       rec.el.style.top  = "0px";
-      rec.el.style.width  = window.innerWidth + "px";
-      rec.el.style.height = (window.innerHeight - taskbarH) + "px";
+      rec.el.style.width  = vw + "px";
+      rec.el.style.height = (vh - taskbarH) + "px";
       continue;
     }
-    const maxW = window.innerWidth  - margin * 2;
-    const maxH = window.innerHeight - taskbarH - margin * 2;
+    const maxW = vw - margin * 2;
+    const maxH = vh - taskbarH - margin * 2;
     let w = Math.max(240, Math.min(rec.el.offsetWidth,  maxW));
     let h = Math.max(140, Math.min(rec.el.offsetHeight, maxH));
-    let l = Math.max(margin, Math.min(rec.el.offsetLeft, window.innerWidth - w - margin));
-    let t = Math.max(margin, Math.min(rec.el.offsetTop,  window.innerHeight - taskbarH - h - margin));
+    let l = Math.max(margin, Math.min(rec.el.offsetLeft, vw - w - margin));
+    let t = Math.max(margin, Math.min(rec.el.offsetTop,  vh - taskbarH - h - margin));
     rec.el.style.left   = l + "px";
     rec.el.style.top    = t + "px";
     rec.el.style.width  = w + "px";

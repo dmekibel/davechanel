@@ -6,6 +6,7 @@ import { ICONS, iconFor } from "./icons.js";
 import { buildStartMenu, closeAllStartMenus } from "./start-menu.js";
 import { showContextMenu, closeContextMenu } from "./context-menu.js";
 import { t } from "./i18n.js";
+import { currentZoom } from "./scale.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -163,17 +164,20 @@ function makeIconDraggable(li) {
     let dragged = false;
 
     const move = (cx, cy, e) => {
-      const dx = cx - clientX;
-      const dy = cy - clientY;
+      // Pointer deltas arrive post-zoom; convert to body-internal px so
+      // we can math against offsetLeft/Top (which are pre-zoom).
+      const z = currentZoom();
+      const dx = (cx - clientX) / z;
+      const dy = (cy - clientY) / z;
       if (!dragged && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
       dragged = true;
       if (e && e.cancelable) e.preventDefault();
-      const dRect = desktop.getBoundingClientRect();
+      const dW = desktop.clientWidth, dH = desktop.clientHeight;
       for (const sp of startPositions) {
         sp.el.classList.add("dragging");
         const w = sp.el.offsetWidth, h = sp.el.offsetHeight;
-        const nx = Math.max(0, Math.min(dRect.width  - w, sp.x + dx));
-        const ny = Math.max(0, Math.min(dRect.height - h, sp.y + dy));
+        const nx = Math.max(0, Math.min(dW - w, sp.x + dx));
+        const ny = Math.max(0, Math.min(dH - h, sp.y + dy));
         sp.el.style.left = nx + "px";
         sp.el.style.top  = ny + "px";
       }
@@ -187,12 +191,12 @@ function makeIconDraggable(li) {
       for (const sp of startPositions) sp.el.classList.remove("dragging");
       if (dragged) {
         // Snap each to grid + persist
-        const dRect = desktop.getBoundingClientRect();
+        const dW = desktop.clientWidth, dH = desktop.clientHeight;
         for (const sp of startPositions) {
           const [sx, sy] = snapToGrid(sp.el.offsetLeft, sp.el.offsetTop);
           const w = sp.el.offsetWidth, h = sp.el.offsetHeight;
-          const fx = Math.max(0, Math.min(dRect.width  - w, sx));
-          const fy = Math.max(0, Math.min(dRect.height - h, sy));
+          const fx = Math.max(0, Math.min(dW - w, sx));
+          const fy = Math.max(0, Math.min(dH - h, sy));
           sp.el.style.left = fx + "px";
           sp.el.style.top  = fy + "px";
           saveIconPosition(sp.el.querySelector(".icon-label").textContent, fx, fy);
@@ -265,10 +269,13 @@ function initMarquee() {
       const top  = Math.min(y0, y1);
       const w = Math.abs(x1 - x0);
       const h = Math.abs(y1 - y0);
-      mq.style.left   = left + "px";
-      mq.style.top    = top  + "px";
-      mq.style.width  = w    + "px";
-      mq.style.height = h    + "px";
+      // Pointer deltas are post-zoom; CSS positioning inside .desktop is in
+      // body-internal (pre-zoom) px. Divide so the marquee tracks the cursor.
+      const z = currentZoom();
+      mq.style.left   = (left / z) + "px";
+      mq.style.top    = (top  / z) + "px";
+      mq.style.width  = (w    / z) + "px";
+      mq.style.height = (h    / z) + "px";
       const right = left + w, bottom = top + h;
       desktopEl.querySelectorAll(".desktop-icon").forEach(icon => {
         const r = icon.getBoundingClientRect();

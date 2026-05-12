@@ -2,9 +2,15 @@
 // Used by desktop empty-space tap and explorer empty-pane tap.
 
 import { t } from "./i18n.js";
+import { currentZoom } from "./scale.js";
 
 export function showContextMenu(x, y, items) {
   closeContextMenu();
+  // Pointer coords arrive post-zoom; CSS positioning is interpreted in
+  // pre-zoom body-internal pixels. Divide to put the menu under the cursor.
+  const z = currentZoom();
+  x = x / z;
+  y = y / z;
   const menu = document.createElement("div");
   menu.className = "ctx-menu";
   menu.style.left = x + "px";
@@ -31,11 +37,13 @@ export function showContextMenu(x, y, items) {
   }
   document.body.appendChild(menu);
 
-  // Clamp inside viewport
+  // Clamp inside viewport. innerWidth/innerHeight are unzoomed CSS px.
   const r = menu.getBoundingClientRect();
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const w = r.width / z, h = r.height / z;
   let nx = x, ny = y;
-  if (r.right  > window.innerWidth)  nx = Math.max(4, window.innerWidth  - r.width  - 4);
-  if (r.bottom > window.innerHeight) ny = Math.max(4, window.innerHeight - r.height - 4);
+  if (nx + w > vw) nx = Math.max(4, vw - w - 4);
+  if (ny + h > vh) ny = Math.max(4, vh - h - 4);
   menu.style.left = nx + "px";
   menu.style.top  = ny + "px";
 

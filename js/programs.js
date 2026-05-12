@@ -9,6 +9,7 @@ import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
 import { openPaint } from "./paint.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 import { showContextMenu } from "./context-menu.js";
+import { currentZoom } from "./scale.js";
 import { t } from "./i18n.js";
 import { SCALES, getScale, setScale } from "./scale.js";
 
@@ -246,8 +247,11 @@ export function openExplorer(startPath = []) {
     const start = (clientX, clientY, isTouchEv) => {
       if (paneEl.scrollLeft || paneEl.scrollTop) { /* still proceed */ }
       const pRect = paneEl.getBoundingClientRect();
-      const x0 = clientX - pRect.left + paneEl.scrollLeft;
-      const y0 = clientY - pRect.top  + paneEl.scrollTop;
+      // pRect & pointer coords are post-zoom; scrollLeft/Top are pre-zoom.
+      // Convert pointer offset into pane-internal (pre-zoom) px.
+      const z = currentZoom();
+      const x0 = (clientX - pRect.left) / z + paneEl.scrollLeft;
+      const y0 = (clientY - pRect.top)  / z + paneEl.scrollTop;
       let dragged = false;
       let mq = null;
 
@@ -266,8 +270,8 @@ export function openExplorer(startPath = []) {
           paneEl.appendChild(mq);
         }
         if (e && e.cancelable) e.preventDefault();
-        const x1 = cx - pRect.left + paneEl.scrollLeft;
-        const y1 = cy - pRect.top  + paneEl.scrollTop;
+        const x1 = (cx - pRect.left) / z + paneEl.scrollLeft;
+        const y1 = (cy - pRect.top)  / z + paneEl.scrollTop;
         const left = Math.min(x0, x1);
         const top  = Math.min(y0, y1);
         const w    = Math.abs(x1 - x0);
@@ -280,10 +284,10 @@ export function openExplorer(startPath = []) {
         const right = left + w, bottom = top + h;
         paneEl.querySelectorAll(".exp-tile").forEach(tile => {
           const r = tile.getBoundingClientRect();
-          const tL = r.left   - pRect.left + paneEl.scrollLeft;
-          const tT = r.top    - pRect.top  + paneEl.scrollTop;
-          const tR = r.right  - pRect.left + paneEl.scrollLeft;
-          const tB = r.bottom - pRect.top  + paneEl.scrollTop;
+          const tL = (r.left   - pRect.left) / z + paneEl.scrollLeft;
+          const tT = (r.top    - pRect.top)  / z + paneEl.scrollTop;
+          const tR = (r.right  - pRect.left) / z + paneEl.scrollLeft;
+          const tB = (r.bottom - pRect.top)  / z + paneEl.scrollTop;
           const inMq = !(tR < left || tL > right || tB < top || tT > bottom);
           tile.classList.toggle("selected", inMq);
         });

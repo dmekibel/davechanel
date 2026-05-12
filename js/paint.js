@@ -1,5 +1,6 @@
 // Mini MS Paint clone — Win98 style.
-// Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette. Clear button.
+// Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
+// Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
 import { openWindow, closeWindow } from "./window-manager.js";
 import { ICONS } from "./icons.js";
@@ -21,17 +22,11 @@ export function openPaint() {
       <button data-tool="rect"    class="pt-btn"        title="Rectangle">▭</button>
       <button data-tool="ellipse" class="pt-btn"        title="Ellipse">◯</button>
       <span class="pt-sep"></span>
-      <label class="pt-size">Size
-        <select class="pt-size-sel">
-          <option value="1">1</option>
-          <option value="2" selected>2</option>
-          <option value="4">4</option>
-          <option value="8">8</option>
-          <option value="14">14</option>
-        </select>
-      </label>
+      <label class="pt-size">Size <span class="pt-size-slot"></span></label>
       <span class="pt-sep"></span>
+      <button class="pt-btn pt-undo"  title="Undo (Ctrl+Z)">↶ Undo</button>
       <button class="pt-btn pt-clear" title="Clear canvas">Clear</button>
+      <button class="pt-btn pt-export" title="Export PNG">Export</button>
     </div>
     <div class="paint-main">
       <div class="paint-palette"></div>
@@ -57,6 +52,18 @@ export function openPaint() {
   let drawing = false;
   let startX = 0, startY = 0;
   let snapshot = null;   // for line/rect/ellipse preview
+
+  // Undo stack: snapshot before each draw action
+  const UNDO_MAX = 24;
+  const undoStack = [];
+  function pushUndo() {
+    undoStack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    ctx.putImageData(undoStack.pop(), 0, 0);
+  }
 
   // Palette
   const paletteEl = wrap.querySelector(".paint-palette");
@@ -88,15 +95,50 @@ export function openPaint() {
     });
   });
 
-  // Size
-  const sizeSel = wrap.querySelector(".pt-size-sel");
-  sizeSel.addEventListener("change", () => { size = parseInt(sizeSel.value, 10); });
+  // Brush size — Win98 combobox (not native select)
+  const sizeSlot = wrap.querySelector(".pt-size-slot");
+  sizeSlot.appendChild(makeWin98SelectInline(
+    [1,2,4,8,14].map(n => ({ value: String(n), label: `${n} px` })),
+    String(size),
+    (v) => { size = parseInt(v, 10); }
+  ));
 
-  // Clear
+  // Undo
+  function doUndo() { undo(); }
+  wrap.querySelector(".pt-undo").addEventListener("click", doUndo);
+  document.addEventListener("keydown", function paintKey(e) {
+    if (!wrap.isConnected) {
+      document.removeEventListener("keydown", paintKey);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      doUndo();
+    }
+  });
+
+  // Clear — Win98 dialog, not native confirm()
   wrap.querySelector(".pt-clear").addEventListener("click", () => {
-    if (!confirm("Clear the whole canvas?")) return;
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    win98Confirm("Clear the whole canvas?", "Paint", () => {
+      pushUndo();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    });
+  });
+
+  // Export PNG
+  wrap.querySelector(".pt-export").addEventListener("click", () => {
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `paint-${new Date().toISOString().slice(0,19).replace(/[:T]/g, "-")}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    }, "image/png");
   });
 
   // Coords helper

@@ -6,6 +6,7 @@ import { ICONS, iconFor } from "./icons.js";
 import { openProgram, openFile } from "./programs.js";
 import { findByPath } from "./file-system.js";
 import { t } from "./i18n.js";
+import { currentZoom } from "./scale.js";
 
 const ARROW = `▶`;
 
@@ -105,12 +106,16 @@ function makeMenuList(items, depth) {
         wrap.appendChild(sub);
         document.body.appendChild(wrap);
         const r = li.getBoundingClientRect();
+        // r is post-transform viewport; CSS positioning is body-internal.
+        const z = currentZoom();
+        const rL = r.left  / z, rR = r.right / z, rT = r.top / z;
+        const vw = window.innerWidth / z;
         // Position to the right of the parent item, aligned with its top
         const subW = wrap.offsetWidth;
-        let left = r.right - 2;
-        if (left + subW > window.innerWidth) left = r.left - subW + 2;
+        let left = rR - 2;
+        if (left + subW > vw) left = rL - subW + 2;
         wrap.style.left = left + "px";
-        wrap.style.top  = (r.top - 2) + "px";
+        wrap.style.top  = (rT - 2) + "px";
         openMenus.push({ depth: depth + 1, el: wrap, parentLi: li });
       };
 
