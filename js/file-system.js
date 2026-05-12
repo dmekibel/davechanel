@@ -24,19 +24,21 @@ export const FS = {
           src: "content/fine-art-cv.txt",
         },
         // Fine-art images. Each opens in the Image Viewer with pan + zoom.
+        // Files served from content/images/web/ — web-sized derivatives.
+        // Originals stay on David's disk only (gitignored).
         {
           name: "30big-standard.jpg",
           type: "file",
           icon: "🖼",
           kind: "image",
-          src: "content/images/30big-standard v2-3x-faceai v2.jpg",
+          src: "content/images/web/30big-standard.jpg",
         },
         {
-          name: "38.png",
+          name: "38.jpg",
           type: "file",
           icon: "🖼",
           kind: "image",
-          src: "content/images/38.png",
+          src: "content/images/web/38.jpg",
         },
       ],
     },

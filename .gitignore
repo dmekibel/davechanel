@@ -1,2 +1,11 @@
 .claude/
 .DS_Store
+
+# Fine-art originals stay local — only web-sized copies (content/images/web/)
+# are shipped. Re-run sips to regenerate.
+content/images/*.png
+content/images/*.jpg
+content/images/*.tif
+content/images/*.tiff
+content/images/*.psd
+!content/images/web/
