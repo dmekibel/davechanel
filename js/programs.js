@@ -212,6 +212,7 @@ export function openExplorer(startPath = []) {
 
   function attachPaneMarquee(paneEl, gridEl, getSetView, getCurView) {
     let lastEmptyTap = 0;
+    let lastTouchAt  = 0;   // suppress synthesized mouse events after touch
     const start = (clientX, clientY, isTouchEv) => {
       if (paneEl.scrollLeft || paneEl.scrollTop) { /* still proceed */ }
       const pRect = paneEl.getBoundingClientRect();
@@ -295,15 +296,18 @@ export function openExplorer(startPath = []) {
 
     paneEl.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
+      if (Date.now() - lastTouchAt < 800) return;   // synthesized after touch, ignore
       if (e.target.closest(".exp-tile")) return;
       start(e.clientX, e.clientY, false);
     });
     paneEl.addEventListener("touchstart", (e) => {
+      lastTouchAt = Date.now();
       if (e.target.closest(".exp-tile")) return;
       const p = e.touches[0];
       if (!p) return;
       start(p.clientX, p.clientY, true);
     }, { passive: true });
+    paneEl.addEventListener("touchend", () => { lastTouchAt = Date.now(); }, { passive: true });
     paneEl.addEventListener("contextmenu", (e) => {
       if (e.target.closest(".exp-tile")) return;
       e.preventDefault();

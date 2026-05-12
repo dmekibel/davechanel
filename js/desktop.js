@@ -224,6 +224,7 @@ function makeIconDraggable(li) {
 function initMarquee() {
   const desktopEl = document.getElementById("desktop");
   let lastEmptyTap = 0;   // for desktop empty-area double-click → context menu
+  let lastTouchAt = 0;    // suppress synthesized mouse events after touch
 
   const start = (clientX, clientY, additive, isTouch) => {
     const dRect = desktopEl.getBoundingClientRect();
@@ -331,6 +332,8 @@ function initMarquee() {
   // Mouse
   desktopEl.addEventListener("mousedown", (e) => {
     if (e.button !== 0) return;
+    // Ignore mousedown that browsers synthesize ~50–700ms after touchend
+    if (Date.now() - lastTouchAt < 800) return;
     if (e.target.closest(".desktop-icon")) return;
     if (e.target.closest(".window")) return;
     if (e.target.closest(".taskbar")) return;
@@ -339,6 +342,7 @@ function initMarquee() {
 
   // Touch
   desktopEl.addEventListener("touchstart", (e) => {
+    lastTouchAt = Date.now();
     if (e.target.closest(".desktop-icon")) return;
     if (e.target.closest(".window")) return;
     if (e.target.closest(".taskbar")) return;
@@ -346,6 +350,7 @@ function initMarquee() {
     if (!p) return;
     start(p.clientX, p.clientY, false, true);
   }, { passive: true });
+  desktopEl.addEventListener("touchend", () => { lastTouchAt = Date.now(); }, { passive: true });
 }
 
 function showDesktopContextMenu(x, y) {
