@@ -58,21 +58,86 @@ function makeWin98SelectInline(options, initial, onChange) {
   return root;
 }
 
+// Classic Win98 menu bar: top-level labels with dropdowns.
+function buildMenubar(rootEl, menus) {
+  rootEl.innerHTML = "";
+  let openMenu = null;
+  let openDrop = null;
+  const close = () => {
+    if (openDrop) { openDrop.remove(); openDrop = null; }
+    if (openMenu) { openMenu.classList.remove("open"); openMenu = null; }
+    document.removeEventListener("click", outsideClose, true);
+  };
+  const outsideClose = (e) => {
+    if (!rootEl.contains(e.target) && (!openDrop || !openDrop.contains(e.target))) close();
+  };
+  for (const m of menus) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pm-menu";
+    btn.textContent = m.label;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (openMenu === btn) { close(); return; }
+      close();
+      openMenu = btn;
+      btn.classList.add("open");
+      const drop = document.createElement("div");
+      drop.className = "pm-drop";
+      for (const it of m.items) {
+        if (it === "sep") {
+          const sep = document.createElement("div");
+          sep.className = "pm-sep";
+          drop.appendChild(sep);
+          continue;
+        }
+        const item = document.createElement("div");
+        item.className = "pm-item";
+        item.innerHTML = `<span class="pm-lbl">${it.label}</span>${it.accel ? `<span class="pm-accel">${it.accel}</span>` : ""}`;
+        item.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          close();
+          it.action();
+        });
+        drop.appendChild(item);
+      }
+      const r = btn.getBoundingClientRect();
+      drop.style.position = "fixed";
+      drop.style.left = r.left + "px";
+      drop.style.top  = r.bottom + "px";
+      document.body.appendChild(drop);
+      openDrop = drop;
+      document.addEventListener("click", outsideClose, true);
+    });
+    btn.addEventListener("mouseenter", () => {
+      // Once a menu is open, hovering siblings switches the dropdown.
+      if (openMenu && openMenu !== btn) btn.click();
+    });
+    rootEl.appendChild(btn);
+  }
+}
+
+// Quick info dialog — same chrome as win98Confirm but OK only.
+function win98Info(message, title) {
+  win98Confirm(message, title, () => {}, { okOnly: true });
+}
+
 // Win98 confirm dialog — replaces native confirm() so the OS illusion holds.
-function win98Confirm(message, title, onOk) {
+function win98Confirm(message, title, onOk, opts = {}) {
   const back = document.createElement("div");
   back.className = "win98-confirm-backdrop";
   const dlg = document.createElement("div");
   dlg.className = "win98-confirm";
+  const okOnly = opts.okOnly === true;
   dlg.innerHTML = `
     <div class="win98-confirm-title">${title || "Confirm"}</div>
     <div class="win98-confirm-body">
-      <div class="win98-confirm-icon">?</div>
+      <div class="win98-confirm-icon">${okOnly ? "i" : "?"}</div>
       <div class="win98-confirm-msg"></div>
     </div>
     <div class="win98-confirm-buttons">
       <button class="win98-confirm-btn win98-confirm-ok">OK</button>
-      <button class="win98-confirm-btn win98-confirm-cancel">Cancel</button>
+      ${okOnly ? "" : `<button class="win98-confirm-btn win98-confirm-cancel">Cancel</button>`}
     </div>
   `;
   dlg.querySelector(".win98-confirm-msg").textContent = message;
@@ -80,7 +145,7 @@ function win98Confirm(message, title, onOk) {
   document.body.appendChild(back);
   const cleanup = () => back.remove();
   dlg.querySelector(".win98-confirm-ok").addEventListener("click", () => { cleanup(); onOk(); });
-  dlg.querySelector(".win98-confirm-cancel").addEventListener("click", cleanup);
+  if (!okOnly) dlg.querySelector(".win98-confirm-cancel").addEventListener("click", cleanup);
   back.addEventListener("click", (e) => { if (e.target === back) cleanup(); });
 }
 
@@ -93,6 +158,7 @@ export function openPaint() {
   const wrap = document.createElement("div");
   wrap.className = "paint";
   wrap.innerHTML = `
+    <div class="paint-menubar"></div>
     <div class="paint-toolbar">
       <button data-tool="pencil"  class="pt-btn active" title="Pencil">✎</button>
       <button data-tool="eraser"  class="pt-btn"        title="Eraser">⌫</button>
@@ -102,10 +168,6 @@ export function openPaint() {
       <button data-tool="ellipse" class="pt-btn"        title="Ellipse">◯</button>
       <span class="pt-sep"></span>
       <label class="pt-size">Size <span class="pt-size-slot"></span></label>
-      <span class="pt-sep"></span>
-      <button class="pt-btn pt-undo"  title="Undo (Ctrl+Z)">↶ Undo</button>
-      <button class="pt-btn pt-clear" title="Clear canvas">Clear</button>
-      <button class="pt-btn pt-export" title="Export PNG">Export</button>
     </div>
     <div class="paint-main">
       <div class="paint-palette"></div>
@@ -182,31 +244,16 @@ export function openPaint() {
     (v) => { size = parseInt(v, 10); }
   ));
 
-  // Undo
+  // Actions
   function doUndo() { undo(); }
-  wrap.querySelector(".pt-undo").addEventListener("click", doUndo);
-  document.addEventListener("keydown", function paintKey(e) {
-    if (!wrap.isConnected) {
-      document.removeEventListener("keydown", paintKey);
-      return;
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-      e.preventDefault();
-      doUndo();
-    }
-  });
-
-  // Clear — Win98 dialog, not native confirm()
-  wrap.querySelector(".pt-clear").addEventListener("click", () => {
+  function doNew() {
     win98Confirm("Clear the whole canvas?", "Paint", () => {
       pushUndo();
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     });
-  });
-
-  // Export PNG
-  wrap.querySelector(".pt-export").addEventListener("click", () => {
+  }
+  function doExport() {
     canvas.toBlob(blob => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -218,7 +265,41 @@ export function openPaint() {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 500);
     }, "image/png");
+  }
+
+  // Ctrl/Cmd+Z global keybinding for Undo
+  document.addEventListener("keydown", function paintKey(e) {
+    if (!wrap.isConnected) {
+      document.removeEventListener("keydown", paintKey);
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      doUndo();
+    }
   });
+
+  // Classic Win98 menu bar — File / Edit / Image / Help
+  const menubar = wrap.querySelector(".paint-menubar");
+  buildMenubar(menubar, [
+    { label: "File", items: [
+      { label: "New",           action: doNew,    accel: "Ctrl+N" },
+      { label: "Export as PNG", action: doExport, accel: "Ctrl+S" },
+      "sep",
+      { label: "Close",         action: () => { const win = wrap.closest(".window"); if (win) closeWindow(parseInt(win.dataset.id, 10)); } },
+    ]},
+    { label: "Edit", items: [
+      { label: "Undo",          action: doUndo,   accel: "Ctrl+Z" },
+      "sep",
+      { label: "Clear Image",   action: doNew },
+    ]},
+    { label: "Image", items: [
+      { label: "Attributes...", action: () => win98Info("Canvas size picker — coming soon.", "Image Attributes") },
+    ]},
+    { label: "Help", items: [
+      { label: "About Paint",   action: () => win98Info("Paint — a tiny in-page MS Paint clone.", "About Paint") },
+    ]},
+  ]);
 
   // Coords helper
   function pos(e) {
