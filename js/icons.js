@@ -48,6 +48,17 @@ const PICTURE = `
   <circle cx="11" cy="6" r="1.5" fill="#fff080"/>
   <path d="M2 12 L5 8 L7 10 L10 6 L14 12 Z" fill="#208040"/>
 `;
+const PAINT = `
+  <rect x="2" y="1" width="12" height="11" fill="#fff" stroke="#000"/>
+  <rect x="3" y="2" width="2" height="2" fill="#d63a1e"/>
+  <rect x="6" y="2" width="2" height="2" fill="#fdd55d"/>
+  <rect x="9" y="2" width="2" height="2" fill="#208040"/>
+  <rect x="3" y="5" width="2" height="2" fill="#1976d2"/>
+  <rect x="6" y="5" width="2" height="2" fill="#7b1fa2"/>
+  <rect x="9" y="5" width="2" height="2" fill="#f57c00"/>
+  <path d="M11 11 L13 9 L15 11 L13 13 Z" fill="#cdcdcd" stroke="#000"/>
+  <rect x="4" y="13" width="8" height="2" fill="#cdcdcd" stroke="#000"/>
+`;
 const BRIEFCASE = `
   <rect x="6" y="3" width="4" height="2" fill="none" stroke="#000"/>
   <rect x="1" y="5" width="14" height="9" fill="#704020" stroke="#000"/>
@@ -129,6 +140,7 @@ export const ICONS = {
   myComputer:  (s = 16) => wrap(MY_COMPUTER, s),
   recycle:     (s = 16) => wrap(RECYCLE, s),
   picture:     (s = 16) => wrap(PICTURE, s),
+  paint:       (s = 16) => wrap(PAINT, s),
   briefcase:   (s = 16) => wrap(BRIEFCASE, s),
   mail:        (s = 16) => wrap(MAIL, s),
   movie:       (s = 16) => wrap(MOVIE, s),
