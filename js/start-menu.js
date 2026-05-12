@@ -22,7 +22,8 @@ const TREE = [
       {
         type: "submenu", label: "Accessories", icon: ICONS.folder(16),
         children: [
-          { type: "item", program: "welcome",  label: "Welcome",   icon: ICONS.notepad(16) },
+          { type: "item", program: "paint",    label: "Paint",       icon: ICONS.picture(16) },
+          { type: "item", program: "welcome",  label: "Welcome",     icon: ICONS.notepad(16) },
           { type: "item", program: "sleep",    label: "Screensaver", icon: ICONS.movie(16) },
         ],
       },

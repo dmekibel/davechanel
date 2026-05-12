@@ -5,7 +5,8 @@
 import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
-import { startScreensaver } from "./screensaver.js";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
+import { openPaint } from "./paint.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
 import { showContextMenu } from "./context-menu.js";
 import { t } from "./i18n.js";
@@ -775,6 +776,7 @@ export function openProgram(progId) {
     case "logout":       return logout();
     case "restart":      return restart();
     case "sleep":        return startScreensaver();
+    case "paint":        return openPaint();
     case "welcome":      return openWelcome();
     case "settings":     return openSettings();
     case "control-panel":return openSettings();
@@ -1101,14 +1103,17 @@ export function openSettings() {
           <div class="ss-select-slot"></div>
         </div>
         <p class="settings-hint">Activate manually from <b>Start &gt; Sleep</b>. Idle auto-trigger is not wired.</p>
+        <div class="settings-foot-actions" style="text-align:right;">
+          <button class="settings-btn" id="ss-preview" type="button">Preview</button>
+        </div>
       `;
       const slot = body.querySelector(".ss-select-slot");
       slot.appendChild(makeWin98Select(
-        [{ value: "bouncing", label: "Bouncing David Mekibel" }],
-        "bouncing",
-        () => {},
-        { disabled: true }
+        SAVERS.map(s => ({ value: s.id, label: s.label })),
+        getSaver(),
+        (val) => setSaver(val)
       ));
+      body.querySelector("#ss-preview").addEventListener("click", () => startScreensaver());
     } else if (tab === "appearance") {
       body.innerHTML = `
         <p class="settings-hint">Color schemes — coming soon.</p>

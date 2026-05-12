@@ -375,6 +375,119 @@
   padding: 5px 15px 3px 17px;
 }
 
+/* === Paint app ==================================================== */
+
+.paint {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--chrome);
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+}
+.paint-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--chrome-dark);
+}
+.pt-btn {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  width: 26px;
+  height: 26px;
+  font-family: var(--ui-font);
+  font-size: 13px;
+  cursor: default;
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pt-btn:active,
+.pt-btn.active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
+.pt-btn.pt-clear { width: auto; padding: 0 10px; font-size: 11px; }
+.pt-sep {
+  width: 1px;
+  align-self: stretch;
+  border-left: 1px solid var(--chrome-dark);
+  border-right: 1px solid var(--chrome-light);
+  margin: 2px 4px;
+}
+.pt-size { display: inline-flex; align-items: center; gap: 4px; }
+.pt-size-sel {
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 1px 4px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  height: 22px;
+}
+.paint-main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.paint-palette {
+  width: 56px;
+  display: grid;
+  grid-template-columns: repeat(2, 22px);
+  align-content: start;
+  gap: 2px;
+  padding: 4px;
+  background: var(--chrome);
+  border-right: 1px solid var(--chrome-dark);
+}
+.pt-swatch {
+  width: 22px;
+  height: 18px;
+  border: 1px solid #000;
+  cursor: default;
+  padding: 0;
+}
+.pt-swatch.active {
+  outline: 2px solid #fff;
+  outline-offset: -3px;
+  box-shadow: 0 0 0 1px #000;
+}
+.paint-canvas-wrap {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  background: #808080;
+}
+.paint-canvas {
+  background: #fff;
+  border: 1px solid #000;
+  cursor: crosshair;
+  display: block;
+  image-rendering: pixelated;
+  max-width: 100%;
+}
+.paint-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 8px;
+  border-top: 1px solid var(--chrome-light);
+  font-size: 11px;
+  color: #333;
+  background: var(--chrome);
+}
+.pt-current {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 1px solid #000;
+  vertical-align: -3px;
+  margin-left: 4px;
+}
+
 /* === Screensaver (bouncing-DVD-style) ============================= */
 
 .screensaver {
@@ -402,6 +515,13 @@
   will-change: transform, color;
   letter-spacing: -1px;
   pointer-events: none;
+}
+.screensaver .ss-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .screensaver-logo .ss-sub {
   font-size: 0.45em;
