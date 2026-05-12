@@ -1554,10 +1554,6 @@ body[data-wallpaper="clouds"] {
 /* === Mobile ======================================================== */
 
 @media (max-width: 720px) {
-  .desktop-icons {
-    grid-template-columns: repeat(auto-fill, 80px);
-    gap: 10px;
-  }
   /* On mobile only the bottom-right corner stays as a resize grip,
      so it doesn't conflict with the min/max/close buttons. */
   .window .resize-handle { display: none; }
@@ -1576,6 +1572,14 @@ body[data-wallpaper="clouds"] {
   }
   /* tree shrinks on small screens */
   .exp-body { grid-template-columns: 130px 1fr; }
+  /* Smaller icon labels on mobile so they don't pile up between rows */
+  .desktop-icon { font-size: 13px; }
+  .desktop-icon .icon-label { max-width: 70px; line-height: 1.05; }
+}
+/* Landscape mobile: very short on vertical space; tighten icon cells */
+@media (max-width: 920px) and (max-height: 480px) {
+  .desktop-icon { font-size: 12px; }
+  .desktop-icon .icon-img { width: 28px; height: 28px; }
 }
 @media (max-width: 480px) {
   .exp-body { grid-template-columns: 1fr; }

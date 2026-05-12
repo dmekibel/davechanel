@@ -63,27 +63,11 @@ function renderDesktopIcons() {
   const ul = document.getElementById("desktop-icons");
   ul.innerHTML = "";
 
-  // Load saved positions, but only TRUST a position if it fits cleanly in
-  // the current viewport. Anything that would push an icon against (or past)
-  // the right or bottom edge gets discarded so we fall back to the default
-  // grid. This catches the common case where positions saved on a wider
-  // screen would otherwise hug the right wall on mobile.
-  const desktopEl_ = document.getElementById("desktop");
-  const dW_ = desktopEl_?.clientWidth  || window.innerWidth;
-  const dH_ = desktopEl_?.clientHeight || (window.innerHeight - 30);
-  const isNarrow = window.innerWidth < 720;
-  const ICON_W_ = 84, ICON_H_ = 80;
-  const rawSaved = isNarrow ? {} : loadIconPositions();
-  const saved = {};
-  for (const [name, p] of Object.entries(rawSaved)) {
-    if (!Array.isArray(p) || p.length !== 2) continue;
-    const [x, y] = p;
-    if (typeof x !== "number" || typeof y !== "number") continue;
-    if (x < 0 || y < 0) continue;
-    if (x > dW_ - ICON_W_ - 4) continue;   // would touch / pass right wall
-    if (y > dH_ - ICON_H_ - 4) continue;   // would touch / pass bottom
-    saved[name] = p;
-  }
+  // On touch devices (any orientation), always use the computed default
+  // grid — saved positions from one orientation/viewport don't translate
+  // to another. Only fine-pointer (mouse) devices get persisted positions.
+  const isTouch = matchMedia("(pointer: coarse)").matches;
+  const saved = isTouch ? {} : loadIconPositions();
   const all = [
     ...DESKTOP_SHORTCUTS.map(sc => ({
       name: sc.name,
@@ -110,11 +94,13 @@ function renderDesktopIcons() {
   const desktopEl = document.getElementById("desktop");
   const dW = desktopEl?.clientWidth  || window.innerWidth;
   const dH = desktopEl?.clientHeight || (window.innerHeight - 30);
-  const ICON_W = 84;
-  const ICON_H = 80;
+  const cellW = gridCellWidth();
+  const cellH = gridCellHeight();
+  const ICON_W = cellW - 12;
+  const ICON_H = cellH - 12;
   const maxX = Math.max(GRID_X0, dW - ICON_W - GRID_X0);
   const maxY = Math.max(GRID_Y0, dH - ICON_H - GRID_Y0);
-  const itemsPerCol = Math.max(3, Math.floor((dH - GRID_Y0 * 2) / CELL_H));
+  const itemsPerCol = Math.max(2, Math.floor((dH - GRID_Y0 * 2) / cellH));
 
   for (let i = 0; i < all.length; i++) {
     const meta = all[i];
@@ -122,8 +108,8 @@ function renderDesktopIcons() {
     const pos = saved[meta.name];
     const col = Math.floor(i / itemsPerCol);
     const row = i % itemsPerCol;
-    let x = pos ? pos[0] : GRID_X0 + col * CELL_W;
-    let y = pos ? pos[1] : GRID_Y0 + row * CELL_H;
+    let x = pos ? pos[0] : GRID_X0 + col * cellW;
+    let y = pos ? pos[1] : GRID_Y0 + row * cellH;
     x = Math.max(GRID_X0, Math.min(maxX, x));
     y = Math.max(GRID_Y0, Math.min(maxY, y));
     li.style.left = x + "px";
@@ -138,6 +124,13 @@ const GRID_X0 = 12;
 const GRID_Y0 = 12;
 const CELL_W  = 96;
 const CELL_H  = 86;
+// On a touch device with a short viewport (landscape phone), shrink rows.
+function gridCellHeight() {
+  return (matchMedia("(pointer: coarse)").matches && window.innerHeight < 500) ? 64 : CELL_H;
+}
+function gridCellWidth() {
+  return (matchMedia("(pointer: coarse)").matches && window.innerHeight < 500) ? 80 : CELL_W;
+}
 
 function snapToGrid(x, y) {
   const col = Math.max(0, Math.round((x - GRID_X0) / CELL_W));
