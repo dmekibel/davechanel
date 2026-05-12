@@ -8,9 +8,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/reset.css?v=28">
-  <link rel="stylesheet" href="css/heaven-os.css?v=28">
-  <link rel="stylesheet" href="css/animations.css?v=28">
+  <link rel="stylesheet" href="css/reset.css?v=29">
+  <link rel="stylesheet" href="css/heaven-os.css?v=29">
+  <link rel="stylesheet" href="css/animations.css?v=29">
 </head>
 <body>
   <main id="desktop" class="desktop" aria-label="Desktop">
@@ -45,13 +45,13 @@
   <!-- Welcome screen: original composed layout, Win98-flavored chrome. -->
   <div id="login-overlay" class="login-overlay">
     <div class="login-stripe top">
-      <span class="login-build-tag">David Mekibel 2026</span>
+      <span class="login-build-tag" data-i18n="David Mekibel 2026">David Mekibel 2026</span>
       <span class="login-build-meta"></span>
     </div>
 
     <div class="login-main">
       <div class="login-left">
-        <div class="login-logo">David Mekibel</div>
+        <div class="login-logo" data-i18n="David Mekibel">David Mekibel</div>
         <div class="login-lead"    data-i18n="portfolio website.">portfolio website.</div>
         <div class="login-sub"     data-i18n="Commercial and fine art work.">Commercial and fine art work.</div>
         <div class="login-tagline" data-i18n="To begin, click your user">To begin, click your user</div>
@@ -69,7 +69,7 @@
             </svg>
           </div>
           <div class="login-meta">
-            <div class="login-name">user1</div>
+            <div class="login-name" data-i18n="user1">user1</div>
           </div>
         </button>
       </div>
@@ -85,6 +85,9 @@
           <span class="ic ic-sleep" aria-hidden="true">☾</span>
           <span data-i18n="Sleep">Sleep</span>
         </button>
+      </div>
+      <div class="login-right-actions">
+        <div class="login-help" data-i18n="No password required. Click your name to enter the desktop.">No password required. Click your name to enter the desktop.</div>
         <button id="login-globe" class="tray-globe login-globe" type="button" aria-label="Switch language">
           <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
             <circle cx="8" cy="8" r="6.5" fill="#4a90d9" stroke="#000" stroke-width="1"/>
@@ -97,10 +100,9 @@
           <span class="lang-code">EN</span>
         </button>
       </div>
-      <div class="login-help" data-i18n="No password required. Click your name to enter the desktop.">No password required. Click your name to enter the desktop.</div>
     </div>
   </div>
 
-  <script type="module" src="js/main.js?v=28"></script>
+  <script type="module" src="js/main.js?v=29"></script>
 </body>
 </html>

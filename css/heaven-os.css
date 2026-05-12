@@ -569,6 +569,14 @@
 }
 
 .login-bottom-actions { display: flex; gap: 8px; align-items: center; }
+.login-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 70%;
+}
+.login-right-actions .login-help { text-align: right; flex: 1; }
+.login-globe { flex: 0 0 auto; }
 
 /* Bottom shutdown + helper — Win98 raised button on the blue stripe */
 .login-shutdown {
@@ -979,13 +987,35 @@ body.lang-ru .settings-tabs,
 body.lang-ru .settings-body,
 body.lang-ru .settings-foot,
 body.lang-ru .window-titlebar,
+body.lang-ru .window-menubar,
+body.lang-ru .login-logo,
 body.lang-ru .login-lead,
 body.lang-ru .login-sub,
 body.lang-ru .login-tagline,
 body.lang-ru .login-help,
 body.lang-ru .login-shutdown,
-body.lang-ru .login-build-meta {
+body.lang-ru .login-build-tag,
+body.lang-ru .login-build-meta,
+body.lang-ru .login-name,
+body.lang-ru .login-intro,
+body.lang-ru .desktop-icon,
+body.lang-ru .desktop-icon .icon-label,
+body.lang-ru .notepad,
+body.lang-ru .notepad pre {
   font-family: "Tahoma", "Geneva", "DejaVu Sans", sans-serif !important;
+}
+/* Drop the heavy text-shadow on icon labels in RU — looks gross with
+   the wider Cyrillic glyphs in Tahoma. Just a single dark drop instead. */
+body.lang-ru .desktop-icon {
+  text-shadow: 1px 1px 0 #000 !important;
+  font-weight: 700;
+  font-size: 12px;
+}
+body.lang-ru .login-logo {
+  font-size: 56px !important;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 /* Marquee selection (drag-to-select on desktop) */

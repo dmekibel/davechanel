@@ -104,8 +104,23 @@ const RU = {
   "Screen area": "Размер экрана",
   "Default Monitor": "Стандартный монитор",
 
-  // Misc
-  "David Mekibel 2026": "David Mekibel 2026",
+  // Brand / name
+  "David Mekibel": "Давид Мекибель",
+  "David": "Давид",
+  "Mekibel": "Мекибель",
+  "David Mekibel 2026": "Давид Мекибель 2026",
+
+  // User
+  "user1": "пользователь1",
+
+  // Files
+  "Showreel.mpg": "шоу рил.mpg",
+  "About Me.txt": "Обо мне.txt",
+  "Fine Art CV.txt": "CV — Изобразительное искусство.txt",
+  "Commercial CV.txt": "CV — Коммерческие работы.txt",
+  "About the studio.txt": "О студии.txt",
+  "Brand Work": "Работа с брендами",
+  "Music Industry": "Музыкальная индустрия",
 };
 
 let current = (() => {

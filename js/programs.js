@@ -61,7 +61,7 @@ export async function openNotepad(file) {
   wrap.appendChild(body);
 
   return openWindow({
-    title: file.name,
+    title: t(file.name),
     icon: ICONS.notepad(14),
     iconHtml: true,
     content: wrap,
@@ -111,7 +111,7 @@ export function openShowreel(file) {
   wrap.className = "showreel";
   wrap.textContent = "▶  SHOWREEL — coming soon";
   return openWindow({
-    title: file?.name || "Showreel.mpg",
+    title: t(file?.name || "Showreel.mpg"),
     icon: ICONS.movie(14),
     iconHtml: true,
     content: wrap,
@@ -842,8 +842,8 @@ function makeWin98Select(options, initial, onChange, opts = {}) {
 }
 
 export function openWelcome() {
-  // 4 short pages — matches the Win98 reference (4 contents items).
-  const PAGES = [
+  // 4 short pages, each with EN + RU body.
+  const PAGES_EN = [
     {
       title: "Welcome",
       body: `
@@ -875,6 +875,39 @@ export function openWelcome() {
       `,
     },
   ];
+  const PAGES_RU = [
+    {
+      title: "Добро пожаловать",
+      body: `
+        <p>Добро пожаловать на сайт <b>Давида Мекибеля</b>.</p>
+        <p>Расслабьтесь и пройдите краткий тур по разделам этого сайта.</p>
+        <p>Чтобы открыть раздел, просто нажмите на него.</p>
+      `,
+    },
+    {
+      title: "Мои работы",
+      body: `
+        <p>Откройте <b>Изобразительное искусство</b> — финалист ArtPrize 2024 + 2025.</p>
+        <p>Откройте <b>Balancē Creative</b> — коммерческие проекты: бренды, музыка, AI/3D-пайплайны.</p>
+      `,
+    },
+    {
+      title: "Контакты",
+      body: `
+        <p><a href="mailto:dmekibel@gmail.com">dmekibel@gmail.com</a></p>
+        <p><a href="https://www.linkedin.com/in/david-mekibel" target="_blank" rel="noopener">linkedin.com/in/david-mekibel</a></p>
+        <p><a href="https://instagram.com/dalledave" target="_blank" rel="noopener">@dalledave</a></p>
+      `,
+    },
+    {
+      title: "Советы",
+      body: `
+        <p>Перетаскивайте окна за заголовок. Перетаскивайте значки, чтобы их переставить.</p>
+        <p>Попробуйте <b>Пуск &gt; Настройки</b> чтобы сменить обои, или <b>Пуск &gt; Сон</b> для заставки.</p>
+      `,
+    },
+  ];
+  const PAGES = () => (t("Welcome") === "Welcome" ? PAGES_EN : PAGES_RU);
 
   // Win98-style flag logo (Microsoft 4-square waving flag pattern, recolored)
   const FLAG_LOGO = `
@@ -925,32 +958,34 @@ export function openWelcome() {
 
   const visited = new Set([0]);
 
-  // Color-coded left bars matching the Win98 reference: red, red, blue/green, yellow.
+  // Color-coded left bars: red, blue, green, yellow
   const COLORS = ["#e84a3a", "#3a8fd6", "#3ad67a", "#f0d040"];
-  PAGES.forEach((p, i) => {
-    const li = document.createElement("li");
-    li.dataset.idx = String(i);
-    li.style.setProperty("--bar", COLORS[i % COLORS.length]);
-    li.innerHTML = `
-      <span class="toc-bar"></span>
-      <span class="toc-label">${p.title}</span>
-      <span class="toc-check">✓</span>
-    `;
-    if (i === 0) li.classList.add("active");
-    toc.appendChild(li);
-  });
-
-  let idx = 0;
+  function buildToc() {
+    toc.innerHTML = "";
+    PAGES().forEach((p, i) => {
+      const li = document.createElement("li");
+      li.dataset.idx = String(i);
+      li.style.setProperty("--bar", COLORS[i % COLORS.length]);
+      li.innerHTML = `
+        <span class="toc-bar"></span>
+        <span class="toc-label">${p.title}</span>
+        <span class="toc-check">✓</span>
+      `;
+      if (i === idx) li.classList.add("active");
+      toc.appendChild(li);
+    });
+  }
   function render() {
+    const pages = PAGES();
     visited.add(idx);
     toc.querySelectorAll("li").forEach((n, i) => {
       n.classList.toggle("active",  i === idx);
       n.classList.toggle("visited", visited.has(i) && i !== idx);
     });
-    titleEl.textContent = PAGES[idx].title;
-    pane.innerHTML = PAGES[idx].body;
+    titleEl.textContent = pages[idx].title;
+    pane.innerHTML = pages[idx].body;
     backBtn.toggleAttribute("disabled", idx === 0);
-    nextBtn.toggleAttribute("disabled", idx === PAGES.length - 1);
+    nextBtn.toggleAttribute("disabled", idx === pages.length - 1);
   }
 
   toc.addEventListener("click", (e) => {
@@ -959,10 +994,14 @@ export function openWelcome() {
     idx = Number(li.dataset.idx);
     render();
   });
-  backBtn.addEventListener("click", () => { if (idx > 0)               { idx--; render(); } });
-  nextBtn.addEventListener("click", () => { if (idx < PAGES.length - 1) { idx++; render(); } });
+  backBtn.addEventListener("click", () => { if (idx > 0)                 { idx--; render(); } });
+  nextBtn.addEventListener("click", () => { if (idx < PAGES().length - 1) { idx++; render(); } });
 
   render();
+
+  // Re-render when language changes (instant translation, no reload)
+  const onLang = () => { buildToc(); render(); };
+  window.addEventListener("languagechange", onLang);
 
   const id = openWindow({
     title: "Welcome",
