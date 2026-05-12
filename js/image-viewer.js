@@ -9,6 +9,19 @@
 
 import { openWindow, closeWindow } from "./window-manager.js";
 import { ICONS } from "./icons.js";
+import { FS } from "./file-system.js";
+
+// Collect every kind:"image" leaf in the virtual file system. Used as the
+// default list when the viewer is opened from the start menu.
+function collectAllPortfolioImages(node = FS, out = []) {
+  if (!node) return out;
+  if (node.type === "file" && node.kind === "image") {
+    out.push({ src: node.src, name: node.name });
+  } else if (node.children) {
+    for (const c of node.children) collectAllPortfolioImages(c, out);
+  }
+  return out;
+}
 
 export function openImageViewer(arg1, title) {
   // Normalize the argument shape into { list, index }.
@@ -22,9 +35,11 @@ export function openImageViewer(arg1, title) {
     index = 0;
     title = title || (list[0] && list[0].name) || "Image Viewer";
   } else {
-    list = [];
+    // Opened with no args (e.g. from the start menu) — default to ALL
+    // portfolio images so prev/next walks David's whole gallery.
+    list = collectAllPortfolioImages();
     index = 0;
-    title = title || "Image Viewer";
+    title = title || (list[0] && list[0].name) || "Image Viewer";
   }
 
   const wrap = document.createElement("div");
@@ -51,11 +66,9 @@ export function openImageViewer(arg1, title) {
         <div class="iv-nav-rect"></div>
       </div>
       <div class="iv-empty">
-        <p>No image loaded.</p>
-        <button class="iv-open-empty">File → Open…</button>
+        <p>No images in this portfolio yet.</p>
       </div>
     </div>
-    <input class="iv-file" type="file" accept="image/*" multiple hidden>
   `;
 
   const stage    = wrap.querySelector(".iv-stage");
@@ -65,13 +78,13 @@ export function openImageViewer(arg1, title) {
   const prevBtn  = wrap.querySelector(".iv-prev");
   const nextBtn  = wrap.querySelector(".iv-next");
   const emptyEl  = wrap.querySelector(".iv-empty");
-  const fileInp  = wrap.querySelector(".iv-file");
-  const openEmpty = wrap.querySelector(".iv-open-empty");
   const navEl    = wrap.querySelector(".iv-navigator");
   const navCv    = wrap.querySelector(".iv-nav-canvas");
   const navCtx   = navCv.getContext("2d");
   const navRect  = wrap.querySelector(".iv-nav-rect");
   const isTouch  = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  // unused references — kept for clarity
+  void wrap.querySelector(".iv-empty");
 
   let img = new Image();
   let scale = 1;
@@ -190,14 +203,13 @@ export function openImageViewer(arg1, title) {
     setTitle(cur.name || "Image Viewer");
     loaded = false;
     img = new Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => {
       loaded = true;
       setTimeout(() => { resize(); fit(); }, 0);
     };
     img.onerror = () => {
       loaded = false;
-      info.textContent = "Failed to load image.";
+      info.textContent = "Failed to load: " + cur.src;
       draw();
     };
     img.src = cur.src;
@@ -313,24 +325,10 @@ export function openImageViewer(arg1, title) {
   }
   document.addEventListener("keydown", keyHandler);
 
-  // File > Open — pick local images
-  function openLocal() { fileInp.click(); }
-  fileInp.addEventListener("change", () => {
-    const files = [...(fileInp.files || [])].filter(f => /^image\//.test(f.type));
-    if (!files.length) return;
-    const items = files.map(f => ({ src: URL.createObjectURL(f), name: f.name }));
-    list = items;
-    index = 0;
-    loadCurrent();
-    fileInp.value = "";
-  });
-  openEmpty.addEventListener("click", openLocal);
-
-  // Menu bar
+  // Menu bar — File menu only has Close. The viewer is bound to portfolio
+  // content; you don't open arbitrary local files from here.
   const menubar = wrap.querySelector(".iv-menubar");
   buildIvMenu(menubar.querySelector('[data-menu="file"]'), [
-    { label: "Open…",  action: openLocal,  accel: "Ctrl+O" },
-    "sep",
     { label: "Close",  action: () => {
       const winEl = wrap.closest(".window");
       if (winEl) closeWindow(parseInt(winEl.dataset.id, 10));

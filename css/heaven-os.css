@@ -1843,9 +1843,16 @@ body.lang-ru .login-logo {
 }
 .window-title-icon svg { display: block; }
 
-.window-controls { display: flex; gap: 2px; }
+.window-controls {
+  display: flex;
+  gap: 2px;
+  position: relative;
+  z-index: 6;            /* above resize handles so X stays clickable */
+}
 .window-button {
   width: 18px; height: 16px;
+  position: relative;
+  z-index: 6;
   background: var(--chrome);
   border: 1px solid;
   border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
@@ -1984,16 +1991,30 @@ body.lang-ru .login-logo {
 .resize-handle {
   position: absolute;
   z-index: 5;
+  touch-action: none;
 }
-.rh-n  { top: -3px;    left: 6px;   right: 6px;  height: 6px;  cursor: ns-resize; }
-.rh-s  { bottom: -3px; left: 6px;   right: 6px;  height: 6px;  cursor: ns-resize; }
-.rh-w  { top: 6px;     bottom: 6px; left: -3px;  width: 6px;   cursor: ew-resize; }
-.rh-e  { top: 6px;     bottom: 6px; right: -3px; width: 6px;   cursor: ew-resize; }
-.rh-nw { top: -3px; left: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
-.rh-ne { top: -3px; right: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
-.rh-sw { bottom: -3px; left: -3px; width: 10px; height: 10px; cursor: nesw-resize; }
-.rh-se { bottom: -3px; right: -3px; width: 10px; height: 10px; cursor: nwse-resize; }
+/* Edges grab a 5px-thick strip on the boundary. Corner handles bias OUTWARDS
+   (negative offsets) so they don't cover titlebar buttons like the X. */
+.rh-n  { top: -3px;    left: 10px;  right: 10px; height: 6px;  cursor: ns-resize; }
+.rh-s  { bottom: -3px; left: 10px;  right: 10px; height: 6px;  cursor: ns-resize; }
+.rh-w  { top: 10px;    bottom: 10px; left: -3px;  width: 6px;  cursor: ew-resize; }
+.rh-e  { top: 10px;    bottom: 10px; right: -3px; width: 6px;  cursor: ew-resize; }
+.rh-nw { top: -4px; left: -4px;  width: 12px; height: 12px; cursor: nwse-resize; }
+.rh-ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
+.rh-sw { bottom: -4px; left: -4px;  width: 12px; height: 12px; cursor: nesw-resize; }
+.rh-se { bottom: -4px; right: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
 .window.maximized .resize-handle { display: none; }
+/* Touch devices: make handles much bigger so fingers can find them. */
+@media (pointer: coarse) {
+  .rh-n  { top: -6px;    height: 14px; }
+  .rh-s  { bottom: -6px; height: 14px; }
+  .rh-w  { left: -6px;   width:  14px; }
+  .rh-e  { right: -6px;  width:  14px; }
+  .rh-nw { top: -8px; left:  -8px; width: 20px; height: 20px; }
+  .rh-ne { top: -8px; right: -8px; width: 20px; height: 20px; }
+  .rh-sw { bottom: -8px; left:  -8px; width: 20px; height: 20px; }
+  .rh-se { bottom: -8px; right: -8px; width: 20px; height: 20px; }
+}
 
 /* === Window content elements ======================================= */
 
@@ -2337,21 +2358,16 @@ body.lang-ru .login-logo {
 /* === Mobile ======================================================== */
 
 @media (max-width: 720px) {
-  /* On mobile only the bottom-right corner stays as a resize grip,
-     so it doesn't conflict with the min/max/close buttons. */
-  .window .resize-handle { display: none; }
+  /* All resize handles are still available on mobile (the touch-coarse
+     media query above sizes them up to be finger-grabbable). The
+     bottom-right corner gets an extra visual grip pattern so it's
+     obvious where to grab. */
   .window .rh-se {
-    display: block;
-    width: 22px;
-    height: 22px;
-    right: 0;
-    bottom: 0;
     background:
       repeating-linear-gradient(135deg,
         transparent 0 3px,
         rgba(0,0,0,0.55) 3px 4px,
         transparent 4px 7px);
-    pointer-events: auto;
   }
   /* tree shrinks on small screens */
   .exp-body { grid-template-columns: 130px 1fr; }
