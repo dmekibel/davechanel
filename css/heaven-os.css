@@ -499,10 +499,23 @@
   text-shadow: none;
   font-weight: 700;
 }
-.login-tagline {
-  font-size: 14px;
-  margin-top: 26px;
+.login-lead {
+  font-size: 16px;
+  margin-top: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+.login-sub {
+  font-size: 13px;
+  margin-top: 4px;
   opacity: 0.95;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
+.login-tagline {
+  font-size: 13px;
+  margin-top: 24px;
+  opacity: 0.85;
   text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
 }
 
