@@ -21,13 +21,17 @@ function boot() {
 }
 
 function initLangGlobe() {
-  const btn = document.getElementById("lang-globe");
-  if (!btn) return;
-  const code = btn.querySelector(".lang-code");
-  if (code) code.textContent = getLang().toUpperCase();
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    showLangPopup(btn);
+  // There are two globe buttons (tray + login). Wire both.
+  document.querySelectorAll(".tray-globe, #lang-globe, #login-globe").forEach(btn => {
+    if (!btn) return;
+    if (btn.dataset.langWired) return;
+    btn.dataset.langWired = "1";
+    const code = btn.querySelector(".lang-code");
+    if (code) code.textContent = getLang().toUpperCase();
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showLangPopup(btn);
+    });
   });
 }
 

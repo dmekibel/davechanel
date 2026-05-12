@@ -5,6 +5,7 @@ import { openProgram, openFile } from "./programs.js";
 import { ICONS, iconFor } from "./icons.js";
 import { buildStartMenu, closeAllStartMenus } from "./start-menu.js";
 import { showContextMenu, closeContextMenu } from "./context-menu.js";
+import { t } from "./i18n.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -24,6 +25,14 @@ export function initDesktop() {
   initClock();
   initMarquee();
   initReflow();
+
+  // Live language switching — re-render anything that displays translated
+  // text without a full page reload.
+  window.addEventListener("languagechange", () => {
+    renderDesktopIcons();
+    const menuEl = document.getElementById("start-menu");
+    if (menuEl) buildStartMenu(menuEl);
+  });
 }
 
 // Re-lay-out the desktop icon grid only when the viewport ORIENTATION
@@ -71,12 +80,12 @@ function renderDesktopIcons() {
   const saved = isTouch ? {} : loadIconPositions();
   const all = [
     ...DESKTOP_SHORTCUTS.map(sc => ({
-      name: sc.name,
+      name: t(sc.name),
       iconHtml: sc.iconHtml,
       open: () => openProgram(sc.program),
     })),
     ...rootDesktopItems().map(item => ({
-      name: item.name,
+      name: t(item.name),
       iconHtml: iconFor(item, 32),
       open: () => {
         if (item.type === "folder") {

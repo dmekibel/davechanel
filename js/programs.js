@@ -13,6 +13,18 @@ import { t } from "./i18n.js";
 // ---- Notepad --------------------------------------------------------
 
 async function loadText(file) {
+  // Pick the language-appropriate body if available
+  const lang = (typeof t === "function" && t("Sleep") !== "Sleep") ? "ru" : "en";
+  const ruData = file.dataRu, ruSrc = file.srcRu;
+  if (lang === "ru") {
+    if (ruData != null) return ruData;
+    if (ruSrc) {
+      try {
+        const r = await fetch(ruSrc);
+        if (r.ok) return await r.text();
+      } catch (_) {}
+    }
+  }
   if (file.data != null) return file.data;
   if (file.src) {
     try {
@@ -437,7 +449,7 @@ export function openExplorer(startPath = []) {
     li.appendChild(ic);
     const lbl = document.createElement("span");
     lbl.className = "tree-label";
-    lbl.textContent = node === FS ? "Mekibel" : node.name;
+    lbl.textContent = node === FS ? "Mekibel" : t(node.name);
     li.appendChild(lbl);
 
     li.addEventListener("click", () => {
@@ -505,7 +517,7 @@ export function openExplorer(startPath = []) {
         tIc.innerHTML = iconFor(child, 32);
         const tLbl = document.createElement("div");
         tLbl.className = "lbl";
-        tLbl.textContent = child.name;
+        tLbl.textContent = t(child.name);
         tile.appendChild(tIc);
         tile.appendChild(tLbl);
 
@@ -700,7 +712,7 @@ export function openExplorer(startPath = []) {
 
   render();
 
-  const initialTitle = currentPath.length ? currentPath[currentPath.length - 1] : "Mekibel";
+  const initialTitle = currentPath.length ? t(currentPath[currentPath.length - 1]) : "Mekibel";
   winId = openWindow({
     title: initialTitle,
     icon: currentPath.length === 0 ? ICONS.myComputer(14) : iconFor(findByPath(currentPath), 14),

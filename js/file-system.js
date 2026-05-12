@@ -115,6 +115,7 @@ HIRE THE STUDIO
       kind: "notepad",
       data: null,   // loaded from /content/about.txt at runtime
       src: "content/about.txt",
+      srcRu: "content/about-me.ru.txt",
     },
     {
       name: "Showreel.mpg",

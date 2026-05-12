@@ -15,7 +15,7 @@ const RU = {
   "To begin, click your user": "Чтобы войти, нажмите на пользователя",
   "No password required. Click your name to enter the desktop.":
     "Пароль не требуется. Нажмите имя, чтобы войти.",
-  "Shut Down": "Завершение работы",
+  "Shut Down": "Выключить",
   "Sleep": "Сон",
 
   // Start menu items
@@ -118,8 +118,21 @@ export function getLang() { return current; }
 export function setLang(lang) {
   if (lang !== "en" && lang !== "ru") return;
   if (lang === current) return;
+  current = lang;
   try { localStorage.setItem(KEY, lang); } catch (_) {}
-  window.location.reload();
+  // Update DOM + class flag
+  document.documentElement.lang = current;
+  if (document.body) {
+    document.body.classList.toggle("lang-ru", current === "ru");
+  }
+  // Walk all data-i18n elements and re-translate
+  applyDomTranslations();
+  // Update the tray globe + any login globe code
+  document.querySelectorAll(".lang-code").forEach(el => {
+    el.textContent = current.toUpperCase();
+  });
+  // Let the app's modules re-render their own pieces
+  window.dispatchEvent(new CustomEvent("languagechange", { detail: { lang: current } }));
 }
 
 export function t(key) {
