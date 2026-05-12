@@ -162,10 +162,25 @@ export function openPaint() {
     <div class="paint-toolbar">
       <button data-tool="pencil"  class="pt-btn active" title="Pencil">✎</button>
       <button data-tool="eraser"  class="pt-btn"        title="Eraser">⌫</button>
-      <button data-tool="fill"    class="pt-btn"        title="Fill">⬛</button>
+      <button data-tool="fill"    class="pt-btn"        title="Fill (paint bucket)">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3 7 L8 2 L13 7 L8 12 Z" fill="#fff" stroke="#000" stroke-width="1"/>
+          <path d="M8 2 L8 12" stroke="#000" stroke-width="1"/>
+          <path d="M13 7 L14 9 L14 12 L12 12 L12 9 Z" fill="#888" stroke="#000" stroke-width="1"/>
+          <circle cx="13" cy="13" r="1.5" fill="#1976d2"/>
+          <circle cx="11" cy="14" r="1" fill="#1976d2"/>
+        </svg>
+      </button>
       <button data-tool="line"    class="pt-btn"        title="Line">╱</button>
       <button data-tool="rect"    class="pt-btn"        title="Rectangle">▭</button>
       <button data-tool="ellipse" class="pt-btn"        title="Ellipse">◯</button>
+      <span class="pt-sep"></span>
+      <button class="pt-btn pt-undo"  title="Undo (Ctrl+Z)" aria-label="Undo">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M3 8 Q3 4 8 4 L12 4" stroke="#000" stroke-width="1.5" fill="none"/>
+          <path d="M5 6 L3 8 L5 10" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
       <span class="pt-sep"></span>
       <label class="pt-size">Size <span class="pt-size-slot"></span></label>
     </div>
@@ -266,6 +281,9 @@ export function openPaint() {
       setTimeout(() => URL.revokeObjectURL(url), 500);
     }, "image/png");
   }
+
+  // Toolbar Undo button
+  wrap.querySelector(".pt-undo").addEventListener("click", doUndo);
 
   // Ctrl/Cmd+Z global keybinding for Undo
   document.addEventListener("keydown", function paintKey(e) {
