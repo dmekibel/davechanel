@@ -1312,7 +1312,17 @@ body.lang-ru .login-logo {
   padding: 4px 10px 4px 6px;
   white-space: nowrap;
 }
-.start-menu-items li:hover {
+/* Only apply hover styles on devices that actually hover — on touch, iOS
+   treats the first tap as "activate hover" and swallows the click. */
+@media (hover: hover) {
+  .start-menu-items li:hover {
+    background: var(--tb-active-1);
+    color: #fff;
+  }
+  .start-menu-items li:hover .sm-arrow { color: #fff; }
+}
+/* Touch devices: highlight on active (press), no sticky hover state. */
+.start-menu-items li:active {
   background: var(--tb-active-1);
   color: #fff;
 }
@@ -1338,7 +1348,7 @@ body.lang-ru .login-logo {
   margin-left: 12px;
   color: #000;
 }
-.start-menu-items li:hover .sm-arrow { color: #fff; }
+.start-menu-items li:active .sm-arrow { color: #fff; }
 
 /* Cascading submenus */
 .start-menu.cascade {
