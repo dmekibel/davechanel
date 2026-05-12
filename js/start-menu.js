@@ -48,8 +48,8 @@ const TREE = [
   { type: "item", program: "run",       label: "Run...",        icon: ICONS.run(16)    },
   "sep",
   { type: "item", program: "sleep",     label: "Sleep",         icon: ICONS.movie(16)    },
-  { type: "item", program: "logout",    label: "Log Out",       icon: ICONS.recycle(16)  },
-  { type: "item", program: "restart",   label: "Restart",       icon: ICONS.recycle(16)  },
+  { type: "item", program: "logout",    label: "Log Out",       icon: ICONS.logout(16)   },
+  { type: "item", program: "restart",   label: "Restart",       icon: ICONS.restart(16)  },
 ];
 
 const openMenus = [];        // stack of open menu DOM nodes

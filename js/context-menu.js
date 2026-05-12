@@ -1,5 +1,7 @@
-// Heaven OS — shared Win98-styled context menu.
+// Mekibel — shared Win98-styled context menu.
 // Used by desktop empty-space tap and explorer empty-pane tap.
+
+import { t } from "./i18n.js";
 
 export function showContextMenu(x, y, items) {
   closeContextMenu();
@@ -17,7 +19,7 @@ export function showContextMenu(x, y, items) {
     }
     const row = document.createElement("div");
     row.className = "item" + (it.disabled ? " disabled" : "");
-    row.textContent = it.label;
+    row.textContent = t(it.label);
     if (!it.disabled && it.action) {
       row.addEventListener("click", (e) => {
         e.stopPropagation();

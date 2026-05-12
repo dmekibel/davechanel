@@ -121,6 +121,14 @@ const RU = {
   "About the studio.txt": "О студии.txt",
   "Brand Work": "Работа с брендами",
   "Music Industry": "Музыкальная индустрия",
+
+  // Notepad menubar
+  "Search": "Поиск",
+
+  // Shutdown screen
+  "It is now safe to turn off your computer.":
+    "Теперь компьютер можно безопасно выключить.",
+  "(Tap to return)": "(нажмите, чтобы вернуться)",
 };
 
 let current = (() => {

@@ -227,9 +227,11 @@ export function openWindow({ title, icon, iconHtml = false, content, width = 520
   const rec = { id, el, title, icon, iconHtml, maximized: false, prev: null, taskbar: null };
   windows.set(id, rec);
 
-  // Position — cap to viewport so windows always fit on small screens
+  // Position — cap to viewport so windows always fit on small screens.
+  // Use the real taskbar height (it grows with iOS safe-area-inset-bottom).
   const vw = window.innerWidth;
-  const vh = window.innerHeight - 30;     // taskbar reserve
+  const taskbarH = document.getElementById("taskbar")?.offsetHeight || 30;
+  const vh = window.innerHeight - taskbarH;
   const isNarrow = vw < 720;
   const minW = isNarrow ? 200 : 240;
   const minH = isNarrow ? 140 : 140;
@@ -322,7 +324,7 @@ export function listOpenWindows() {
 // Windows that were larger than the new viewport get shrunk;
 // windows that ended up off-screen get clamped back.
 function reflowOnResize() {
-  const taskbarH = 30;
+  const taskbarH = document.getElementById("taskbar")?.offsetHeight || 30;
   const margin = 8;
   for (const rec of windows.values()) {
     if (rec.maximized) {

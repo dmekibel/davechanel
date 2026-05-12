@@ -937,7 +937,7 @@ body[data-wallpaper="clouds"] {
   padding: 2px;
   font-family: var(--ui-font);
   font-size: 11px;
-  z-index: 100002;
+  z-index: 1000002;   /* above the login overlay (1000000) */
   min-width: 160px;
 }
 .lang-popup .item {
@@ -1017,16 +1017,28 @@ body.lang-ru .login-logo {
   letter-spacing: 0;
   line-height: 1;
 }
+@media (max-width: 720px) {
+  body.lang-ru .login-logo { font-size: 30px !important; }
+}
+@media (max-width: 420px) {
+  body.lang-ru .login-logo { font-size: 22px !important; }
+}
 
 /* Marquee selection (drag-to-select on desktop) */
 .marquee {
   position: absolute;
-  border: 1px dotted rgba(255, 255, 255, 0.7);
-  outline: 1px dotted rgba(0, 0, 0, 0.45);
+  border: 1px dotted rgba(255, 255, 255, 0.85);
+  outline: 1px dotted rgba(0, 0, 0, 0.6);
   outline-offset: -1px;
-  background: rgba(120, 160, 220, 0.08);
+  background: rgba(0, 60, 160, 0.18);
   pointer-events: none;
   z-index: 50;
+}
+/* Inside the explorer pane (white bg) — slightly different fill */
+.exp-pane .marquee {
+  background: rgba(0, 60, 160, 0.10);
+  border-color: rgba(0, 60, 160, 0.7);
+  outline-color: transparent;
 }
 
 /* Dropdown menu (used by file explorer's File / Edit / View / etc.) */

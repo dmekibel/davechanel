@@ -2,7 +2,7 @@
 // Shown once per browser session (sessionStorage flag), then revealed only
 // when the user clicks the user tile.
 
-const t = (s) => s;   // i18n removed
+import { t } from "./i18n.js";
 
 // Always show the welcome screen on a fresh page load.
 export function shouldShowLogin() { return true; }
@@ -54,8 +54,8 @@ function showShutdownScreen() {
   layer.className = "shutdown-screen";
   layer.innerHTML = `
     <div class="shutdown-text">
-      It is now safe to turn off<br>your computer.
-      <div class="shutdown-hint">(Tap to return)</div>
+      ${t("It is now safe to turn off your computer.")}
+      <div class="shutdown-hint">${t("(Tap to return)")}</div>
     </div>
   `;
   document.body.appendChild(layer);

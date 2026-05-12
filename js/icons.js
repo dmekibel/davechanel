@@ -101,6 +101,25 @@ const RUN = `
   <rect x="2" y="2" width="12" height="12" fill="#fff" stroke="#000"/>
   <path d="M4 11 L4 5 L6 5 L8 8 L10 5 L12 5 L12 11 L10 11 L10 7 L8 10 L6 7 L6 11 Z" fill="#000"/>
 `;
+// Log Off — a key
+const LOGOUT = `
+  <circle cx="5" cy="8" r="3" fill="none" stroke="#000" stroke-width="1.4"/>
+  <rect x="4" y="7" width="2" height="2" fill="#dba23a"/>
+  <rect x="7" y="7" width="7" height="2" fill="#dba23a" stroke="#000" stroke-width="1"/>
+  <rect x="11" y="9" width="2" height="2" fill="#dba23a" stroke="#000" stroke-width="1"/>
+  <rect x="13" y="9" width="1" height="2" fill="#dba23a" stroke="#000" stroke-width="1"/>
+`;
+// Restart — circular arrow
+const RESTART = `
+  <path d="M8 2 A 6 6 0 1 1 2.5 6" stroke="#0066d0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M1 4 L5 2 L4 6 Z" fill="#0066d0"/>
+`;
+// Power — for Shut Down
+const POWER = `
+  <circle cx="8" cy="9" r="5" fill="none" stroke="#d63a1e" stroke-width="2"/>
+  <rect x="7" y="2" width="2" height="6" fill="#d63a1e"/>
+  <rect x="7.4" y="2.4" width="1.2" height="5.2" fill="#fff"/>
+`;
 
 export const ICONS = {
   folder:      (s = 16) => wrap(FOLDER, s),
@@ -120,6 +139,9 @@ export const ICONS = {
   search:      (s = 16) => wrap(SEARCH, s),
   help:        (s = 16) => wrap(HELP, s),
   run:         (s = 16) => wrap(RUN, s),
+  logout:      (s = 16) => wrap(LOGOUT, s),
+  restart:     (s = 16) => wrap(RESTART, s),
+  power:       (s = 16) => wrap(POWER, s),
 };
 
 // Map a file-system node to its icon string.

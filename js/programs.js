@@ -44,7 +44,7 @@ export async function openNotepad(file) {
   for (const m of ["File", "Edit", "Search", "Help"]) {
     const span = document.createElement("span");
     span.className = "menu-item";
-    span.textContent = m;
+    span.textContent = t(m);
     menu.appendChild(span);
   }
   wrap.appendChild(menu);
@@ -60,7 +60,7 @@ export async function openNotepad(file) {
   body.appendChild(pre);
   wrap.appendChild(body);
 
-  return openWindow({
+  const id = openWindow({
     title: t(file.name),
     icon: ICONS.notepad(14),
     iconHtml: true,
@@ -68,6 +68,23 @@ export async function openNotepad(file) {
     width: 580,
     height: 480,
   });
+
+  // Live language switch — reload content + retranslate menubar + title
+  const onLang = async () => {
+    pre.textContent = await loadText(file);
+    menu.querySelectorAll(".menu-item").forEach((el, i) => {
+      el.textContent = t(["File", "Edit", "Search", "Help"][i] || "");
+    });
+    // update titlebar text
+    const win = document.querySelector(`.window[aria-label="${file.name}"], .window[aria-label="${t(file.name)}"]`);
+    if (win) {
+      const tEl = win.querySelector(".window-title span:last-child");
+      if (tEl) tEl.textContent = t(file.name);
+      win.setAttribute("aria-label", t(file.name));
+    }
+  };
+  window.addEventListener("languagechange", onLang);
+  return id;
 }
 
 // ---- Compose (Contact) ---------------------------------------------
@@ -711,6 +728,13 @@ export function openExplorer(startPath = []) {
   }
 
   render();
+  buildMenuBar();
+
+  // Live language switch — re-render menus + content
+  window.addEventListener("languagechange", () => {
+    buildMenuBar();
+    render();
+  });
 
   const initialTitle = currentPath.length ? t(currentPath[currentPath.length - 1]) : "Mekibel";
   winId = openWindow({
@@ -758,7 +782,7 @@ export function openProgram(progId) {
     case "settings":     return openSettings();
     case "control-panel":return openSettings();
     case "find":         return openStub("Find Files",  "Find / search isn't wired up yet.");
-    case "help":         return openStub("Help", "Help system isn't wired up yet. Check the file explorer for now.");
+    case "help":         return openWelcome();    // Help opens the Welcome tour
     case "run":          return openStub("Run", "There's nothing to run. This isn't a real OS.");
     default:             return null;
   }
@@ -960,6 +984,7 @@ export function openWelcome() {
 
   // Color-coded left bars: red, blue, green, yellow
   const COLORS = ["#e84a3a", "#3a8fd6", "#3ad67a", "#f0d040"];
+  let idx = 0;
   function buildToc() {
     toc.innerHTML = "";
     PAGES().forEach((p, i) => {
@@ -997,6 +1022,7 @@ export function openWelcome() {
   backBtn.addEventListener("click", () => { if (idx > 0)                 { idx--; render(); } });
   nextBtn.addEventListener("click", () => { if (idx < PAGES().length - 1) { idx++; render(); } });
 
+  buildToc();
   render();
 
   // Re-render when language changes (instant translation, no reload)
