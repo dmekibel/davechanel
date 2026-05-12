@@ -4,6 +4,7 @@
 
 import { openWindow } from "./window-manager.js";
 import { ICONS } from "./icons.js";
+import { currentZoom } from "./scale.js";
 
 const LEVELS = {
   beginner:     { w:  9, h:  9, mines: 10 },
@@ -57,6 +58,36 @@ export function openMinesweeper() {
     if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
   }
 
+  // Pick a cell size that lets the board fit the viewport for the level.
+  function cellPxForLevel(lvl) {
+    const z = currentZoom();
+    const vw = window.innerWidth  / z;
+    const vh = window.innerHeight / z;
+    const chromeW = 40;            // window borders + frame paddings
+    const chromeH = 130;            // titlebar + menubar + status + frame
+    const maxCellW = Math.floor((vw - chromeW) / lvl.w);
+    const maxCellH = Math.floor((vh - chromeH) / lvl.h);
+    return Math.max(12, Math.min(20, maxCellW, maxCellH));
+  }
+
+  // Resize the host window to match the current board.
+  function fitWindowToBoard() {
+    const winEl = wrap.closest(".window");
+    if (!winEl) return;
+    if (winEl.classList.contains("maximized")) return;
+    const cell = cellPxForLevel(level);
+    const z = currentZoom();
+    const vw = window.innerWidth  / z;
+    const vh = window.innerHeight / z;
+    const w = Math.min(vw - 8, level.w * cell + 40);
+    const h = Math.min(vh - 8, level.h * cell + 130);
+    winEl.style.width  = w + "px";
+    winEl.style.height = h + "px";
+    // Re-center if it would overflow
+    if (parseInt(winEl.style.left, 10) + w > vw) winEl.style.left = Math.max(4, (vw - w) / 2) + "px";
+    if (parseInt(winEl.style.top,  10) + h > vh) winEl.style.top  = Math.max(4, (vh - h) / 2) + "px";
+  }
+
   function newGame(lvl) {
     if (lvl) level = lvl;
     gameOver = false;
@@ -76,6 +107,7 @@ export function openMinesweeper() {
     }
     renderBoard();
     updateStatus();
+    fitWindowToBoard();
   }
 
   function placeMines(safeX, safeY) {
@@ -164,7 +196,9 @@ export function openMinesweeper() {
 
   function renderBoard() {
     boardEl.innerHTML = "";
-    boardEl.style.gridTemplateColumns = `repeat(${level.w}, 18px)`;
+    const cell = cellPxForLevel(level);
+    boardEl.style.gridTemplateColumns = `repeat(${level.w}, ${cell}px)`;
+    boardEl.style.setProperty("--ms-cell", cell + "px");
     for (let y = 0; y < level.h; y++) {
       for (let x = 0; x < level.w; x++) {
         const c = board[y][x];

@@ -630,14 +630,14 @@
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
 }
 .ms-cell {
-  width: 18px;
-  height: 18px;
+  width: var(--ms-cell, 18px);
+  height: var(--ms-cell, 18px);
   background: var(--chrome);
   border: 2px solid;
   border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
   font-family: var(--ui-font);
   font-weight: 700;
-  font-size: 12px;
+  font-size: calc(var(--ms-cell, 18px) * 0.65);
   line-height: 1;
   padding: 0;
   text-align: center;
@@ -645,6 +645,7 @@
   cursor: default;
   user-select: none;
 }
+.ms-board { overflow: auto; max-width: 100%; }
 .ms-cell.revealed {
   border: 1px solid var(--chrome-dark);
   background: var(--chrome);
