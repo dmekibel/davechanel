@@ -5,6 +5,85 @@
 import { openWindow, closeWindow } from "./window-manager.js";
 import { ICONS } from "./icons.js";
 
+// Inline Win98-styled combobox (no native <select> — iOS renders that as
+// a modal picker which breaks the OS illusion).
+function makeWin98SelectInline(options, initial, onChange) {
+  const root = document.createElement("div");
+  root.className = "ws-select ws-select-inline";
+  root.tabIndex = 0;
+  let current = options.find(o => o.value === initial) || options[0];
+
+  const valueEl = document.createElement("span");
+  valueEl.className = "ws-value";
+  valueEl.textContent = current.label;
+
+  const arrow = document.createElement("button");
+  arrow.type = "button";
+  arrow.className = "ws-arrow";
+  arrow.tabIndex = -1;
+  arrow.innerHTML = `<span aria-hidden="true">▼</span>`;
+
+  const listEl = document.createElement("ul");
+  listEl.className = "ws-options";
+  listEl.hidden = true;
+  for (const o of options) {
+    const li = document.createElement("li");
+    li.dataset.value = o.value;
+    li.textContent = o.label;
+    if (o.value === current.value) li.classList.add("selected");
+    li.addEventListener("click", (e) => {
+      e.stopPropagation();
+      current = o;
+      valueEl.textContent = o.label;
+      listEl.querySelectorAll("li.selected").forEach(n => n.classList.remove("selected"));
+      li.classList.add("selected");
+      close();
+      onChange(o.value);
+    });
+    listEl.appendChild(li);
+  }
+
+  const open = () => { listEl.hidden = false; document.addEventListener("click", outside, true); };
+  const close = () => { listEl.hidden = true; document.removeEventListener("click", outside, true); };
+  const outside = (e) => { if (!root.contains(e.target)) close(); };
+
+  root.addEventListener("click", (e) => {
+    e.stopPropagation();
+    listEl.hidden ? open() : close();
+  });
+
+  root.appendChild(valueEl);
+  root.appendChild(arrow);
+  root.appendChild(listEl);
+  return root;
+}
+
+// Win98 confirm dialog — replaces native confirm() so the OS illusion holds.
+function win98Confirm(message, title, onOk) {
+  const back = document.createElement("div");
+  back.className = "win98-confirm-backdrop";
+  const dlg = document.createElement("div");
+  dlg.className = "win98-confirm";
+  dlg.innerHTML = `
+    <div class="win98-confirm-title">${title || "Confirm"}</div>
+    <div class="win98-confirm-body">
+      <div class="win98-confirm-icon">?</div>
+      <div class="win98-confirm-msg"></div>
+    </div>
+    <div class="win98-confirm-buttons">
+      <button class="win98-confirm-btn win98-confirm-ok">OK</button>
+      <button class="win98-confirm-btn win98-confirm-cancel">Cancel</button>
+    </div>
+  `;
+  dlg.querySelector(".win98-confirm-msg").textContent = message;
+  back.appendChild(dlg);
+  document.body.appendChild(back);
+  const cleanup = () => back.remove();
+  dlg.querySelector(".win98-confirm-ok").addEventListener("click", () => { cleanup(); onOk(); });
+  dlg.querySelector(".win98-confirm-cancel").addEventListener("click", cleanup);
+  back.addEventListener("click", (e) => { if (e.target === back) cleanup(); });
+}
+
 const PALETTE = [
   "#000000","#808080","#7e0000","#808000","#007e00","#007e7e","#00007e","#7e007e",
   "#ffffff","#c3c3c3","#ff0000","#ffff00","#00ff00","#00ffff","#0000ff","#ff00ff",

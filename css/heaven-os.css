@@ -310,6 +310,79 @@
 }
 .ws-select:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
 .ws-select.disabled { color: #888; }
+/* Inline variant for toolbar use (Paint brush-size, etc.) — fixed width. */
+.ws-select-inline {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 20px;
+  font-size: 11px;
+}
+
+/* Win98 modal confirm dialog (used by Paint's Clear button). */
+.win98-confirm-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.18);
+  z-index: 200000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ui-font);
+}
+.win98-confirm {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.25);
+  min-width: 280px;
+  max-width: 380px;
+  font-size: 11px;
+  color: #000;
+}
+.win98-confirm-title {
+  background: linear-gradient(90deg, var(--tb-active-1), var(--tb-active-2));
+  color: #fff;
+  font-weight: 700;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.win98-confirm-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px 12px;
+}
+.win98-confirm-icon {
+  width: 32px; height: 32px;
+  background: #ffd34d;
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  border: 1px solid #000;
+}
+.win98-confirm-msg { flex: 1; font-size: 12px; line-height: 1.4; }
+.win98-confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 4px 12px 12px;
+}
+.win98-confirm-btn {
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  padding: 3px 18px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  min-width: 72px;
+  cursor: default;
+}
+.win98-confirm-btn:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
 .ws-select .ws-value {
   flex: 1;
   padding: 2px 6px;
