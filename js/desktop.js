@@ -4,6 +4,7 @@ import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
 import { ICONS, iconFor } from "./icons.js";
 import { buildStartMenu, closeAllStartMenus } from "./start-menu.js";
+import { showContextMenu, closeContextMenu } from "./context-menu.js";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -279,12 +280,18 @@ function initMarquee() {
       if (p) move(p.clientX, p.clientY, e);
     };
     const cleanup = () => {
+      const wasDrag = !!mq;
       if (mq) mq.remove();
       document.removeEventListener("mousemove", onMouseMove);
       document.removeEventListener("mouseup",   cleanup);
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("touchend",  cleanup);
       document.removeEventListener("touchcancel", cleanup);
+      // If the user just tapped empty desktop (no drag), open the desktop
+      // context menu at that point (mobile-friendly substitute for right-click).
+      if (!wasDrag) {
+        showDesktopContextMenu(clientX, clientY);
+      }
     };
 
     if (isTouch) {
@@ -296,6 +303,15 @@ function initMarquee() {
       document.addEventListener("mouseup",   cleanup);
     }
   };
+
+  // Real right-click also opens the menu, as you'd expect on desktop
+  desktopEl.addEventListener("contextmenu", (e) => {
+    if (e.target.closest(".desktop-icon")) return;
+    if (e.target.closest(".window")) return;
+    if (e.target.closest(".taskbar")) return;
+    e.preventDefault();
+    showDesktopContextMenu(e.clientX, e.clientY);
+  });
 
   // Mouse
   desktopEl.addEventListener("mousedown", (e) => {
@@ -315,6 +331,20 @@ function initMarquee() {
     if (!p) return;
     start(p.clientX, p.clientY, false, true);
   }, { passive: true });
+}
+
+function showDesktopContextMenu(x, y) {
+  showContextMenu(x, y, [
+    { label: "Refresh",                action: () => renderDesktopIcons() },
+    "sep",
+    { label: "Arrange Icons by name",  action: () => {
+        try { localStorage.removeItem("heaven-os.icon-positions"); } catch (_) {}
+        renderDesktopIcons();
+      } },
+    "sep",
+    { label: "Display Properties...",  action: () => openProgram("settings") },
+    { label: "About Heaven OS",        action: () => openProgram("welcome") },
+  ]);
 }
 
 function makeIcon({ name, iconHtml, open }) {

@@ -931,6 +931,40 @@ body[data-wallpaper="clouds"] {
 }
 .exp-menubar .menu-item.open { background: var(--tb-active-1); color: #fff; }
 
+/* Win98 right-click context menu (desktop + explorer empty space) */
+.ctx-menu {
+  position: fixed;
+  background: var(--chrome);
+  border: 2px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  box-shadow: 2px 2px 0 var(--chrome-shadow);
+  padding: 2px;
+  font-family: var(--ui-font);
+  font-size: 11px;
+  z-index: 100003;
+  min-width: 180px;
+  color: #000;
+}
+.ctx-menu .item {
+  padding: 5px 22px;
+  cursor: default;
+  white-space: nowrap;
+}
+.ctx-menu .item:hover:not(.disabled) {
+  background: var(--tb-active-1);
+  color: #fff;
+}
+.ctx-menu .item.disabled {
+  color: #888;
+  text-shadow: 1px 1px 0 var(--chrome-light);
+}
+.ctx-menu .sep {
+  border-top: 1px solid var(--chrome-dark);
+  border-bottom: 1px solid var(--chrome-light);
+  margin: 3px 1px;
+  height: 0;
+}
+
 /* === Start menu ==================================================== */
 
 .start-menu {

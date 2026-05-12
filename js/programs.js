@@ -7,6 +7,7 @@ import { FS, findByPath } from "./file-system.js";
 import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver } from "./screensaver.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
+import { showContextMenu } from "./context-menu.js";
 
 const t = (s) => s;   // i18n removed; identity for now
 
@@ -205,6 +206,114 @@ export function openExplorer(startPath = []) {
     render();
   }
   grid.classList.add("view-large");
+
+  // ---- Marquee selection + tap-empty context menu (in the right pane) ----
+  attachPaneMarquee(pane, grid, () => setView, () => currentView);
+
+  function attachPaneMarquee(paneEl, gridEl, getSetView, getCurView) {
+    const start = (clientX, clientY, isTouchEv) => {
+      if (paneEl.scrollLeft || paneEl.scrollTop) { /* still proceed */ }
+      const pRect = paneEl.getBoundingClientRect();
+      const x0 = clientX - pRect.left + paneEl.scrollLeft;
+      const y0 = clientY - pRect.top  + paneEl.scrollTop;
+      let dragged = false;
+      let mq = null;
+
+      // Clear tile selection on tap-empty unless drag begins
+      const initiallySelected = new Set([...paneEl.querySelectorAll(".exp-tile.selected")]);
+      paneEl.querySelectorAll(".exp-tile.selected").forEach(n => n.classList.remove("selected"));
+
+      const move = (cx, cy, e) => {
+        const dx = cx - clientX;
+        const dy = cy - clientY;
+        if (!dragged && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+        dragged = true;
+        if (!mq) {
+          mq = document.createElement("div");
+          mq.className = "marquee";
+          paneEl.appendChild(mq);
+        }
+        if (e && e.cancelable) e.preventDefault();
+        const x1 = cx - pRect.left + paneEl.scrollLeft;
+        const y1 = cy - pRect.top  + paneEl.scrollTop;
+        const left = Math.min(x0, x1);
+        const top  = Math.min(y0, y1);
+        const w    = Math.abs(x1 - x0);
+        const h    = Math.abs(y1 - y0);
+        mq.style.left   = left + "px";
+        mq.style.top    = top  + "px";
+        mq.style.width  = w    + "px";
+        mq.style.height = h    + "px";
+
+        const right = left + w, bottom = top + h;
+        paneEl.querySelectorAll(".exp-tile").forEach(tile => {
+          const r = tile.getBoundingClientRect();
+          const tL = r.left   - pRect.left + paneEl.scrollLeft;
+          const tT = r.top    - pRect.top  + paneEl.scrollTop;
+          const tR = r.right  - pRect.left + paneEl.scrollLeft;
+          const tB = r.bottom - pRect.top  + paneEl.scrollTop;
+          const inMq = !(tR < left || tL > right || tB < top || tT > bottom);
+          tile.classList.toggle("selected", inMq);
+        });
+      };
+
+      const onMouseMove = (e) => move(e.clientX, e.clientY, e);
+      const onTouchMove = (e) => {
+        const p = e.touches[0] || e.changedTouches[0];
+        if (p) move(p.clientX, p.clientY, e);
+      };
+      const cleanup = () => {
+        if (mq) mq.remove();
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup",   cleanup);
+        document.removeEventListener("touchmove", onTouchMove);
+        document.removeEventListener("touchend",  cleanup);
+        document.removeEventListener("touchcancel", cleanup);
+        // Tap (no drag) on empty pane → open context menu
+        if (!dragged) {
+          showExplorerContextMenu(clientX, clientY);
+        }
+      };
+
+      if (isTouchEv) {
+        document.addEventListener("touchmove", onTouchMove, { passive: false });
+        document.addEventListener("touchend",  cleanup);
+        document.addEventListener("touchcancel", cleanup);
+      } else {
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup",   cleanup);
+      }
+    };
+
+    paneEl.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest(".exp-tile")) return;
+      start(e.clientX, e.clientY, false);
+    });
+    paneEl.addEventListener("touchstart", (e) => {
+      if (e.target.closest(".exp-tile")) return;
+      const p = e.touches[0];
+      if (!p) return;
+      start(p.clientX, p.clientY, true);
+    }, { passive: true });
+    paneEl.addEventListener("contextmenu", (e) => {
+      if (e.target.closest(".exp-tile")) return;
+      e.preventDefault();
+      showExplorerContextMenu(e.clientX, e.clientY);
+    });
+  }
+
+  function showExplorerContextMenu(x, y) {
+    showContextMenu(x, y, [
+      { label: "Refresh",            action: () => render() },
+      "sep",
+      { label: "View — Large Icons", action: () => setView("large") },
+      { label: "View — Small Icons", action: () => setView("small") },
+      { label: "View — List",        action: () => setView("list") },
+      "sep",
+      { label: "Display Properties...", action: () => openSettings() },
+    ]);
+  }
 
   function pathKey(path) {
     return ["Heaven OS:", ...path].join("/");
