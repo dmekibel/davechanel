@@ -598,6 +598,9 @@
   color: #ddd;
   font-size: 12px;
 }
+.iv-empty[hidden] { display: none; }      /* explicit display: flex above wins
+                                              over [hidden]'s default display:
+                                              none — restore it explicitly */
 .iv-empty button {
   background: var(--chrome);
   color: #000;
