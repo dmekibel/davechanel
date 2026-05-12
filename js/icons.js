@@ -185,6 +185,7 @@ export function iconFor(node, size = 16) {
     case "notepad": return ICONS.notepad(size);
     case "compose": return ICONS.mail(size);
     case "media":   return ICONS.movie(size);
+    case "image":   return ICONS.picture(size);
   }
   return ICONS.document(size);
 }

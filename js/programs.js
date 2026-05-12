@@ -765,6 +765,7 @@ export function openFile(file) {
     case "notepad": return openNotepad(file);
     case "compose": return openCompose();
     case "media":   return openShowreel(file);
+    case "image":   return openImageViewer(file.src, file.name);
     case "html":    return openNotepad(file);
     default:        return openNotepad(file);
   }

@@ -23,9 +23,21 @@ export const FS = {
           kind: "notepad",
           src: "content/fine-art-cv.txt",
         },
-        // Populate with David's art pieces in v0.6
-        // e.g. ArtPrize 2024 (Madonna / Mnemosyne), ArtPrize 2025 winning piece,
-        // Heaven Inc, Transhuman, Cyber Pink, etc.
+        // Fine-art images. Each opens in the Image Viewer with pan + zoom.
+        {
+          name: "30big-standard.jpg",
+          type: "file",
+          icon: "🖼",
+          kind: "image",
+          src: "content/images/30big-standard v2-3x-faceai v2.jpg",
+        },
+        {
+          name: "38.png",
+          type: "file",
+          icon: "🖼",
+          kind: "image",
+          src: "content/images/38.png",
+        },
       ],
     },
     {
