@@ -2,6 +2,22 @@
 // Drop new images into content/images/ and re-run the script.
 export const FINE_ART = [
   {
+    name: "evefull.jpeg",
+    type: "file",
+    kind: "image",
+    thumb:   "content/images/web/thumb/evefull.jpg",
+    preview: "content/images/web/preview/evefull.jpg",
+    src:     "content/images/web/evefull.jpg",
+  },
+  {
+    name: "adamfinal.jpeg",
+    type: "file",
+    kind: "image",
+    thumb:   "content/images/web/thumb/adamfinal.jpg",
+    preview: "content/images/web/preview/adamfinal.jpg",
+    src:     "content/images/web/adamfinal.jpg",
+  },
+  {
     name: "38.png",
     type: "file",
     kind: "image",
