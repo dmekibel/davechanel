@@ -17,8 +17,8 @@ SRC_DIR="$ROOT/content/images"
 WEB_DIR="$SRC_DIR/web"
 MANIFEST="$ROOT/js/fine-art-manifest.js"
 
-THUMB_PX=400
-PREVIEW_PX=1400
+THUMB_PX=300
+PREVIEW_PX=1200
 DETAIL_PX=2400
 
 mkdir -p "$WEB_DIR/thumb" "$WEB_DIR/preview"

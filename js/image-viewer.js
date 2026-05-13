@@ -192,6 +192,10 @@ export function openImageViewer(arg1, title) {
     emptyEl.hidden = list.length > 0;
   }
 
+  // Bump on every loadCurrent so stale Image.onload callbacks from a
+  // previous load can't overwrite the current image.
+  let loadToken = 0;
+
   function loadCurrent() {
     if (!list.length || index < 0 || index >= list.length) {
       loaded = false;
@@ -203,35 +207,63 @@ export function openImageViewer(arg1, title) {
     setTitle(cur.name || "Image Viewer");
     loaded = false;
 
-    // Progressive load: show the smallest available image immediately
-    // so the user sees art within ~100 ms, then swap to the higher-res
-    // when it arrives. We start a parallel fetch for the detail file.
+    const myToken = ++loadToken;
     const tinyURL = cur.thumb || cur.preview || cur.src;
     const mainURL = cur.preview || cur.src;
     const fullURL = cur.src;
 
-    let currentLevel = 0;   // 0 = nothing, 1 = thumb, 2 = preview, 3 = full
+    let currentLevel = 0;       // 0 nothing, 1 thumb, 2 preview, 3 detail
+    let hasInitialFit = false;
 
-    const swapTo = (url, level) => {
+    const apply = (next, level) => {
+      // Bail if user has navigated away to a different image since.
+      if (myToken !== loadToken) return;
       if (level <= currentLevel) return;
-      const next = new Image();
-      next.onload = () => {
-        // Late arrivals after we've already moved on shouldn't downgrade
-        if (level <= currentLevel) return;
+
+      if (!hasInitialFit || !img || !img.naturalWidth) {
+        // First image we've seen — center it and call fit so the whole
+        // piece is on screen.
         img = next;
         loaded = true;
         currentLevel = level;
-        setTimeout(() => { resize(); if (currentLevel === level && level <= 2) fit(); else draw(); }, 0);
-      };
+        hasInitialFit = true;
+        resize();
+        fit();
+      } else {
+        // Upgrading: keep the SAME visual region of the image on screen
+        // by adjusting scale + translate for the new natural dimensions.
+        const prevW = img.naturalWidth;
+        const ratio = prevW / next.naturalWidth;
+        // Anchor on the stage center so any zoom/pan the user already
+        // did keeps pointing at the same image-space point.
+        const sw = stage.clientWidth, sh = stage.clientHeight;
+        const cx = sw / 2, cy = sh / 2;
+        const ix = (cx - tx) / scale;
+        const iy = (cy - ty) / scale;
+        img = next;
+        loaded = true;
+        currentLevel = level;
+        scale = scale * ratio;
+        tx = cx - ix * scale;
+        ty = cy - iy * scale;
+        draw();
+      }
+    };
+
+    const fetchAt = (url, level) => {
+      if (!url) return;
+      const next = new Image();
+      next.decoding = "async";
+      next.onload = () => apply(next, level);
       next.onerror = () => {
         if (currentLevel === 0 && level === 1) info.textContent = "Failed to load: " + url;
       };
       next.src = url;
     };
 
-    swapTo(tinyURL, 1);
-    if (mainURL && mainURL !== tinyURL) swapTo(mainURL, 2);
-    if (fullURL && fullURL !== mainURL) swapTo(fullURL, 3);
+    fetchAt(tinyURL, 1);
+    if (mainURL && mainURL !== tinyURL) fetchAt(mainURL, 2);
+    if (fullURL && fullURL !== mainURL) fetchAt(fullURL, 3);
 
     updateNavVisibility();
   }
