@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Pre-commit hook: regenerate fine-art derivatives + manifest whenever
+# the masters in content/images/ change, then stage the results.
+
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+"$ROOT/scripts/process-images.sh"
+
+# Stage anything the script regenerated so the commit picks it up.
+git add "$ROOT/content/images/web" "$ROOT/js/fine-art-manifest.js" 2>/dev/null || true

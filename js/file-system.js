@@ -1,10 +1,12 @@
-// Heaven OS — virtual file system
+// Virtual file system
 // Pure data. The file explorer renders this; programs read from it.
 //
 // Node shape:
 //   { name, type: "folder"|"file", icon?, kind?, children?, data? }
-// kind on a file says how to open it: "notepad", "explorer", "media", "compose", "html"
+// kind on a file says how to open it: "notepad", "explorer", "media", "compose", "html", "image"
 // data is the payload (string, url, html, or folder path).
+
+import { FINE_ART } from "./fine-art-manifest.js";
 
 export const FS = {
   name: "Mekibel",
@@ -23,29 +25,10 @@ export const FS = {
           kind: "notepad",
           src: "content/fine-art-cv.txt",
         },
-        // Fine-art images. Each opens in the Image Viewer with pan + zoom.
-        // Three derivatives per image — thumb for folder grid (50 KB),
-        // preview for fast first paint in the viewer (~400 KB), detail
-        // for full-resolution zoom (~1-2 MB).
-        // Originals stay on David's disk only (gitignored).
-        {
-          name: "30big-standard.jpg",
-          type: "file",
-          icon: "🖼",
-          kind: "image",
-          thumb:   "content/images/web/thumb/30big-standard.jpg",
-          preview: "content/images/web/preview/30big-standard.jpg",
-          src:     "content/images/web/30big-standard.jpg",
-        },
-        {
-          name: "38.jpg",
-          type: "file",
-          icon: "🖼",
-          kind: "image",
-          thumb:   "content/images/web/thumb/38.jpg",
-          preview: "content/images/web/preview/38.jpg",
-          src:     "content/images/web/38.jpg",
-        },
+        // Fine-art images come from the auto-generated manifest.
+        // Add new pieces by dropping the originals into content/images/
+        // and running ./scripts/process-images.sh
+        ...FINE_ART,
       ],
     },
     {
