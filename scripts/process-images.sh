@@ -19,7 +19,7 @@ MANIFEST="$ROOT/js/fine-art-manifest.js"
 
 THUMB_PX=300
 PREVIEW_PX=1200
-DETAIL_PX=2400
+DETAIL_PX=4000
 
 mkdir -p "$WEB_DIR/thumb" "$WEB_DIR/preview"
 
@@ -81,7 +81,7 @@ for src in "${sorted_masters[@]}"; do
     echo "Processing: $filename → ${slug}.jpg"
     [ "$needs_thumb"   = "1" ] && sips -Z $THUMB_PX   "$src" --out "$thumb_out"   -s format jpeg -s formatOptions 80 >/dev/null
     [ "$needs_preview" = "1" ] && sips -Z $PREVIEW_PX "$src" --out "$preview_out" -s format jpeg -s formatOptions 82 >/dev/null
-    [ "$needs_detail"  = "1" ] && sips -Z $DETAIL_PX  "$src" --out "$detail_out"  -s format jpeg -s formatOptions 85 >/dev/null
+    [ "$needs_detail"  = "1" ] && sips -Z $DETAIL_PX  "$src" --out "$detail_out"  -s format jpeg -s formatOptions 90 >/dev/null
   else
     echo "Up to date: ${slug}.jpg"
   fi
