@@ -535,6 +535,23 @@
 @media (hover: hover) {
   .iv-menu:hover { background: var(--tb-active-1); color: #fff; }
 }
+.iv-menubar-spacer { flex: 1; }
+.iv-mb-nav {
+  background: var(--chrome);
+  border: 1px solid;
+  border-color: var(--chrome-light) var(--chrome-dark) var(--chrome-dark) var(--chrome-light);
+  width: 22px;
+  height: 18px;
+  font-size: 14px;
+  line-height: 1;
+  margin: 1px 1px 0;
+  color: #000;
+  cursor: default;
+  padding: 0;
+}
+.iv-mb-nav:active {
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+}
 .iv-toolbar {
   display: flex;
   align-items: center;
@@ -2001,10 +2018,12 @@ body.lang-ru .login-logo {
 .rh-s  { bottom: -3px; left: 10px;  right: 10px; height: 6px;  cursor: ns-resize; }
 .rh-w  { top: 10px;    bottom: 10px; left: -3px;  width: 6px;  cursor: ew-resize; }
 .rh-e  { top: 10px;    bottom: 10px; right: -3px; width: 6px;  cursor: ew-resize; }
+/* Top corners bias OUTSIDE so they don't cover titlebar buttons (X). */
 .rh-nw { top: -4px; left: -4px;  width: 12px; height: 12px; cursor: nwse-resize; }
 .rh-ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: nesw-resize; }
-.rh-sw { bottom: -4px; left: -4px;  width: 12px; height: 12px; cursor: nesw-resize; }
-.rh-se { bottom: -4px; right: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
+/* Bottom corners sit INSIDE the window so the diagonal grip is visible. */
+.rh-sw { bottom: 0; left: 0;  width: 14px; height: 14px; cursor: nesw-resize; }
+.rh-se { bottom: 0; right: 0; width: 14px; height: 14px; cursor: nwse-resize; }
 .window.maximized .resize-handle { display: none; }
 /* Touch devices: make handles much bigger so fingers can find them. */
 @media (pointer: coarse) {
@@ -2014,8 +2033,8 @@ body.lang-ru .login-logo {
   .rh-e  { right: -6px;  width:  14px; }
   .rh-nw { top: -8px; left:  -8px; width: 20px; height: 20px; }
   .rh-ne { top: -8px; right: -8px; width: 20px; height: 20px; }
-  .rh-sw { bottom: -8px; left:  -8px; width: 20px; height: 20px; }
-  .rh-se { bottom: -8px; right: -8px; width: 20px; height: 20px; }
+  .rh-sw { bottom: 0; left: 0;  width: 22px; height: 22px; }
+  .rh-se { bottom: 0; right: 0; width: 22px; height: 22px; }
 }
 
 /* === Window content elements ======================================= */
@@ -2367,18 +2386,23 @@ body.lang-ru .login-logo {
 
 /* === Mobile ======================================================== */
 
+/* Visible diagonal grip in the bottom-right corner of every window —
+   iconic Win98 affordance for "you can grab this to resize". */
+.window .rh-se {
+  background:
+    repeating-linear-gradient(135deg,
+      transparent 0 2px,
+      rgba(0,0,0,0.55) 2px 3px,
+      transparent 3px 6px);
+  background-position: bottom right;
+  background-size: 14px 14px;
+  background-repeat: no-repeat;
+}
+@media (pointer: coarse) {
+  .window .rh-se { background-size: 22px 22px; }
+}
+
 @media (max-width: 720px) {
-  /* All resize handles are still available on mobile (the touch-coarse
-     media query above sizes them up to be finger-grabbable). The
-     bottom-right corner gets an extra visual grip pattern so it's
-     obvious where to grab. */
-  .window .rh-se {
-    background:
-      repeating-linear-gradient(135deg,
-        transparent 0 3px,
-        rgba(0,0,0,0.55) 3px 4px,
-        transparent 4px 7px);
-  }
   /* tree shrinks on small screens */
   .exp-body { grid-template-columns: 130px 1fr; }
   /* Smaller icon labels on mobile so they don't pile up between rows */

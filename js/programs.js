@@ -784,7 +784,10 @@ export function openFile(file, parentFolder) {
       // so prev/next arrows can navigate through them. Carry thumb +
       // preview alongside src so the viewer can show a small one first
       // and upgrade to detail as the bigger files arrive.
-      const pack = c => ({ src: c.src, preview: c.preview, thumb: c.thumb, name: c.name });
+      const pack = c => ({
+        src: c.src, preview: c.preview, thumb: c.thumb,
+        name: c.name, detailW: c.detailW, detailH: c.detailH,
+      });
       if (parentFolder && Array.isArray(parentFolder.children)) {
         const images = parentFolder.children.filter(c => c.kind === "image");
         const idx = Math.max(0, images.findIndex(c => c === file));

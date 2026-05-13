@@ -16,7 +16,14 @@ import { FS } from "./file-system.js";
 function collectAllPortfolioImages(node = FS, out = []) {
   if (!node) return out;
   if (node.type === "file" && node.kind === "image") {
-    out.push({ src: node.src, preview: node.preview, thumb: node.thumb, name: node.name });
+    out.push({
+      src: node.src,
+      preview: node.preview,
+      thumb: node.thumb,
+      name: node.name,
+      detailW: node.detailW,
+      detailH: node.detailH,
+    });
   } else if (node.children) {
     for (const c of node.children) collectAllPortfolioImages(c, out);
   }
@@ -48,6 +55,9 @@ export function openImageViewer(arg1, title) {
     <div class="iv-menubar">
       <button class="iv-menu" data-menu="file">File</button>
       <button class="iv-menu" data-menu="view">View</button>
+      <span class="iv-menubar-spacer"></span>
+      <button class="iv-mb-nav iv-prev" aria-label="Previous image" title="Previous">‹</button>
+      <button class="iv-mb-nav iv-next" aria-label="Next image"     title="Next">›</button>
     </div>
     <div class="iv-toolbar">
       <button class="iv-btn iv-zoom-out" title="Zoom out">−</button>
@@ -59,8 +69,6 @@ export function openImageViewer(arg1, title) {
     </div>
     <div class="iv-stage">
       <canvas class="iv-canvas"></canvas>
-      <button class="iv-nav iv-prev" aria-label="Previous">‹</button>
-      <button class="iv-nav iv-next" aria-label="Next">›</button>
       <div class="iv-navigator" hidden>
         <canvas class="iv-nav-canvas" width="160" height="120"></canvas>
         <div class="iv-nav-rect"></div>
@@ -142,7 +150,14 @@ export function openImageViewer(arg1, title) {
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
     const cur = list[index];
-    info.textContent = `${cur ? (cur.name + "  ") : ""}${img.naturalWidth}×${img.naturalHeight}  ${Math.round(scale * 100)}%`;
+    // Show the master (detail) dimensions — don't bounce the readout as
+    // each progressive level loads in. Fall back to current image's
+    // natural size if the manifest didn't provide detailW/H.
+    const showW = (cur && cur.detailW) || img.naturalWidth;
+    const showH = (cur && cur.detailH) || img.naturalHeight;
+    // Visual zoom is relative to the master size, not the loaded level.
+    const visualZoom = img.naturalWidth ? (img.naturalWidth * scale / showW) : scale;
+    info.textContent = `${cur ? (cur.name + "  ") : ""}${showW}×${showH}  ${Math.round(visualZoom * 100)}%`;
     drawNavigator();
   }
 

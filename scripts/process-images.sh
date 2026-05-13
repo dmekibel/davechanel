@@ -86,13 +86,20 @@ for src in "${sorted_masters[@]}"; do
     echo "Up to date: ${slug}.jpg"
   fi
 
+  # Read the detail's final dimensions so the viewer can show the master
+  # size regardless of which progressive level is currently displayed.
+  detail_w=$(sips -g pixelWidth  "$detail_out" 2>/dev/null | tail -n1 | awk '{print $NF}')
+  detail_h=$(sips -g pixelHeight "$detail_out" 2>/dev/null | tail -n1 | awk '{print $NF}')
+
   entries+="  {\n"
   entries+="    name: \"${filename}\",\n"
   entries+="    type: \"file\",\n"
   entries+="    kind: \"image\",\n"
-  entries+="    thumb:   \"content/images/web/thumb/${slug}.jpg\",\n"
-  entries+="    preview: \"content/images/web/preview/${slug}.jpg\",\n"
-  entries+="    src:     \"content/images/web/${slug}.jpg\",\n"
+  entries+="    thumb:    \"content/images/web/thumb/${slug}.jpg\",\n"
+  entries+="    preview:  \"content/images/web/preview/${slug}.jpg\",\n"
+  entries+="    src:      \"content/images/web/${slug}.jpg\",\n"
+  entries+="    detailW:  ${detail_w:-0},\n"
+  entries+="    detailH:  ${detail_h:-0},\n"
   entries+="  },\n"
 done
 
