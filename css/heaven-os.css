@@ -901,7 +901,7 @@
 .paint-canvas-wrap {
   flex: 1;
   overflow: auto;
-  padding: 8px;
+  padding: 0;            /* canvas fills the work area edge-to-edge */
   background: #808080;
 }
 .paint-canvas {

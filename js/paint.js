@@ -2,7 +2,7 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow } from "./window-manager.js";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { ICONS } from "./icons.js";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
@@ -239,9 +239,21 @@ export function openPaint(opts = {}) {
   wrap.innerHTML = `
     <div class="paint-menubar"></div>
     <div class="paint-toolbar">
-      <button data-tool="pencil"  class="pt-btn active" title="Pencil">✎</button>
-      <button data-tool="eraser"  class="pt-btn"        title="Eraser">⌫</button>
-      <button data-tool="fill"    class="pt-btn"        title="Fill (paint bucket)">
+      <button data-tool="pencil"  class="pt-btn active" title="Pencil" aria-label="Pencil">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M2 14 L4 12 L11 5 L13 7 L6 14 Z" fill="#fdd55d" stroke="#000"/>
+          <path d="M11 5 L13 3 L15 5 L13 7 Z" fill="#cdcdcd" stroke="#000"/>
+          <path d="M2 14 L3.5 12.5 L4.5 13.5 L4 14 Z" fill="#000"/>
+        </svg>
+      </button>
+      <button data-tool="eraser"  class="pt-btn" title="Eraser" aria-label="Eraser">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path d="M2 11 L8 5 L13 10 L7 14 Z" fill="#ffc0cb" stroke="#000"/>
+          <path d="M8 5 L12 1 L15 4 L13 6 Z" fill="#5a7fbd" stroke="#000"/>
+          <path d="M13 6 L8 5" stroke="#000" stroke-width="0.5" fill="none"/>
+        </svg>
+      </button>
+      <button data-tool="fill"    class="pt-btn" title="Fill (paint bucket)" aria-label="Fill">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path d="M3 7 L8 2 L13 7 L8 12 Z" fill="#fff" stroke="#000" stroke-width="1"/>
           <path d="M8 2 L8 12" stroke="#000" stroke-width="1"/>
@@ -256,8 +268,8 @@ export function openPaint(opts = {}) {
       <span class="pt-sep"></span>
       <button class="pt-btn pt-undo"  title="Undo (Ctrl+Z)" aria-label="Undo">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-          <path d="M3.5 6 Q8 1.5 13 6 Q13 9 9 9" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-          <path d="M1.5 4 L3.5 6 L5.5 4" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 7 L5 4 L5 6 L10 6 Q14 6 14 10 Q14 14 10 14 L7 14" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 7 L5 10 L5 8" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
       <span class="pt-sep"></span>
@@ -522,7 +534,7 @@ export function openPaint(opts = {}) {
   canvas.addEventListener("touchmove",   move,  { passive: false });
   canvas.addEventListener("touchend",    end);
 
-  return openWindow({
+  const winId = openWindow({
     title: "Paint",
     icon: ICONS.picture(14),
     iconHtml: true,
@@ -531,4 +543,28 @@ export function openPaint(opts = {}) {
     height: 540,
     flush: true,
   });
+
+  // After the window mounts: on mobile, maximize so paint fills the screen.
+  // Then size the canvas to fully fit the canvas-wrap area, oriented the
+  // same way as the device (portrait window → portrait canvas, etc.).
+  setTimeout(() => {
+    const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+    if (isNarrow) toggleMaximize(winId);
+    // Wait one more tick for the maximize layout to settle.
+    setTimeout(() => {
+      const wrapEl = wrap.querySelector(".paint-canvas-wrap");
+      if (!wrapEl) return;
+      const w = Math.max(120, Math.floor(wrapEl.clientWidth));
+      const h = Math.max(120, Math.floor(wrapEl.clientHeight));
+      canvas.width  = w;
+      canvas.height = h;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      // Reset undo stack — the dimensions changed; old snapshots would
+      // throw on putImageData.
+      undoStack.length = 0;
+    }, 50);
+  }, 0);
+
+  return winId;
 }
