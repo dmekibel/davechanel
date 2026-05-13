@@ -230,22 +230,14 @@ export function openImageViewer(arg1, title) {
         resize();
         fit();
       } else {
-        // Upgrading: keep the SAME visual region of the image on screen
-        // by adjusting scale + translate for the new natural dimensions.
-        const prevW = img.naturalWidth;
-        const ratio = prevW / next.naturalWidth;
-        // Anchor on the stage center so any zoom/pan the user already
-        // did keeps pointing at the same image-space point.
-        const sw = stage.clientWidth, sh = stage.clientHeight;
-        const cx = sw / 2, cy = sh / 2;
-        const ix = (cx - tx) / scale;
-        const iy = (cy - ty) / scale;
+        // Upgrading: drawImage uses (tx, ty, naturalW*scale, naturalH*scale).
+        // To make the new (higher-res) image render at the SAME pixels as
+        // the old one, shrink scale by the natural-width ratio. tx/ty stay.
+        const ratio = img.naturalWidth / next.naturalWidth;
         img = next;
         loaded = true;
         currentLevel = level;
         scale = scale * ratio;
-        tx = cx - ix * scale;
-        ty = cy - iy * scale;
         draw();
       }
     };
