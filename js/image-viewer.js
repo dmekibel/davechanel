@@ -16,7 +16,7 @@ import { FS } from "./file-system.js";
 function collectAllPortfolioImages(node = FS, out = []) {
   if (!node) return out;
   if (node.type === "file" && node.kind === "image") {
-    out.push({ src: node.src, name: node.name });
+    out.push({ src: node.src, preview: node.preview, thumb: node.thumb, name: node.name });
   } else if (node.children) {
     for (const c of node.children) collectAllPortfolioImages(c, out);
   }
@@ -202,17 +202,37 @@ export function openImageViewer(arg1, title) {
     const cur = list[index];
     setTitle(cur.name || "Image Viewer");
     loaded = false;
-    img = new Image();
-    img.onload = () => {
-      loaded = true;
-      setTimeout(() => { resize(); fit(); }, 0);
+
+    // Progressive load: show the smallest available image immediately
+    // so the user sees art within ~100 ms, then swap to the higher-res
+    // when it arrives. We start a parallel fetch for the detail file.
+    const tinyURL = cur.thumb || cur.preview || cur.src;
+    const mainURL = cur.preview || cur.src;
+    const fullURL = cur.src;
+
+    let currentLevel = 0;   // 0 = nothing, 1 = thumb, 2 = preview, 3 = full
+
+    const swapTo = (url, level) => {
+      if (level <= currentLevel) return;
+      const next = new Image();
+      next.onload = () => {
+        // Late arrivals after we've already moved on shouldn't downgrade
+        if (level <= currentLevel) return;
+        img = next;
+        loaded = true;
+        currentLevel = level;
+        setTimeout(() => { resize(); if (currentLevel === level && level <= 2) fit(); else draw(); }, 0);
+      };
+      next.onerror = () => {
+        if (currentLevel === 0 && level === 1) info.textContent = "Failed to load: " + url;
+      };
+      next.src = url;
     };
-    img.onerror = () => {
-      loaded = false;
-      info.textContent = "Failed to load: " + cur.src;
-      draw();
-    };
-    img.src = cur.src;
+
+    swapTo(tinyURL, 1);
+    if (mainURL && mainURL !== tinyURL) swapTo(mainURL, 2);
+    if (fullURL && fullURL !== mainURL) swapTo(fullURL, 3);
+
     updateNavVisibility();
   }
 

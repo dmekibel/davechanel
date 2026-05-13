@@ -537,13 +537,16 @@ export function openExplorer(startPath = []) {
         tile.tabIndex = 0;
         const tIc = document.createElement("div");
         tIc.className = "ic";
-        if (child.kind === "image" && child.src) {
+        if (child.kind === "image" && (child.thumb || child.src)) {
           // Real thumbnail of the file so David can tell which image is which.
+          // Prefer the small `thumb` derivative (~50 KB) over the full-size
+          // src so the folder grid loads instantly.
           tile.classList.add("exp-tile-image");
           const im = document.createElement("img");
-          im.src = child.src;
+          im.src = child.thumb || child.src;
           im.alt = "";
           im.loading = "lazy";
+          im.decoding = "async";
           im.draggable = false;
           tIc.appendChild(im);
         } else {
@@ -778,13 +781,16 @@ export function openFile(file, parentFolder) {
     case "media":   return openShowreel(file);
     case "image": {
       // If we know the parent folder, pass all its images as a list
-      // so prev/next arrows can navigate through them.
+      // so prev/next arrows can navigate through them. Carry thumb +
+      // preview alongside src so the viewer can show a small one first
+      // and upgrade to detail as the bigger files arrive.
+      const pack = c => ({ src: c.src, preview: c.preview, thumb: c.thumb, name: c.name });
       if (parentFolder && Array.isArray(parentFolder.children)) {
         const images = parentFolder.children.filter(c => c.kind === "image");
         const idx = Math.max(0, images.findIndex(c => c === file));
-        return openImageViewer({ list: images.map(c => ({ src: c.src, name: c.name })), index: idx, title: file.name });
+        return openImageViewer({ list: images.map(pack), index: idx, title: file.name });
       }
-      return openImageViewer(file.src, file.name);
+      return openImageViewer({ list: [pack(file)], index: 0, title: file.name });
     }
     case "html":    return openNotepad(file);
     default:        return openNotepad(file);
