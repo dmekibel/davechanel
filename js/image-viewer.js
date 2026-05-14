@@ -118,6 +118,7 @@ export function openImageViewer(arg1, title) {
   const SWIPE_DECIDE_PX = 8;
   const neighbors = { prev: null, next: null };
   let snapRaf = null;
+  let pendingCommit = null;        // { cb } if a commit-to-next/prev anim is in-flight
 
   // Anti-copy deterrents
   ["contextmenu", "dragstart", "selectstart"].forEach(ev => {
@@ -235,8 +236,12 @@ export function openImageViewer(arg1, title) {
   }
 
   // Animate swipeOffsetX from its current value to `target`, then run cb.
+  // If `target` isn't 0 (i.e. we're committing to a neighbor), we remember
+  // the cb so a subsequent touchstart that interrupts us can fire it
+  // immediately — otherwise fast successive swipes would drop nav calls.
   function animateSwipeTo(target, cb) {
     if (snapRaf) cancelAnimationFrame(snapRaf);
+    pendingCommit = (target !== 0 && cb) ? { cb } : null;
     const start = swipeOffsetX;
     const t0 = performance.now();
     const dur = 220;
@@ -250,11 +255,25 @@ export function openImageViewer(arg1, title) {
       } else {
         swipeOffsetX = target;
         snapRaf = null;
+        pendingCommit = null;
         draw();
         cb && cb();
       }
     };
     snapRaf = requestAnimationFrame(step);
+  }
+  // Flush any in-flight commit instantly — used by touchstart so the
+  // first navigation always lands even if the user starts swipe 2 mid-
+  // animation.
+  function flushPendingCommit() {
+    if (snapRaf) { cancelAnimationFrame(snapRaf); snapRaf = null; }
+    if (pendingCommit) {
+      const cb = pendingCommit.cb;
+      pendingCommit = null;
+      swipeOffsetX = 0;
+      gestureMode = "idle";
+      cb && cb();
+    }
   }
 
   function finishSwipe() {
@@ -452,7 +471,7 @@ export function openImageViewer(arg1, title) {
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   }
   canvas.addEventListener("touchstart", (e) => {
-    if (snapRaf) { cancelAnimationFrame(snapRaf); snapRaf = null; }
+    flushPendingCommit();
     if (e.touches.length === 1) {
       const t = e.touches[0];
       swipeStartX = t.clientX;
