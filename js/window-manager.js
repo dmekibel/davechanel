@@ -359,16 +359,43 @@ function reflowOnResize() {
       rec.el.style.height = (vh - taskbarH) + "px";
       continue;
     }
+    // Track whether the window was centered (horizontally / vertically)
+    // BEFORE we resize, so orientation flips don't pin everything to the
+    // left edge.
+    const prevW = rec.el.offsetWidth;
+    const prevH = rec.el.offsetHeight;
+    const prevL = rec.el.offsetLeft;
+    const prevT = rec.el.offsetTop;
+    const prevVW = rec._lastVW || prevL + prevW + (prevL || 1);  // best guess
+    const prevVH = rec._lastVH || prevT + prevH + (prevT || 1);
+    // "Centered" if the offsets on left and right were within 10% of each
+    // other (allow for small bottom/top alignment quirks).
+    const horizGap = prevVW - prevL - prevW;
+    const vertGap  = prevVH - prevT - prevH;
+    const wasCenteredX = Math.abs(prevL - horizGap) < Math.max(20, prevVW * 0.1);
+    const wasCenteredY = Math.abs(prevT - vertGap) < Math.max(20, prevVH * 0.1);
+
     const maxW = vw - margin * 2;
     const maxH = vh - taskbarH - margin * 2;
-    let w = Math.max(240, Math.min(rec.el.offsetWidth,  maxW));
-    let h = Math.max(140, Math.min(rec.el.offsetHeight, maxH));
-    let l = Math.max(margin, Math.min(rec.el.offsetLeft, vw - w - margin));
-    let t = Math.max(margin, Math.min(rec.el.offsetTop,  vh - taskbarH - h - margin));
+    const w = Math.max(240, Math.min(prevW, maxW));
+    const h = Math.max(140, Math.min(prevH, maxH));
+    let l, t;
+    if (wasCenteredX) {
+      l = Math.max(margin, (vw - w) / 2);
+    } else {
+      l = Math.max(margin, Math.min(prevL, vw - w - margin));
+    }
+    if (wasCenteredY) {
+      t = Math.max(margin, (vh - taskbarH - h) / 2);
+    } else {
+      t = Math.max(margin, Math.min(prevT, vh - taskbarH - h - margin));
+    }
     rec.el.style.left   = l + "px";
     rec.el.style.top    = t + "px";
     rec.el.style.width  = w + "px";
     rec.el.style.height = h + "px";
+    rec._lastVW = vw;
+    rec._lastVH = vh;
   }
 }
 window.addEventListener("resize", reflowOnResize);

@@ -70,22 +70,34 @@ export function openMinesweeper() {
     return Math.max(12, Math.min(20, maxCellW, maxCellH));
   }
 
-  // Resize the host window to match the current board.
+  // Resize the host window to exactly fit the rendered board.
   function fitWindowToBoard() {
     const winEl = wrap.closest(".window");
     if (!winEl) return;
     if (winEl.classList.contains("maximized")) return;
-    const cell = cellPxForLevel(level);
-    const z = currentZoom();
-    const vw = window.innerWidth  / z;
-    const vh = window.innerHeight / z;
-    const w = Math.min(vw - 8, level.w * cell + 40);
-    const h = Math.min(vh - 8, level.h * cell + 130);
-    winEl.style.width  = w + "px";
-    winEl.style.height = h + "px";
-    // Re-center if it would overflow
-    if (parseInt(winEl.style.left, 10) + w > vw) winEl.style.left = Math.max(4, (vw - w) / 2) + "px";
-    if (parseInt(winEl.style.top,  10) + h > vh) winEl.style.top  = Math.max(4, (vh - h) / 2) + "px";
+    // Wait one frame for layout to settle, then measure the actual
+    // rendered frame and add the known window chrome around it.
+    setTimeout(() => {
+      const frame = wrap.querySelector(".ms-frame");
+      const menubar = wrap.querySelector(".ms-menubar");
+      if (!frame) return;
+      // Frame is centered inside .ms; its outer rect includes its border
+      // but NOT its margin. We re-apply the margin (8 each side) plus
+      // the window's 2px border (4 total each axis).
+      const fw = frame.offsetWidth, fh = frame.offsetHeight;
+      const mh = menubar ? menubar.offsetHeight : 22;
+      const targetW = fw + 16 + 4;            // frame margin + window border
+      const targetH = fh + 16 + mh + 22 + 4;  // frame margin + menubar + titlebar + border
+      const z = currentZoom();
+      const vw = window.innerWidth  / z;
+      const vh = window.innerHeight / z;
+      const w = Math.min(vw - 8, targetW);
+      const h = Math.min(vh - 8, targetH);
+      winEl.style.width  = w + "px";
+      winEl.style.height = h + "px";
+      if (parseInt(winEl.style.left, 10) + w > vw) winEl.style.left = Math.max(4, (vw - w) / 2) + "px";
+      if (parseInt(winEl.style.top,  10) + h > vh) winEl.style.top  = Math.max(4, (vh - h) / 2) + "px";
+    }, 0);
   }
 
   function newGame(lvl) {

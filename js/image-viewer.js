@@ -328,10 +328,16 @@ export function openImageViewer(arg1, title) {
   window.addEventListener("mousemove", (e) => onMove(e.clientX, e.clientY));
   window.addEventListener("mouseup", onUp);
 
-  // Touch: 1 finger = pan, 2 fingers = pinch-zoom (centered on midpoint)
+  // Touch: 1 finger = pan or swipe, 2 fingers = pinch-zoom.
+  // The swipe detector tracks the SAME gesture as pan: we only commit a
+  // swipe (next/prev image) on touchend if the motion was mostly
+  // horizontal, fast, and the image is at or near "fit" scale (zoomed-
+  // in users probably want to pan around, not jump to the next image).
   let pinchStartDist = 0;
   let pinchStartScale = 1;
-  let pinchAnchorImg = null;   // image-space anchor point we keep under the midpoint
+  let pinchAnchorImg = null;
+  let swipeStart = null;       // {x, y, t}
+  let swipeCanceled = false;
   function touchMidpoint(e) {
     const r = canvas.getBoundingClientRect();
     const a = e.touches[0], b = e.touches[1];
@@ -346,8 +352,13 @@ export function openImageViewer(arg1, title) {
   }
   canvas.addEventListener("touchstart", (e) => {
     if (e.touches.length === 1) {
-      onDown(e.touches[0].clientX, e.touches[0].clientY);
+      const t = e.touches[0];
+      swipeStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+      swipeCanceled = false;
+      onDown(t.clientX, t.clientY);
     } else if (e.touches.length === 2) {
+      swipeStart = null;
+      swipeCanceled = true;
       dragging = false;
       pinchStartDist  = touchDistance(e);
       pinchStartScale = scale;
@@ -358,10 +369,10 @@ export function openImageViewer(arg1, title) {
   canvas.addEventListener("touchmove", (e) => {
     if (e.touches.length === 2 && pinchStartDist > 0) {
       if (e.cancelable) e.preventDefault();
+      swipeCanceled = true;
       const dist = touchDistance(e);
       const mid = touchMidpoint(e);
       scale = Math.max(0.05, Math.min(20, pinchStartScale * (dist / pinchStartDist)));
-      // Keep the original image-space anchor under the (moving) midpoint
       tx = mid.x - pinchAnchorImg.ix * scale;
       ty = mid.y - pinchAnchorImg.iy * scale;
       draw();
@@ -371,7 +382,29 @@ export function openImageViewer(arg1, title) {
     }
   }, { passive: false });
   canvas.addEventListener("touchend", (e) => {
+    // Decide before we tear down state: was this gesture a horizontal
+    // swipe to next/prev, or just a pan?
+    if (!swipeCanceled && swipeStart && e.changedTouches.length === 1 && list.length > 1) {
+      const t = e.changedTouches[0];
+      const dx = t.clientX - swipeStart.x;
+      const dy = t.clientY - swipeStart.y;
+      const dt = Date.now() - swipeStart.t;
+      const absX = Math.abs(dx), absY = Math.abs(dy);
+      // Swipe criteria: fast (< 500 ms), mostly horizontal (X >> Y),
+      // far enough (> 60 px). And only when at-or-near fit scale — once
+      // zoomed in, single-finger drag is for panning details, not nav.
+      const fs = fitScale();
+      const nearFit = scale <= fs * 1.25;
+      if (dt < 500 && absX > 60 && absX > absY * 1.5 && nearFit) {
+        if (dx < 0) next(); else prev();
+        // The pan handler updated tx/ty during the swipe; reset to fit
+        // so the (now next) image isn't dragged off-center.
+        setTimeout(fit, 0);
+      }
+    }
     if (e.touches.length < 2) { pinchStartDist = 0; pinchAnchorImg = null; }
+    swipeStart = null;
+    swipeCanceled = false;
     onUp();
   });
 
