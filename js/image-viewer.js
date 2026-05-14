@@ -67,7 +67,7 @@ export function openImageViewer(arg1, title) {
       <button class="iv-btn iv-actual"     title="Actual size">100%</button>
       <button class="iv-btn iv-fullscreen" title="Full screen (image only)">⛶ Full</button>
       <span class="iv-spacer"></span>
-      <span class="iv-info"></span>
+      <span class="iv-info" hidden></span>
     </div>
     <div class="iv-stage iv-show-arrows">
       <canvas class="iv-canvas"></canvas>
@@ -113,7 +113,8 @@ export function openImageViewer(arg1, title) {
   //   neighbors: preloaded preview-quality prev/next Image()s.
   let gestureMode = "idle";
   let swipeOffsetX = 0;
-  let swipeStartX = 0, swipeStartY = 0;
+  let swipeStartX = 0, swipeStartY = 0, swipeStartT = 0;
+  let swipeLastX = 0,  swipeLastY = 0;
   const SWIPE_DECIDE_PX = 8;
   const neighbors = { prev: null, next: null };
   let snapRaf = null;
@@ -259,13 +260,16 @@ export function openImageViewer(arg1, title) {
   function finishSwipe() {
     const w = stage.clientWidth;
     const threshold = Math.max(50, w * 0.25);
-    if (swipeOffsetX <= -threshold && neighbors.next) {
+    // Commit even if the neighbor preview hasn't loaded yet — we'll just
+    // animate past the edge and call next()/prev(); the new image will
+    // load progressively in the destination.
+    if (swipeOffsetX <= -threshold && list.length > 1) {
       animateSwipeTo(-w - 16, () => {
         swipeOffsetX = 0;
         gestureMode = "idle";
         next();
       });
-    } else if (swipeOffsetX >= threshold && neighbors.prev) {
+    } else if (swipeOffsetX >= threshold && list.length > 1) {
       animateSwipeTo(w + 16, () => {
         swipeOffsetX = 0;
         gestureMode = "idle";
@@ -453,6 +457,9 @@ export function openImageViewer(arg1, title) {
       const t = e.touches[0];
       swipeStartX = t.clientX;
       swipeStartY = t.clientY;
+      swipeStartT = Date.now();
+      swipeLastX  = t.clientX;
+      swipeLastY  = t.clientY;
       gestureMode = "undecided";
       // We still record the pan start so existing pan code works once
       // we commit to "panning". Pan won't actually move anything until
@@ -499,11 +506,12 @@ export function openImageViewer(arg1, title) {
       }
     }
 
+    swipeLastX = t.clientX;
+    swipeLastY = t.clientY;
+
     if (gestureMode === "swiping") {
       swipeOffsetX = dx;
-      // Slight rubber-band feel if dragging past a missing neighbor.
-      if (!neighbors.next && dx < 0) swipeOffsetX = dx * 0.3;
-      if (!neighbors.prev && dx > 0) swipeOffsetX = dx * 0.3;
+      if (list.length < 2) swipeOffsetX = dx * 0.3;
       draw();
     } else if (gestureMode === "panning") {
       onMove(t.clientX, t.clientY);
@@ -511,15 +519,39 @@ export function openImageViewer(arg1, title) {
   }, { passive: false });
   canvas.addEventListener("touchend", (e) => {
     if (e.touches.length < 2) { pinchStartDist = 0; pinchAnchorImg = null; }
+
+    // Fling-to-nav: a fast horizontal flick always navigates, even when
+    // zoomed in (where the gesture would otherwise be a pan) or when the
+    // swipe distance didn't quite reach the visual threshold.
+    const dxTotal = swipeLastX - swipeStartX;
+    const dyTotal = swipeLastY - swipeStartY;
+    const dt      = Date.now() - swipeStartT;
+    const absX = Math.abs(dxTotal), absY = Math.abs(dyTotal);
+    const isFling = list.length > 1 && dt > 0 && dt < 350 && absX > 80 && absX > absY * 1.5;
+
     if (gestureMode === "swiping") {
-      finishSwipe();
+      if (isFling) {
+        // Honor the fling direction even if swipeOffsetX didn't cross
+        // the 25% threshold (a quick fast flick should still commit).
+        const w = stage.clientWidth;
+        if (dxTotal < 0) animateSwipeTo(-w - 16, () => { swipeOffsetX = 0; gestureMode = "idle"; next(); });
+        else             animateSwipeTo( w + 16, () => { swipeOffsetX = 0; gestureMode = "idle"; prev(); });
+      } else {
+        finishSwipe();
+      }
     } else if (gestureMode === "panning") {
-      // After panning at fit scale, snap the image back inside the stage
-      // so users can't accidentally drag it off into nothing.
-      const fs = fitScale();
-      if (scale <= fs * 1.05) setTimeout(fit, 0);
-      onUp();
-      gestureMode = "idle";
+      if (isFling) {
+        // Zoomed-in fling: commit to next/prev. fit() runs inside loadCurrent
+        // → the new image starts fresh.
+        if (dxTotal < 0) next(); else prev();
+        gestureMode = "idle";
+      } else {
+        // After panning at fit scale, snap the image back inside the stage.
+        const fs = fitScale();
+        if (scale <= fs * 1.05) setTimeout(fit, 0);
+        onUp();
+        gestureMode = "idle";
+      }
     } else {
       onUp();
       gestureMode = "idle";
@@ -582,15 +614,28 @@ export function openImageViewer(arg1, title) {
     if (!fullscreen) enterFullscreen();
   });
   // Manual double-tap detection for iOS (dblclick is unreliable on touch).
+  // Only count it as a tap if the touch barely moved — otherwise a quick
+  // pair of swipes between images would mistakenly trigger fullscreen.
   let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
   canvas.addEventListener("touchend", (e) => {
-    if (fullscreen) return;                           // already fullscreen
+    if (fullscreen) return;
     if (e.changedTouches.length !== 1) return;
-    if (e.touches.length !== 0) return;               // multi-touch ending
+    if (e.touches.length !== 0) return;
+    // If this gesture was a swipe or a pan, don't treat it as a tap.
+    if (gestureMode === "swiping" || gestureMode === "panning") {
+      lastTapAt = 0;
+      return;
+    }
     const t = e.changedTouches[0];
+    // Distance from the touchstart — if user moved, it's a drag, not a tap.
+    const moved = Math.hypot(t.clientX - swipeStartX, t.clientY - swipeStartY);
+    if (moved > 12) {
+      lastTapAt = 0;
+      return;
+    }
     const now = Date.now();
-    const close = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) < 30;
-    if (now - lastTapAt < 350 && close) {
+    const closeToLast = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) < 30;
+    if (now - lastTapAt < 350 && closeToLast) {
       lastTapAt = 0;
       e.preventDefault();
       enterFullscreen();

@@ -91,8 +91,13 @@ for src in "${sorted_masters[@]}"; do
   detail_w=$(sips -g pixelWidth  "$detail_out" 2>/dev/null | tail -n1 | awk '{print $NF}')
   detail_h=$(sips -g pixelHeight "$detail_out" 2>/dev/null | tail -n1 | awk '{print $NF}')
 
+  # Display name = filename minus its extension (so "Goddess of Memory.png"
+  # shows as "Goddess of Memory" in the UI, while we still know the source
+  # filename via `name`).
+  displayName="${filename%.*}"
+
   entries+="  {\n"
-  entries+="    name: \"${filename}\",\n"
+  entries+="    name: \"${displayName}\",\n"
   entries+="    type: \"file\",\n"
   entries+="    kind: \"image\",\n"
   entries+="    thumb:    \"content/images/web/thumb/${slug}.jpg\",\n"
