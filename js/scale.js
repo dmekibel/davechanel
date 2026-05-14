@@ -5,7 +5,7 @@
 // which is why mobile defaults to 100% — but the user can opt in.
 
 const KEY = "site.scale";
-export const SCALES = [75, 90, 100, 110, 125, 150];
+export const SCALES = [75, 90, 100, 110, 115, 125, 135, 150];
 
 export function isTouchDevice() {
   return typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
@@ -19,9 +19,10 @@ export function getScale() {
       if (SCALES.includes(v)) return v;
     }
   } catch (_) {}
-  // Default: 110% on desktops (pointer: fine), 100% on touch.
+  // Default: 110% on desktops (pointer: fine), 125% on touch (much
+  // easier to hit small Win98 buttons with a finger).
   if (typeof matchMedia !== "undefined" && matchMedia("(pointer: fine)").matches) return 110;
-  return 100;
+  return 125;
 }
 
 export function setScale(v) {

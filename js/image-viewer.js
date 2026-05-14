@@ -7,9 +7,10 @@
 //   openImageViewer(src, title)
 //   openImageViewer({ list, index })   // list: [{src, name}], index: 0..n-1
 
-import { openWindow, closeWindow } from "./window-manager.js";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { ICONS } from "./icons.js";
 import { FS } from "./file-system.js";
+import { currentZoom } from "./scale.js";
 
 // Collect every kind:"image" leaf in the virtual file system. Used as the
 // default list when the viewer is opened from the start menu.
@@ -444,18 +445,34 @@ export function openImageViewer(arg1, title) {
   const ro = new ResizeObserver(() => { resize(); });
   setTimeout(() => ro.observe(stage), 0);
 
+  // Default size: big. The viewer is image-first — small windows defeat
+  // the point. We aim for ~92% of viewport, capped sensibly.
+  const z = currentZoom();
+  const vw = window.innerWidth  / z;
+  const vh = window.innerHeight / z;
+  const initialW = Math.min(1200, Math.max(480, vw - 16));
+  const initialH = Math.min(900,  Math.max(360, vh - 60));
+
   const winId = openWindow({
     title,
     icon: ICONS.picture(14),
     iconHtml: true,
     content: wrap,
-    width: 720,
-    height: 540,
+    width:  initialW,
+    height: initialH,
     flush: true,
   });
 
-  // Kick off after the window mounts so .iv-stage has a real size.
-  setTimeout(loadCurrent, 0);
+  // On mobile, fully maximize so art has the whole screen. Then load,
+  // then re-fit so the image fills the (now bigger) stage.
+  setTimeout(() => {
+    const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+    if (isNarrow) toggleMaximize(winId);
+    setTimeout(() => {
+      loadCurrent();
+      // After image loads, ResizeObserver + onload's fit() catches up.
+    }, 30);
+  }, 0);
 
   return winId;
 }
