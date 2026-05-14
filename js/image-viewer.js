@@ -68,8 +68,14 @@ export function openImageViewer(arg1, title) {
       <span class="iv-spacer"></span>
       <span class="iv-info"></span>
     </div>
-    <div class="iv-stage">
+    <div class="iv-stage iv-show-arrows">
       <canvas class="iv-canvas"></canvas>
+      <button class="iv-side iv-side-prev" aria-label="Previous image">
+        <span class="iv-side-arrow">‹</span>
+      </button>
+      <button class="iv-side iv-side-next" aria-label="Next image">
+        <span class="iv-side-arrow">›</span>
+      </button>
       <div class="iv-navigator" hidden>
         <canvas class="iv-nav-canvas" width="160" height="120"></canvas>
         <div class="iv-nav-rect"></div>
@@ -123,7 +129,16 @@ export function openImageViewer(arg1, title) {
   function fit() {
     if (!loaded) return;
     const w = stage.clientWidth, h = stage.clientHeight;
-    scale = Math.min(w / img.naturalWidth, h / img.naturalHeight, 1);
+    // Fit relative to the MASTER dimensions, not the currently-loaded
+    // progressive level. That way a 300 px thumb still fills the stage
+    // (blurry briefly) instead of sitting tiny in the corner.
+    const cur = list[index];
+    const targetW = (cur && cur.detailW) || img.naturalWidth;
+    const targetH = (cur && cur.detailH) || img.naturalHeight;
+    const masterScale = Math.min(w / targetW, h / targetH, 1);
+    // Translate to "scale of the master" into the actual loaded image's
+    // scale: drawImage uses img.naturalWidth * scale.
+    scale = masterScale * (targetW / img.naturalWidth);
     tx = (w - img.naturalWidth  * scale) / 2;
     ty = (h - img.naturalHeight * scale) / 2;
     draw();
@@ -205,6 +220,7 @@ export function openImageViewer(arg1, title) {
     const hasMany = list.length > 1;
     prevBtn.hidden = !hasMany;
     nextBtn.hidden = !hasMany;
+    stage.classList.toggle("iv-no-nav", !hasMany);
     emptyEl.hidden = list.length > 0;
   }
 
@@ -374,6 +390,26 @@ export function openImageViewer(arg1, title) {
   prevBtn.addEventListener("click", (e) => { e.stopPropagation(); prev(); });
   nextBtn.addEventListener("click", (e) => { e.stopPropagation(); next(); });
 
+  // Side hit zones — full-height zones on the left and right of the
+  // stage that always cycle prev/next on click. The visible arrow inside
+  // fades out after a moment of inactivity but the zone stays clickable.
+  const sidePrev = wrap.querySelector(".iv-side-prev");
+  const sideNext = wrap.querySelector(".iv-side-next");
+  sidePrev.addEventListener("click", (e) => { e.stopPropagation(); prev(); pingArrows(); });
+  sideNext.addEventListener("click", (e) => { e.stopPropagation(); next(); pingArrows(); });
+
+  let arrowFadeTimer = null;
+  function pingArrows() {
+    stage.classList.add("iv-show-arrows");
+    clearTimeout(arrowFadeTimer);
+    arrowFadeTimer = setTimeout(() => stage.classList.remove("iv-show-arrows"), 2200);
+  }
+  // Show arrows when the user pokes the stage — mouse move, tap, etc.
+  stage.addEventListener("mousemove", pingArrows);
+  stage.addEventListener("touchstart", pingArrows, { passive: true });
+  // Initial nudge so they show briefly when the viewer first opens.
+  pingArrows();
+
   // Keyboard arrows
   function keyHandler(e) {
     if (!wrap.isConnected) {
@@ -445,13 +481,18 @@ export function openImageViewer(arg1, title) {
   const ro = new ResizeObserver(() => { resize(); });
   setTimeout(() => ro.observe(stage), 0);
 
-  // Default size: big. The viewer is image-first — small windows defeat
-  // the point. We aim for ~92% of viewport, capped sensibly.
+  // Default size: most of viewport with breathing room on top + bottom.
+  // Don't auto-maximize — full-bleed feels claustrophobic on mobile and
+  // hides the titlebar / close button.
   const z = currentZoom();
   const vw = window.innerWidth  / z;
   const vh = window.innerHeight / z;
-  const initialW = Math.min(1200, Math.max(480, vw - 16));
-  const initialH = Math.min(900,  Math.max(360, vh - 60));
+  const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+  const marginTop    = isNarrow ?  6 : 24;
+  const marginBottom = isNarrow ? 40 : 60;          // taskbar room
+  const marginX      = isNarrow ?  4 : 24;
+  const initialW = Math.min(1280, vw - marginX * 2);
+  const initialH = Math.min(960,  vh - marginTop - marginBottom);
 
   const winId = openWindow({
     title,
@@ -463,16 +504,8 @@ export function openImageViewer(arg1, title) {
     flush: true,
   });
 
-  // On mobile, fully maximize so art has the whole screen. Then load,
-  // then re-fit so the image fills the (now bigger) stage.
-  setTimeout(() => {
-    const isNarrow = window.matchMedia("(max-width: 720px)").matches;
-    if (isNarrow) toggleMaximize(winId);
-    setTimeout(() => {
-      loadCurrent();
-      // After image loads, ResizeObserver + onload's fit() catches up.
-    }, 30);
-  }, 0);
+  // Kick off after the window mounts so .iv-stage has a real size.
+  setTimeout(loadCurrent, 0);
 
   return winId;
 }

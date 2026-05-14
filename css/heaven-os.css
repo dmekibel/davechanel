@@ -587,6 +587,45 @@
   user-select: none;
 }
 .iv-canvas:active { cursor: grabbing; }
+
+/* Side click zones — always clickable to flip prev/next. The arrow
+   indicator inside fades out after the user goes idle for a moment. */
+.iv-side {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 22%;
+  max-width: 120px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+.iv-side-prev { left: 0;  justify-content: flex-start; padding-left: 8px;  }
+.iv-side-next { right: 0; justify-content: flex-end;   padding-right: 8px; }
+.iv-side-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 56px;
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.22);
+  font-size: 30px;
+  line-height: 1;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;     /* clicks go through to .iv-side */
+  user-select: none;
+}
+.iv-stage.iv-show-arrows .iv-side-arrow { opacity: 1; }
+.iv-side:active .iv-side-arrow { background: rgba(0,0,0,0.55); }
+/* Hide the side controls entirely when there is only one image. */
+.iv-stage.iv-no-nav .iv-side { display: none; }
 .iv-nav {
   position: absolute;
   top: 50%;
