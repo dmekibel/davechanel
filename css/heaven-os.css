@@ -242,14 +242,17 @@
   padding: 4px 6px 0;
   background: var(--chrome);
   border-bottom: 1px solid var(--chrome-dark);
-  /* Scroll the tab row independently when the window is narrow. */
+  /* Scroll the tab row independently when the window is narrow — but
+     hide the actual scrollbar so it doesn't paint over the tabs. */
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
   flex-shrink: 0;
-  scrollbar-width: thin;
+  scrollbar-width: none;            /* Firefox */
+  -ms-overflow-style: none;         /* old Edge / IE */
   -webkit-overflow-scrolling: touch;
 }
+.settings-tabs::-webkit-scrollbar { display: none; }   /* Chrome / Safari / iOS */
 .settings-tabs button {
   background: var(--chrome);
   border: 2px solid;

@@ -4,16 +4,14 @@
 const KEY = "site.icontheme";
 
 export const ICON_THEMES = [
-  { id: "win98", label: "Windows 98" },
-  // XP theme is parked: the Null Tale atlas needs interactive position
-  // mapping via /icon-picker.html before it produces correct icons.
-  // Re-enable once XP positions are added to icons.js (XP object).
-  // { id: "xp", label: "Windows XP (coming soon)" },
+  { id: "classic", label: "Classic (David's hand-drawn SVGs)" },
+  { id: "win98",   label: "Windows 98 (alexmeub set)" },
+  { id: "xp",      label: "Windows XP (atlas — positions WIP)" },
 ];
 
 export function getIconTheme() {
-  try { return localStorage.getItem(KEY) || "win98"; }
-  catch (_) { return "win98"; }
+  try { return localStorage.getItem(KEY) || "classic"; }
+  catch (_) { return "classic"; }
 }
 
 export function setIconTheme(id) {

@@ -163,9 +163,15 @@ function xpSprite(col, row, s) {
   const sx = col * TILE * k, sy = row * TILE * k;
   return `<span class="ico ico-xp" style="display:inline-block;width:${s}px;height:${s}px;background:url('${ATLAS_URL}') -${sx}px -${sy}px / ${ATLAS_W * k}px ${ATLAS_H * k}px no-repeat;image-rendering:pixelated;vertical-align:middle"></span>`;
 }
-function make(win98File, xpPos) {
+// Three-way theme dispatcher.
+//   classic → original hand-drawn SVG (the one we shipped with first)
+//   win98   → alexmeub PNG
+//   xp      → Null Tale atlas sprite (falls back to win98 if no position)
+function make(svgConst, win98File, xpPos) {
   return (s = 16) => {
-    if (getIconTheme() === "xp" && xpPos) return xpSprite(xpPos.col, xpPos.row, s);
+    const theme = getIconTheme();
+    if (theme === "classic" && svgConst) return wrap(svgConst, s);
+    if (theme === "xp" && xpPos) return xpSprite(xpPos.col, xpPos.row, s);
     return png98(win98File, s);
   };
 }
@@ -177,21 +183,21 @@ function make(win98File, xpPos) {
 const XP = {};
 
 export const ICONS = {
-  folder:      make("folder.png",       XP.folder),
-  folderOpen:  make("folder-open.png",  XP.folderOpen),
+  folder:      make(FOLDER,       "folder.png",       XP.folder),
+  folderOpen:  make(FOLDER_OPEN,  "folder-open.png",  XP.folderOpen),
   document:    (s = 16) => wrap(DOCUMENT, s),
-  notepad:     make("notepad.png",      XP.notepad),
-  myComputer:  make("my-computer.png",  XP.myComputer),
-  recycle:     make("recycle.png",      XP.recycle),
-  picture:     make("picture.png",      XP.picture),
-  paint:       make("paint.png",        XP.paint),
-  minesweeper: make("minesweeper.png",  XP.minesweeper),
-  briefcase:   make("briefcase.png",    XP.briefcase),
-  mail:        make("mail.png",         XP.mail),
-  movie:       make("movie.png",        XP.movie),
-  gear:        make("gear.png",         XP.gear),
-  help:        make("help.png",         XP.help),
-  calculator:  make("calculator.png",   XP.calculator),
+  notepad:     make(NOTEPAD,      "notepad.png",      XP.notepad),
+  myComputer:  make(MY_COMPUTER,  "my-computer.png",  XP.myComputer),
+  recycle:     make(RECYCLE,      "recycle.png",      XP.recycle),
+  picture:     make(PICTURE,      "picture.png",      XP.picture),
+  paint:       make(PAINT,        "paint.png",        XP.paint),
+  minesweeper: make(MINESWEEPER,  "minesweeper.png",  XP.minesweeper),
+  briefcase:   make(BRIEFCASE,    "briefcase.png",    XP.briefcase),
+  mail:        make(MAIL,         "mail.png",         XP.mail),
+  movie:       make(MOVIE,        "movie.png",        XP.movie),
+  gear:        make(GEAR,         "gear.png",         XP.gear),
+  help:        make(HELP,         "help.png",         XP.help),
+  calculator:  make(null,         "calculator.png",   XP.calculator),
   arrowLeft:   (s = 16) => wrap(ARROW_LEFT, s),
   arrowRight:  (s = 16) => wrap(ARROW_RIGHT, s),
   arrowUp:     (s = 16) => wrap(ARROW_UP, s),
