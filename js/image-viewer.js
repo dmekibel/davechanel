@@ -415,20 +415,39 @@ export function openImageViewer(arg1, title) {
     preloadNeighbors();
   }
 
+  // Track the host window id once openWindow returns so we can keep
+  // setting the title even while we're portaled to <body> for fullscreen
+  // (wrap.closest('.window') is null in that state).
+  let viewerWinId = null;
   function setTitle(t) {
+    if (viewerWinId) {
+      setWindowTitle(viewerWinId, t);
+      return;
+    }
     const winEl = wrap.closest(".window");
     if (winEl && winEl.dataset.id) {
       setWindowTitle(parseInt(winEl.dataset.id, 10), t);
     }
   }
 
+  function resetGestureState() {
+    if (snapRaf) { cancelAnimationFrame(snapRaf); snapRaf = null; }
+    pendingCommit = null;
+    swipeOffsetX = 0;
+    gestureMode = "idle";
+    dragging = false;
+    pinchStartDist = 0;
+    pinchAnchorImg = null;
+  }
   function prev() {
     if (list.length < 2) return;
+    resetGestureState();
     index = (index - 1 + list.length) % list.length;
     loadCurrent();
   }
   function next() {
     if (list.length < 2) return;
+    resetGestureState();
     index = (index + 1) % list.length;
     loadCurrent();
   }
@@ -828,6 +847,7 @@ export function openImageViewer(arg1, title) {
     height: initialH,
     flush: true,
   });
+  viewerWinId = winId;
 
   // Kick off after the window mounts so .iv-stage has a real size.
   setTimeout(loadCurrent, 0);
