@@ -47,6 +47,7 @@ function makeTitlebar(rec) {
     titleEl.appendChild(ic);
   }
   const txt = document.createElement("span");
+  txt.className = "window-title-text";
   txt.textContent = rec.title;
   titleEl.appendChild(txt);
 
@@ -190,6 +191,7 @@ function makeTaskbarEntry(rec) {
   ic.style.display = "inline-flex";
   ic.style.alignItems = "center";
   const lbl = document.createElement("span");
+  lbl.className = "taskbar-label";
   lbl.textContent = rec.title;
   lbl.style.overflow = "hidden";
   lbl.style.textOverflow = "ellipsis";
@@ -225,6 +227,7 @@ export function openWindow({ title, icon, iconHtml = false, content, width = 520
   const id = nextId++;
   const el = document.createElement("section");
   el.className = "window";
+  el.dataset.id = String(id);
   el.setAttribute("role", "dialog");
   el.setAttribute("aria-label", title);
 
@@ -325,6 +328,18 @@ export function closeWindow(id) {
 
 export function listOpenWindows() {
   return [...windows.values()].map(r => ({ id: r.id, title: r.title }));
+}
+
+export function setWindowTitle(id, title) {
+  const rec = windows.get(id);
+  if (!rec) return;
+  rec.title = title;
+  const txt = rec.el.querySelector(".window-titlebar .window-title-text");
+  if (txt) txt.textContent = title;
+  if (rec.taskbar) {
+    const lbl = rec.taskbar.querySelector(".taskbar-label");
+    if (lbl) lbl.textContent = title;
+  }
 }
 
 // Re-fit windows on viewport changes (orientation flip, browser resize).

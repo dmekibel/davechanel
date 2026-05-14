@@ -7,7 +7,7 @@
 //   openImageViewer(src, title)
 //   openImageViewer({ list, index })   // list: [{src, name}], index: 0..n-1
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
+import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./window-manager.js";
 import { ICONS } from "./icons.js";
 import { FS } from "./file-system.js";
 import { currentZoom } from "./scale.js";
@@ -295,9 +295,8 @@ export function openImageViewer(arg1, title) {
 
   function setTitle(t) {
     const winEl = wrap.closest(".window");
-    if (winEl) {
-      const titleEl = winEl.querySelector(".window-titlebar .title");
-      if (titleEl) titleEl.textContent = t;
+    if (winEl && winEl.dataset.id) {
+      setWindowTitle(parseInt(winEl.dataset.id, 10), t);
     }
   }
 
@@ -425,6 +424,31 @@ export function openImageViewer(arg1, title) {
     if (e.key === "Escape") { e.preventDefault(); exitFullscreen(); }
   }
   wrap.querySelector(".iv-fullscreen").addEventListener("click", enterFullscreen);
+
+  // Double-click / double-tap on the image enters fullscreen.
+  canvas.addEventListener("dblclick", (e) => {
+    e.preventDefault();
+    if (!fullscreen) enterFullscreen();
+  });
+  // Manual double-tap detection for iOS (dblclick is unreliable on touch).
+  let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
+  canvas.addEventListener("touchend", (e) => {
+    if (fullscreen) return;                           // already fullscreen
+    if (e.changedTouches.length !== 1) return;
+    if (e.touches.length !== 0) return;               // multi-touch ending
+    const t = e.changedTouches[0];
+    const now = Date.now();
+    const close = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) < 30;
+    if (now - lastTapAt < 350 && close) {
+      lastTapAt = 0;
+      e.preventDefault();
+      enterFullscreen();
+    } else {
+      lastTapAt = now;
+      lastTapX = t.clientX;
+      lastTapY = t.clientY;
+    }
+  });
 
   // Stage touch handling for the exit gesture.
   stage.addEventListener("touchstart", (e) => {
