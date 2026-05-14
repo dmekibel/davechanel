@@ -390,15 +390,24 @@ export function openImageViewer(arg1, title) {
   wrap.querySelector(".iv-actual").addEventListener("click",   () => setScale(1));
 
   // ---- Full-screen mode ---------------------------------------------------
-  // Drops all chrome and locks the viewer over the whole viewport. Only
-  // two-finger pinch zoom is allowed inside; anything else (tap, click,
-  // ESC) exits back to the normal viewer.
+  // Drops all chrome and locks the viewer over the whole viewport. To exit
+  // you tap once without dragging and without pinching. Pan (drag) and
+  // pinch-zoom both stay inside fullscreen. Tapping the left/right side
+  // zones flips to prev/next while staying in fullscreen.
   let fullscreen = false;
   let exitPending = false;
+  let exitStartX = 0, exitStartY = 0;
+  let originalParent = null, originalNextSibling = null;
+  const EXIT_MOVE_THRESHOLD = 8;   // px of pointer travel that disqualifies a tap
 
   function enterFullscreen() {
     if (fullscreen) return;
     fullscreen = true;
+    // Portal the viewer to <body> so it escapes the window's stacking
+    // context and covers the taskbar / titlebar / everything.
+    originalParent = wrap.parentNode;
+    originalNextSibling = wrap.nextSibling;
+    document.body.appendChild(wrap);
     wrap.classList.add("iv-fullscreen-root");
     setTimeout(() => { resize(); fit(); }, 30);
     document.addEventListener("keydown", fsKey, true);
@@ -407,6 +416,8 @@ export function openImageViewer(arg1, title) {
     if (!fullscreen) return;
     fullscreen = false;
     wrap.classList.remove("iv-fullscreen-root");
+    if (originalParent) originalParent.insertBefore(wrap, originalNextSibling);
+    originalParent = originalNextSibling = null;
     document.removeEventListener("keydown", fsKey, true);
     setTimeout(() => { resize(); fit(); }, 30);
   }
@@ -415,21 +426,22 @@ export function openImageViewer(arg1, title) {
   }
   wrap.querySelector(".iv-fullscreen").addEventListener("click", enterFullscreen);
 
-  // Stage-level handlers: in fullscreen, any non-pinch tap exits.
-  // Pinch (2 touches) defers the exit and lets the existing pinch
-  // handler on .iv-canvas handle the zoom.
+  // Stage touch handling for the exit gesture.
   stage.addEventListener("touchstart", (e) => {
     if (!fullscreen) return;
-    if (e.touches.length >= 2) {
-      // pinching — don't exit
-      exitPending = false;
-      return;
-    }
+    if (e.touches.length >= 2) { exitPending = false; return; }   // pinch
+    const t = e.touches[0];
     exitPending = true;
+    exitStartX = t.clientX;
+    exitStartY = t.clientY;
   }, { passive: true });
   stage.addEventListener("touchmove", (e) => {
-    // If a second finger lands during the gesture, abort the exit.
-    if (fullscreen && e.touches.length >= 2) exitPending = false;
+    if (!fullscreen) return;
+    if (e.touches.length >= 2) { exitPending = false; return; }   // pinch
+    const t = e.touches[0];
+    if (Math.hypot(t.clientX - exitStartX, t.clientY - exitStartY) > EXIT_MOVE_THRESHOLD) {
+      exitPending = false;   // it's a drag/pan, not a tap
+    }
   }, { passive: true });
   stage.addEventListener("touchend", (e) => {
     if (!fullscreen) return;
@@ -438,10 +450,25 @@ export function openImageViewer(arg1, title) {
       exitFullscreen();
     }
   });
-  // Desktop: any click in fullscreen exits (except on the canvas during
-  // a wheel-zoom; wheel events don't fire click, so plain click is fine).
+
+  // Desktop: only plain clicks (no drag in between) exit. Track mouse
+  // distance from mousedown → mouseup; if the cursor moved noticeably,
+  // treat it as a drag and don't exit.
+  let mDownX = 0, mDownY = 0, mDragged = false;
+  stage.addEventListener("mousedown", (e) => {
+    if (!fullscreen) return;
+    mDownX = e.clientX; mDownY = e.clientY; mDragged = false;
+  });
+  stage.addEventListener("mousemove", (e) => {
+    if (!fullscreen) return;
+    if (e.buttons && Math.hypot(e.clientX - mDownX, e.clientY - mDownY) > EXIT_MOVE_THRESHOLD) {
+      mDragged = true;
+    }
+  });
   stage.addEventListener("click", (e) => {
-    if (fullscreen) exitFullscreen();
+    if (!fullscreen) return;
+    if (mDragged) { mDragged = false; return; }
+    exitFullscreen();
   });
   prevBtn.addEventListener("click", (e) => { e.stopPropagation(); prev(); });
   nextBtn.addEventListener("click", (e) => { e.stopPropagation(); next(); });

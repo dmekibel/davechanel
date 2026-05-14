@@ -640,8 +640,10 @@
 }
 .iv.iv-fullscreen-root .iv-menubar,
 .iv.iv-fullscreen-root .iv-toolbar,
-.iv.iv-fullscreen-root .iv-side,
 .iv.iv-fullscreen-root .iv-navigator { display: none; }
+/* Side zones STAY in fullscreen so tapping edges flips prev/next, but
+   their visible arrow indicator is hidden. */
+.iv.iv-fullscreen-root .iv-side-arrow { display: none; }
 .iv.iv-fullscreen-root .iv-stage { background: #000; }
 .iv.iv-fullscreen-root .iv-canvas { cursor: zoom-out; }
 .iv-nav {
