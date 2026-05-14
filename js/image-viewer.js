@@ -191,7 +191,17 @@ export function openImageViewer(arg1, title) {
     const w = stage.clientWidth, h = stage.clientHeight;
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, w, h);
-    if (!loaded) return;
+    if (!loaded) {
+      // Slow networks: image isn't here yet. Show a loading hint so
+      // users don't think the app is frozen, and so the swipe gesture
+      // they just made (which DID commit nav) has visible feedback.
+      ctx.fillStyle = "#888";
+      ctx.font = "13px Tahoma, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Loading…", w / 2, h / 2);
+      return;
+    }
     ctx.imageSmoothingQuality = "high";
 
     if (swipeOffsetX !== 0 && gestureMode !== "panning") {
@@ -227,6 +237,10 @@ export function openImageViewer(arg1, title) {
     const prevItem = list[(index - 1 + list.length) % list.length];
     const nextItem = list[(index + 1) % list.length];
     const make = (slot, item) => {
+      // Warm the THUMB so the next loadCurrent's first-paint is instant
+      // even on slow networks. Then load the preview, which is what
+      // gets shown during the swipe transition.
+      if (item.thumb) { const w = new Image(); w.src = item.thumb; }
       const im = new Image();
       im.onload = () => { neighbors[slot] = im; };
       im.src = item.preview || item.thumb || item.src;
@@ -671,6 +685,12 @@ export function openImageViewer(arg1, title) {
       lastTapAt = 0;
       return;
     }
+    // Tap on the edge zones flips prev/next — never double-taps into
+    // fullscreen. Only the CENTER zone is a candidate for double-tap.
+    if (tapZoneFor(t.clientX) !== "center") {
+      lastTapAt = 0;
+      return;
+    }
     const now = Date.now();
     const closeToLast = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) < 30;
     if (now - lastTapAt < 350 && closeToLast) {
@@ -701,13 +721,19 @@ export function openImageViewer(arg1, title) {
       exitPending = false;   // it's a drag/pan, not a tap
     }
   }, { passive: true });
+  // Marks a touch sequence as "already handled" so the synthesized click
+  // immediately afterward doesn't double-fire the nav action.
+  let suppressNextClick = false;
   stage.addEventListener("touchend", (e) => {
     if (!fullscreen) return;
     if (exitPending && e.touches.length === 0) {
       exitPending = false;
       const t = e.changedTouches[0];
-      // Edge tap in fullscreen → flip prev/next, stay in fullscreen.
       const zone = t ? tapZoneFor(t.clientX) : "center";
+      suppressNextClick = true;
+      // safety: clear the flag a tick later in case no click follows
+      setTimeout(() => { suppressNextClick = false; }, 600);
+      if (e.cancelable) e.preventDefault();
       if (zone === "prev")      { prev(); return; }
       if (zone === "next")      { next(); return; }
       exitFullscreen();
@@ -730,6 +756,7 @@ export function openImageViewer(arg1, title) {
   });
   stage.addEventListener("click", (e) => {
     if (!fullscreen) return;
+    if (suppressNextClick) { suppressNextClick = false; return; }
     if (mDragged) { mDragged = false; return; }
     const zone = tapZoneFor(e.clientX);
     if (zone === "prev") { prev(); return; }
