@@ -107,6 +107,17 @@ export function openImageViewer(arg1, title) {
   let tx = 0, ty = 0;
   let loaded = false;
 
+  // Swipe-to-nav state (iOS Photos style).
+  //   gestureMode: "idle" | "undecided" | "panning" | "swiping"
+  //   swipeOffsetX: current horizontal swipe offset, in viewport px.
+  //   neighbors: preloaded preview-quality prev/next Image()s.
+  let gestureMode = "idle";
+  let swipeOffsetX = 0;
+  let swipeStartX = 0, swipeStartY = 0;
+  const SWIPE_DECIDE_PX = 8;
+  const neighbors = { prev: null, next: null };
+  let snapRaf = null;
+
   // Anti-copy deterrents
   ["contextmenu", "dragstart", "selectstart"].forEach(ev => {
     wrap.addEventListener(ev, (e) => e.preventDefault());
@@ -159,23 +170,110 @@ export function openImageViewer(arg1, title) {
     draw();
   }
 
+  // Compute fit-scale position for an arbitrary loaded image (used to
+  // draw the current image AND its neighbors during a swipe).
+  function fitDrawRect(im) {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    if (!im || !im.naturalWidth) return null;
+    const s = Math.min(w / im.naturalWidth, h / im.naturalHeight, 1);
+    return {
+      s,
+      dw: im.naturalWidth  * s,
+      dh: im.naturalHeight * s,
+      dx: (w - im.naturalWidth  * s) / 2,
+      dy: (h - im.naturalHeight * s) / 2,
+    };
+  }
+
   function draw() {
     const w = stage.clientWidth, h = stage.clientHeight;
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(0, 0, w, h);
     if (!loaded) return;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
+
+    if (swipeOffsetX !== 0 && gestureMode !== "panning") {
+      // Swipe transition: current image follows finger; neighbor enters
+      // from the opposite edge with a small gap.
+      const GAP = 16;
+      const cur = fitDrawRect(img);
+      ctx.drawImage(img, cur.dx + swipeOffsetX, cur.dy, cur.dw, cur.dh);
+      if (swipeOffsetX < 0 && neighbors.next) {
+        const n = fitDrawRect(neighbors.next);
+        ctx.drawImage(neighbors.next, n.dx + swipeOffsetX + w + GAP, n.dy, n.dw, n.dh);
+      } else if (swipeOffsetX > 0 && neighbors.prev) {
+        const p = fitDrawRect(neighbors.prev);
+        ctx.drawImage(neighbors.prev, p.dx + swipeOffsetX - w - GAP, p.dy, p.dw, p.dh);
+      }
+    } else {
+      ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
+    }
+
     const cur = list[index];
-    // Show the master (detail) dimensions — don't bounce the readout as
-    // each progressive level loads in. Fall back to current image's
-    // natural size if the manifest didn't provide detailW/H.
     const showW = (cur && cur.detailW) || img.naturalWidth;
     const showH = (cur && cur.detailH) || img.naturalHeight;
-    // Visual zoom is relative to the master size, not the loaded level.
     const visualZoom = img.naturalWidth ? (img.naturalWidth * scale / showW) : scale;
     info.textContent = `${cur ? (cur.name + "  ") : ""}${showW}×${showH}  ${Math.round(visualZoom * 100)}%`;
     drawNavigator();
+  }
+
+  // Preload the preview-quality prev and next images so the swipe
+  // transition has something real to show before nav commits.
+  function preloadNeighbors() {
+    neighbors.prev = neighbors.next = null;
+    if (list.length < 2) return;
+    const prevItem = list[(index - 1 + list.length) % list.length];
+    const nextItem = list[(index + 1) % list.length];
+    const make = (slot, item) => {
+      const im = new Image();
+      im.onload = () => { neighbors[slot] = im; };
+      im.src = item.preview || item.thumb || item.src;
+    };
+    make("prev", prevItem);
+    make("next", nextItem);
+  }
+
+  // Animate swipeOffsetX from its current value to `target`, then run cb.
+  function animateSwipeTo(target, cb) {
+    if (snapRaf) cancelAnimationFrame(snapRaf);
+    const start = swipeOffsetX;
+    const t0 = performance.now();
+    const dur = 220;
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      swipeOffsetX = start + (target - start) * ease(k);
+      draw();
+      if (k < 1) {
+        snapRaf = requestAnimationFrame(step);
+      } else {
+        swipeOffsetX = target;
+        snapRaf = null;
+        draw();
+        cb && cb();
+      }
+    };
+    snapRaf = requestAnimationFrame(step);
+  }
+
+  function finishSwipe() {
+    const w = stage.clientWidth;
+    const threshold = Math.max(50, w * 0.25);
+    if (swipeOffsetX <= -threshold && neighbors.next) {
+      animateSwipeTo(-w - 16, () => {
+        swipeOffsetX = 0;
+        gestureMode = "idle";
+        next();
+      });
+    } else if (swipeOffsetX >= threshold && neighbors.prev) {
+      animateSwipeTo(w + 16, () => {
+        swipeOffsetX = 0;
+        gestureMode = "idle";
+        prev();
+      });
+    } else {
+      animateSwipeTo(0, () => { gestureMode = "idle"; });
+    }
   }
 
   // Navigator (Photoshop-style mini-map). Visible only on desktop and only
@@ -291,6 +389,7 @@ export function openImageViewer(arg1, title) {
     if (fullURL && fullURL !== mainURL) fetchAt(fullURL, 3);
 
     updateNavVisibility();
+    preloadNeighbors();
   }
 
   function setTitle(t) {
@@ -336,8 +435,6 @@ export function openImageViewer(arg1, title) {
   let pinchStartDist = 0;
   let pinchStartScale = 1;
   let pinchAnchorImg = null;
-  let swipeStart = null;       // {x, y, t}
-  let swipeCanceled = false;
   function touchMidpoint(e) {
     const r = canvas.getBoundingClientRect();
     const a = e.touches[0], b = e.touches[1];
@@ -351,14 +448,19 @@ export function openImageViewer(arg1, title) {
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   }
   canvas.addEventListener("touchstart", (e) => {
+    if (snapRaf) { cancelAnimationFrame(snapRaf); snapRaf = null; }
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      swipeStart = { x: t.clientX, y: t.clientY, t: Date.now() };
-      swipeCanceled = false;
+      swipeStartX = t.clientX;
+      swipeStartY = t.clientY;
+      gestureMode = "undecided";
+      // We still record the pan start so existing pan code works once
+      // we commit to "panning". Pan won't actually move anything until
+      // we set gestureMode to "panning" in touchmove.
       onDown(t.clientX, t.clientY);
     } else if (e.touches.length === 2) {
-      swipeStart = null;
-      swipeCanceled = true;
+      gestureMode = "idle";          // pinch — neither swipe nor pan
+      swipeOffsetX = 0;
       dragging = false;
       pinchStartDist  = touchDistance(e);
       pinchStartScale = scale;
@@ -369,43 +471,59 @@ export function openImageViewer(arg1, title) {
   canvas.addEventListener("touchmove", (e) => {
     if (e.touches.length === 2 && pinchStartDist > 0) {
       if (e.cancelable) e.preventDefault();
-      swipeCanceled = true;
       const dist = touchDistance(e);
       const mid = touchMidpoint(e);
       scale = Math.max(0.05, Math.min(20, pinchStartScale * (dist / pinchStartDist)));
       tx = mid.x - pinchAnchorImg.ix * scale;
       ty = mid.y - pinchAnchorImg.iy * scale;
       draw();
-    } else if (e.touches.length === 1) {
-      if (e.cancelable) e.preventDefault();
-      onMove(e.touches[0].clientX, e.touches[0].clientY);
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    if (e.cancelable) e.preventDefault();
+    const t = e.touches[0];
+    const dx = t.clientX - swipeStartX;
+    const dy = t.clientY - swipeStartY;
+
+    // First few px decide: at-near-fit horizontal motion → swipe gesture.
+    // Otherwise → pan (the existing behavior; tx/ty follow finger).
+    if (gestureMode === "undecided") {
+      if (Math.abs(dx) > SWIPE_DECIDE_PX || Math.abs(dy) > SWIPE_DECIDE_PX) {
+        const fs = fitScale();
+        const nearFit = scale <= fs * 1.25;
+        if (nearFit && Math.abs(dx) > Math.abs(dy) && list.length > 1) {
+          gestureMode = "swiping";
+        } else {
+          gestureMode = "panning";
+        }
+      }
+    }
+
+    if (gestureMode === "swiping") {
+      swipeOffsetX = dx;
+      // Slight rubber-band feel if dragging past a missing neighbor.
+      if (!neighbors.next && dx < 0) swipeOffsetX = dx * 0.3;
+      if (!neighbors.prev && dx > 0) swipeOffsetX = dx * 0.3;
+      draw();
+    } else if (gestureMode === "panning") {
+      onMove(t.clientX, t.clientY);
     }
   }, { passive: false });
   canvas.addEventListener("touchend", (e) => {
-    // Decide before we tear down state: was this gesture a horizontal
-    // swipe to next/prev, or just a pan?
-    if (!swipeCanceled && swipeStart && e.changedTouches.length === 1 && list.length > 1) {
-      const t = e.changedTouches[0];
-      const dx = t.clientX - swipeStart.x;
-      const dy = t.clientY - swipeStart.y;
-      const dt = Date.now() - swipeStart.t;
-      const absX = Math.abs(dx), absY = Math.abs(dy);
-      // Swipe criteria: fast (< 500 ms), mostly horizontal (X >> Y),
-      // far enough (> 60 px). And only when at-or-near fit scale — once
-      // zoomed in, single-finger drag is for panning details, not nav.
-      const fs = fitScale();
-      const nearFit = scale <= fs * 1.25;
-      if (dt < 500 && absX > 60 && absX > absY * 1.5 && nearFit) {
-        if (dx < 0) next(); else prev();
-        // The pan handler updated tx/ty during the swipe; reset to fit
-        // so the (now next) image isn't dragged off-center.
-        setTimeout(fit, 0);
-      }
-    }
     if (e.touches.length < 2) { pinchStartDist = 0; pinchAnchorImg = null; }
-    swipeStart = null;
-    swipeCanceled = false;
-    onUp();
+    if (gestureMode === "swiping") {
+      finishSwipe();
+    } else if (gestureMode === "panning") {
+      // After panning at fit scale, snap the image back inside the stage
+      // so users can't accidentally drag it off into nothing.
+      const fs = fitScale();
+      if (scale <= fs * 1.05) setTimeout(fit, 0);
+      onUp();
+      gestureMode = "idle";
+    } else {
+      onUp();
+      gestureMode = "idle";
+    }
   });
 
   canvas.addEventListener("wheel", (e) => {
