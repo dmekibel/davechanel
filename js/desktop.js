@@ -18,10 +18,12 @@ const PROG_FOR = {
 // Synthetic desktop shortcuts that don't live in the FS but appear on the desktop.
 // Image Viewer is intentionally NOT a desktop shortcut — it opens automatically
 // when you tap an image file inside My Computer.
+// `iconFn` (not `iconHtml`) so theme swaps regenerate the icon at render
+// time instead of using a stale string baked at module-load.
 const DESKTOP_SHORTCUTS = [
-  { name: "My Computer", iconHtml: ICONS.myComputer(28),  program: "explorer"    },
-  { name: "Paint",       iconHtml: ICONS.paint(28),       program: "paint"       },
-  { name: "Minesweeper", iconHtml: ICONS.minesweeper(28), program: "minesweeper" },
+  { name: "My Computer", iconFn: () => ICONS.myComputer(28),  program: "explorer"    },
+  { name: "Paint",       iconFn: () => ICONS.paint(28),       program: "paint"       },
+  { name: "Minesweeper", iconFn: () => ICONS.minesweeper(28), program: "minesweeper" },
 ];
 
 export function initDesktop() {
@@ -95,7 +97,7 @@ function renderDesktopIcons() {
   const all = [
     ...DESKTOP_SHORTCUTS.map(sc => ({
       name: t(sc.name),
-      iconHtml: sc.iconHtml,
+      iconHtml: sc.iconFn(),    // call at render time so theme swaps apply
       open: () => openProgram(sc.program),
     })),
     ...rootDesktopItems().map(item => ({
