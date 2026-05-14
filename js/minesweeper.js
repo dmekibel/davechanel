@@ -325,7 +325,7 @@ export function openMinesweeper() {
 
   return openWindow({
     title: "Minesweeper",
-    icon: ICONS.recycle(14),
+    icon: ICONS.minesweeper(14),
     iconHtml: true,
     content: wrap,
     width: 240,

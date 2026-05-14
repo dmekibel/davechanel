@@ -4,14 +4,16 @@
 const KEY = "site.icontheme";
 
 export const ICON_THEMES = [
-  { id: "classic", label: "Classic (hand-drawn SVGs)" },
-  { id: "win98",   label: "Windows 98" },
-  { id: "xp",      label: "Windows XP" },
+  { id: "win98", label: "Windows 98" },
+  { id: "xp",    label: "Windows XP" },
 ];
 
 export function getIconTheme() {
-  try { return localStorage.getItem(KEY) || "classic"; }
-  catch (_) { return "classic"; }
+  try {
+    const v = localStorage.getItem(KEY);
+    if (v === "classic") return "win98";   // migrate legacy stored value
+    return v || "win98";
+  } catch (_) { return "win98"; }
 }
 
 export function setIconTheme(id) {

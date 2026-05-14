@@ -584,7 +584,7 @@ export function openPaint(opts = {}) {
 
   const winId = openWindow({
     title: "Paint",
-    icon: ICONS.picture(14),
+    icon: ICONS.paint(14),
     iconHtml: true,
     content: wrap,
     width: 720,
