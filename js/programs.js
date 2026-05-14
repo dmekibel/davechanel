@@ -1272,6 +1272,32 @@ export function openSettings() {
     flush: true,
   });
 
+  // Shrink-to-fit: when the user resizes the window smaller than the
+  // natural content width, scale the WHOLE settings UI down so every
+  // control stays usable instead of getting clipped.
+  const NATURAL_W = 460;
+  const NATURAL_H = 420;
+  const ro = new ResizeObserver(() => {
+    if (!wrap.isConnected) return;
+    const parent = wrap.parentElement;
+    if (!parent) return;
+    const pw = parent.clientWidth;
+    const ph = parent.clientHeight;
+    if (pw <= 0 || ph <= 0) return;
+    const k = Math.min(1, pw / NATURAL_W, ph / NATURAL_H);
+    if (k < 1) {
+      wrap.style.width  = NATURAL_W + "px";
+      wrap.style.height = NATURAL_H + "px";
+      wrap.style.transformOrigin = "top left";
+      wrap.style.transform = `scale(${k.toFixed(3)})`;
+    } else {
+      wrap.style.width = "";
+      wrap.style.height = "";
+      wrap.style.transform = "";
+    }
+  });
+  setTimeout(() => ro.observe(wrap.parentElement || wrap), 30);
+
   wrap.querySelector('[data-act="ok"]').addEventListener("click", () => {
     setWallpaper(pendingWp);
     closeWindow(id);

@@ -169,23 +169,12 @@ function make(win98File, xpPos) {
     return png98(win98File, s);
   };
 }
-// XP tile positions (col, row) — initial guesses. Replace via icon-picker.html.
-const XP = {
-  folder:      { col:  5, row:  0 },
-  folderOpen:  { col:  2, row:  3 },
-  recycle:     { col:  0, row:  2 },
-  help:        { col:  2, row:  1 },
-  notepad:     { col:  2, row:  4 },
-  picture:     { col:  0, row:  4 },
-  paint:       { col:  4, row:  4 },
-  myComputer:  { col:  1, row:  9 },
-  briefcase:   { col:  6, row:  8 },
-  mail:        { col:  4, row:  2 },
-  movie:       { col:  4, row: 12 },
-  minesweeper: { col:  3, row: 16 },
-  gear:        { col:  4, row:  8 },
-  calculator:  { col:  2, row:  6 },
-};
+// XP tile positions — left empty for now. The Null Tale atlas has no
+// sprite-map JSON, and blind-guessing positions from a thumbnail proved
+// unreliable (every icon I tried mapped to the wrong tile). The XP
+// theme falls back to the Win98 PNGs until positions are pinned down
+// via the picker (/icon-picker.html). Add entries here once verified.
+const XP = {};
 
 export const ICONS = {
   folder:      make("folder.png",       XP.folder),
