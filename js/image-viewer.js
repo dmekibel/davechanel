@@ -115,7 +115,7 @@ export function openImageViewer(arg1, title) {
   let swipeOffsetX = 0;
   let swipeStartX = 0, swipeStartY = 0, swipeStartT = 0;
   let swipeLastX = 0,  swipeLastY = 0;
-  const SWIPE_DECIDE_PX = 8;
+  const SWIPE_DECIDE_PX = 5;
   const neighbors = { prev: null, next: null };
   let snapRaf = null;
   let pendingCommit = null;        // { cb } if a commit-to-next/prev anim is in-flight
@@ -278,7 +278,10 @@ export function openImageViewer(arg1, title) {
 
   function finishSwipe() {
     const w = stage.clientWidth;
-    const threshold = Math.max(50, w * 0.25);
+    // Lower threshold (15% of stage width, min 40 px) so a normal phone
+    // swipe — even one that doesn't drag the image fully half-way —
+    // still commits to next/prev rather than snapping back.
+    const threshold = Math.max(40, w * 0.15);
     // Commit even if the neighbor preview hasn't loaded yet — we'll just
     // animate past the edge and call next()/prev(); the new image will
     // load progressively in the destination.
@@ -565,7 +568,9 @@ export function openImageViewer(arg1, title) {
     const dyTotal = swipeLastY - swipeStartY;
     const dt      = Date.now() - swipeStartT;
     const absX = Math.abs(dxTotal), absY = Math.abs(dyTotal);
-    const isFling = list.length > 1 && dt > 0 && dt < 350 && absX > 80 && absX > absY * 1.5;
+    // Fling = fast horizontal flick. Lowered the distance to 40 px so a
+    // quick wrist-flick on a small screen still navigates.
+    const isFling = list.length > 1 && dt > 0 && dt < 400 && absX > 40 && absX > absY * 1.5;
 
     if (gestureMode === "swiping") {
       if (isFling) {
