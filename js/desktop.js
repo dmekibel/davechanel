@@ -19,9 +19,9 @@ const PROG_FOR = {
 // Image Viewer is intentionally NOT a desktop shortcut — it opens automatically
 // when you tap an image file inside My Computer.
 const DESKTOP_SHORTCUTS = [
-  { name: "My Computer", iconHtml: ICONS.myComputer(32),  program: "explorer"    },
-  { name: "Paint",       iconHtml: ICONS.paint(32),       program: "paint"       },
-  { name: "Minesweeper", iconHtml: ICONS.minesweeper(32), program: "minesweeper" },
+  { name: "My Computer", iconHtml: ICONS.myComputer(28),  program: "explorer"    },
+  { name: "Paint",       iconHtml: ICONS.paint(28),       program: "paint"       },
+  { name: "Minesweeper", iconHtml: ICONS.minesweeper(28), program: "minesweeper" },
 ];
 
 export function initDesktop() {
@@ -114,7 +114,7 @@ function renderDesktopIcons() {
     ...listItems("desktop").map(item => ({
       name: item.name,
       iconHtml: item.kind === "image" && (item.thumb || item.src)
-        ? `<img src="${item.thumb || item.src}" style="max-width:32px;max-height:32px;border:1px solid #555;background:#000">`
+        ? `<img src="${item.thumb || item.src}" style="max-width:28px;max-height:28px;border:1px solid #555;background:#000">`
         : iconFor(item, 32),
       open: () => openFile(item, { children: listItems("desktop") }),
     })),
@@ -154,8 +154,8 @@ function renderDesktopIcons() {
 // Grid spec — desktop icons snap to this on release.
 const GRID_X0 = 12;
 const GRID_Y0 = 12;
-const CELL_W  = 96;
-const CELL_H  = 86;
+const CELL_W  = 80;
+const CELL_H  = 74;
 // On a touch device with a short viewport (landscape phone), shrink rows.
 function gridCellHeight() {
   return (matchMedia("(pointer: coarse)").matches && window.innerHeight < 500) ? 64 : CELL_H;

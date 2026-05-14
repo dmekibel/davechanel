@@ -1267,8 +1267,8 @@ export function openSettings() {
     icon: ICONS.myComputer(14),
     iconHtml: true,
     content: wrap,
-    width: 460,
-    height: 420,
+    width: 380,
+    height: 360,
     flush: true,
   });
 

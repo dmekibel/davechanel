@@ -37,13 +37,20 @@ export function showContextMenu(x, y, items) {
   }
   document.body.appendChild(menu);
 
-  // Clamp inside viewport. innerWidth/innerHeight are unzoomed CSS px.
-  const r = menu.getBoundingClientRect();
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const w = r.width / z, h = r.height / z;
+  // Clamp inside the viewport in body-internal CSS px. offsetWidth /
+  // offsetHeight are always pre-zoom (body-internal); innerWidth /
+  // innerHeight are viewport / zoom (also body-internal). Both in the
+  // same coord space — clamp left, right, top, bottom edges.
+  const menuW = menu.offsetWidth;
+  const menuH = menu.offsetHeight;
+  const vw = window.innerWidth  / z;
+  const vh = window.innerHeight / z;
+  const margin = 4;
   let nx = x, ny = y;
-  if (nx + w > vw) nx = Math.max(4, vw - w - 4);
-  if (ny + h > vh) ny = Math.max(4, vh - h - 4);
+  if (nx + menuW + margin > vw) nx = vw - menuW - margin;
+  if (ny + menuH + margin > vh) ny = vh - menuH - margin;
+  nx = Math.max(margin, nx);
+  ny = Math.max(margin, ny);
   menu.style.left = nx + "px";
   menu.style.top  = ny + "px";
 

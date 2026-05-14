@@ -1657,15 +1657,15 @@ body[data-wallpaper="sky"] .desktop {
 
 .desktop-icon {
   position: absolute;
-  width: 76px;
+  width: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px 3px;
+  gap: 3px;
+  padding: 3px 2px;
   cursor: default;
   font-family: var(--ui-font);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: #fff;
   text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
@@ -1682,16 +1682,22 @@ body[data-wallpaper="sky"] .desktop {
   outline: 1px dotted #fff;
 }
 .desktop-icon .icon-img {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   background: transparent;
   image-rendering: pixelated;
 }
+.desktop-icon .icon-img img,
+.desktop-icon .icon-img svg {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
 .desktop-icon .icon-img svg { display: block; }
 .desktop-icon .icon-label {
-  max-width: 86px;
+  max-width: 64px;
   word-wrap: break-word;
 }
 
