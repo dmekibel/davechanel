@@ -11,6 +11,7 @@ import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./windo
 import { ICONS } from "./icons.js";
 import { FS } from "./file-system.js";
 import { currentZoom } from "./scale.js";
+import { getDescription } from "./fine-art-descriptions.js";
 
 // Collect every kind:"image" leaf in the virtual file system. Used as the
 // default list when the viewer is opened from the start menu.
@@ -66,6 +67,7 @@ export function openImageViewer(arg1, title) {
       <button class="iv-btn iv-fit"        title="Fit to window">Fit</button>
       <button class="iv-btn iv-actual"     title="Actual size">100%</button>
       <button class="iv-btn iv-fullscreen" title="Full screen (image only)">⛶ Full</button>
+      <button class="iv-btn iv-info-btn"   title="About this piece">ⓘ Info</button>
       <span class="iv-spacer"></span>
       <span class="iv-info" hidden></span>
     </div>
@@ -80,6 +82,14 @@ export function openImageViewer(arg1, title) {
       <div class="iv-navigator" hidden>
         <canvas class="iv-nav-canvas" width="160" height="120"></canvas>
         <div class="iv-nav-rect"></div>
+      </div>
+      <div class="iv-info-panel" hidden>
+        <div class="iv-info-handle"></div>
+        <div class="iv-info-content">
+          <h3 class="iv-info-title"></h3>
+          <p class="iv-info-meta"></p>
+          <div class="iv-info-text"></div>
+        </div>
       </div>
       <div class="iv-empty">
         <p>No images in this portfolio yet.</p>
@@ -99,6 +109,10 @@ export function openImageViewer(arg1, title) {
   const navCtx   = navCv.getContext("2d");
   const navRect  = wrap.querySelector(".iv-nav-rect");
   const isTouch  = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  const infoPanel  = wrap.querySelector(".iv-info-panel");
+  const infoTitle  = wrap.querySelector(".iv-info-title");
+  const infoMeta   = wrap.querySelector(".iv-info-meta");
+  const infoText   = wrap.querySelector(".iv-info-text");
   // unused references — kept for clarity
   void wrap.querySelector(".iv-empty");
 
@@ -447,6 +461,47 @@ export function openImageViewer(arg1, title) {
     }
   }
 
+  // Update + show / hide the info panel.
+  function updateInfoPanel() {
+    const cur = list[index];
+    if (!cur) return;
+    const desc = getDescription(cur.name);
+    if (!desc) {
+      infoTitle.textContent = cur.name || "";
+      infoMeta.textContent = "";
+      infoText.textContent = "";
+      return;
+    }
+    infoTitle.textContent = cur.name || "";
+    const parts = [];
+    if (desc.year)   parts.push(desc.year);
+    if (desc.medium) parts.push(desc.medium);
+    infoMeta.textContent = parts.join(" · ");
+    infoText.textContent = desc.text || "";
+  }
+  function showInfo() { updateInfoPanel(); infoPanel.hidden = false; requestAnimationFrame(() => infoPanel.classList.add("open")); }
+  function hideInfo() { infoPanel.classList.remove("open"); setTimeout(() => { infoPanel.hidden = true; }, 250); }
+  function toggleInfo() {
+    if (infoPanel.classList.contains("open")) hideInfo();
+    else showInfo();
+  }
+  // Tap on the handle bar (or any non-content area of the panel) closes.
+  infoPanel.addEventListener("click", (e) => {
+    if (e.target.closest(".iv-info-content")) return;
+    hideInfo();
+  });
+  // Drag down on the handle = close (touch).
+  let infoTouchStartY = 0;
+  infoPanel.addEventListener("touchstart", (e) => {
+    if (!e.touches[0]) return;
+    infoTouchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  infoPanel.addEventListener("touchend", (e) => {
+    const t = e.changedTouches[0];
+    if (!t) return;
+    if (t.clientY - infoTouchStartY > 60) hideInfo();
+  });
+
   function resetGestureState() {
     if (snapRaf) { cancelAnimationFrame(snapRaf); snapRaf = null; }
     pendingCommit = null;
@@ -547,16 +602,23 @@ export function openImageViewer(arg1, title) {
     const dx = t.clientX - swipeStartX;
     const dy = t.clientY - swipeStartY;
 
-    // First few px decide: at-near-fit horizontal motion → swipe gesture.
-    // Otherwise → pan (the existing behavior; tx/ty follow finger).
+    // First few px decide the gesture's role:
+    //   horizontal at fit  → swiping (nav)
+    //   vertical-up at fit (and not fullscreen) → info-pull (reveal panel)
+    //   vertical-down in fullscreen → fs-dismiss (slide down to close)
+    //   anything else      → panning
     if (gestureMode === "undecided") {
       if (Math.abs(dx) > SWIPE_DECIDE_PX || Math.abs(dy) > SWIPE_DECIDE_PX) {
         const fs = fitScale();
         const nearFit = scale <= fs * 1.25;
-        if (nearFit && Math.abs(dx) > Math.abs(dy) && list.length > 1) {
-          gestureMode = "swiping";
-        } else {
+        if (!nearFit) {
           gestureMode = "panning";
+        } else if (Math.abs(dx) > Math.abs(dy)) {
+          gestureMode = list.length > 1 ? "swiping" : "panning";
+        } else {
+          if (fullscreen && dy > 0) gestureMode = "fs-dismiss";
+          else if (!fullscreen && dy < 0) gestureMode = "info-pull";
+          else gestureMode = "panning";
         }
       }
     }
@@ -586,6 +648,28 @@ export function openImageViewer(arg1, title) {
     // quick wrist-flick on a small screen still navigates.
     const isFling = list.length > 1 && dt > 0 && dt < 400 && absX > 40 && absX > absY * 1.5;
 
+    if (gestureMode === "fs-dismiss") {
+      const dyTotal = swipeLastY - swipeStartY;
+      const dyAbs = Math.abs(dyTotal);
+      const dxAbs = Math.abs(swipeLastX - swipeStartX);
+      const isFlingDown = dt > 0 && dt < 400 && dyTotal > 40 && dyTotal > dxAbs * 1.2;
+      if (dyTotal > stage.clientHeight * 0.15 || isFlingDown) {
+        exitFullscreen();
+      }
+      gestureMode = "idle";
+      return;
+    }
+    if (gestureMode === "info-pull") {
+      const dyTotal = swipeLastY - swipeStartY;
+      const dyAbs = Math.abs(dyTotal);
+      const dxAbs = Math.abs(swipeLastX - swipeStartX);
+      const isFlingUp = dt > 0 && dt < 400 && dyTotal < -40 && dyAbs > dxAbs * 1.2;
+      if (dyTotal < -stage.clientHeight * 0.12 || isFlingUp) {
+        showInfo();
+      }
+      gestureMode = "idle";
+      return;
+    }
     if (gestureMode === "swiping") {
       if (isFling) {
         // Honor the fling direction even if swipeOffsetX didn't cross
@@ -622,6 +706,7 @@ export function openImageViewer(arg1, title) {
   wrap.querySelector(".iv-zoom-out").addEventListener("click", () => setScale(scale / 1.25));
   wrap.querySelector(".iv-fit").addEventListener("click",      fit);
   wrap.querySelector(".iv-actual").addEventListener("click",   () => setScale(1));
+  wrap.querySelector(".iv-info-btn").addEventListener("click", toggleInfo);
 
   // ---- Full-screen mode ---------------------------------------------------
   // Drops all chrome and locks the viewer over the whole viewport. To exit
