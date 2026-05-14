@@ -1215,15 +1215,13 @@ export function openSettings() {
           <label class="settings-label">Icon set</label>
           <div class="icon-theme-slot"></div>
         </div>
-        <p class="settings-hint">Switch between Windows 98 and Windows XP icon styles. XP positions are best-guesses; some may need tuning.</p>
+        <p class="settings-hint">Currently the site uses authentic Windows 98 icons. A Windows XP icon set is in the works — the source atlas needs interactive position mapping before it can render correctly.</p>
       `;
       const slot = body.querySelector(".icon-theme-slot");
       slot.appendChild(makeWin98Select(
         ICON_THEMES.map(t => ({ value: t.id, label: t.label })),
         getIconTheme(),
-        (val) => {
-          setIconTheme(val);
-        }
+        (val) => { setIconTheme(val); }
       ));
     } else if (tab === "appearance") {
       body.innerHTML = `
@@ -1271,32 +1269,6 @@ export function openSettings() {
     height: 420,
     flush: true,
   });
-
-  // Shrink-to-fit: when the user resizes the window smaller than the
-  // natural content width, scale the WHOLE settings UI down so every
-  // control stays usable instead of getting clipped.
-  const NATURAL_W = 460;
-  const NATURAL_H = 420;
-  const ro = new ResizeObserver(() => {
-    if (!wrap.isConnected) return;
-    const parent = wrap.parentElement;
-    if (!parent) return;
-    const pw = parent.clientWidth;
-    const ph = parent.clientHeight;
-    if (pw <= 0 || ph <= 0) return;
-    const k = Math.min(1, pw / NATURAL_W, ph / NATURAL_H);
-    if (k < 1) {
-      wrap.style.width  = NATURAL_W + "px";
-      wrap.style.height = NATURAL_H + "px";
-      wrap.style.transformOrigin = "top left";
-      wrap.style.transform = `scale(${k.toFixed(3)})`;
-    } else {
-      wrap.style.width = "";
-      wrap.style.height = "";
-      wrap.style.transform = "";
-    }
-  });
-  setTimeout(() => ro.observe(wrap.parentElement || wrap), 30);
 
   wrap.querySelector('[data-act="ok"]').addEventListener("click", () => {
     setWallpaper(pendingWp);

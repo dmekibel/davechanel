@@ -5,7 +5,10 @@ const KEY = "site.icontheme";
 
 export const ICON_THEMES = [
   { id: "win98", label: "Windows 98" },
-  { id: "xp",    label: "Windows XP" },
+  // XP theme is parked: the Null Tale atlas needs interactive position
+  // mapping via /icon-picker.html before it produces correct icons.
+  // Re-enable once XP positions are added to icons.js (XP object).
+  // { id: "xp", label: "Windows XP (coming soon)" },
 ];
 
 export function getIconTheme() {
