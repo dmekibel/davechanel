@@ -4,6 +4,9 @@
 
 import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { ICONS } from "./icons.js";
+import { saveImage, loadUserFS } from "./user-storage.js";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js";
+import { FS } from "./file-system.js";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -380,18 +383,60 @@ export function openPaint(opts = {}) {
       },
     );
   }
-  function doExport() {
+  function defaultFileName() {
+    const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g, "-");
+    return `paint-${stamp}.png`;
+  }
+  // Download to local disk (the user's actual files).
+  function doDownload() {
     canvas.toBlob(blob => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `paint-${new Date().toISOString().slice(0,19).replace(/[:T]/g, "-")}.png`;
+      a.download = defaultFileName();
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 500);
     }, "image/png");
+  }
+  // Save on the in-OS desktop.
+  async function doSaveToDesktop() {
+    const name = await win98Prompt("Save as:", defaultFileName(), { title: "Save to Desktop" });
+    if (name == null) return;
+    const dataURL = canvas.toDataURL("image/png");
+    saveImage("desktop", dataURL, name.trim() || defaultFileName());
+  }
+  // Save into a folder in My Computer (user picks the folder).
+  async function doSaveAs() {
+    // Walk the FS to build the folder list (depth-limited).
+    const folders = [{ label: "My Computer (root)", value: "/", depth: 0 }];
+    function walk(node, path, depth) {
+      if (!node.children) return;
+      for (const c of node.children) {
+        if (c.type === "folder") {
+          const p = path === "/" ? "/" + c.name : path + "/" + c.name;
+          folders.push({ label: c.name, value: p, depth });
+          if (depth < 3) walk(c, p, depth + 1);
+        }
+      }
+    }
+    walk(FS, "/", 1);
+    // Also include any user-created folders at the root level.
+    const fs = loadUserFS();
+    for (const path of Object.keys(fs.items || {})) {
+      if (path === "desktop" || folders.find(f => f.value === path)) continue;
+      const segments = path.split("/").filter(Boolean);
+      folders.push({ label: segments[segments.length - 1] + "  (user)", value: path, depth: segments.length });
+    }
+    const result = await win98PickFolder(folders, {
+      title: "Save image to folder",
+      defaultName: defaultFileName(),
+    });
+    if (!result) return;
+    const dataURL = canvas.toDataURL("image/png");
+    saveImage(result.path, dataURL, result.name || defaultFileName());
   }
 
   // Toolbar Undo button
@@ -413,10 +458,13 @@ export function openPaint(opts = {}) {
   const menubar = wrap.querySelector(".paint-menubar");
   buildMenubar(menubar, [
     { label: "File", items: [
-      { label: "New",           action: doNew,    accel: "Ctrl+N" },
-      { label: "Export as PNG", action: doExport, accel: "Ctrl+S" },
+      { label: "New",                       action: doNew,           accel: "Ctrl+N" },
       "sep",
-      { label: "Close",         action: () => { const win = wrap.closest(".window"); if (win) closeWindow(parseInt(win.dataset.id, 10)); } },
+      { label: "Save to Desktop",           action: doSaveToDesktop },
+      { label: "Save to Folder…",           action: doSaveAs },
+      { label: "Download to my Computer",   action: doDownload,      accel: "Ctrl+S" },
+      "sep",
+      { label: "Close",                     action: () => { const win = wrap.closest(".window"); if (win) closeWindow(parseInt(win.dataset.id, 10)); } },
     ]},
     { label: "Edit", items: [
       { label: "Undo",          action: doUndo,   accel: "Ctrl+Z" },

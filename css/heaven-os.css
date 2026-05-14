@@ -424,6 +424,57 @@
 .canvas-attr-presets button:active {
   border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
 }
+
+/* Win98 prompt + folder-picker dialogs */
+.w98-prompt-row { padding: 0 18px 6px; }
+.w98-prompt-input {
+  width: 100%;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 3px 5px;
+  font-family: var(--ui-font);
+  font-size: 12px;
+  box-sizing: border-box;
+}
+.w98-folder-picker { min-width: 320px; max-width: 420px; }
+.w98-fp-body { padding: 6px 12px 0; }
+.w98-fp-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0;
+  height: 200px;
+  overflow: auto;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  font-size: 12px;
+}
+.w98-fp-item {
+  padding: 3px 8px;
+  cursor: default;
+  white-space: nowrap;
+}
+.w98-fp-item.selected { background: var(--tb-active-1); color: #fff; }
+@media (hover: hover) {
+  .w98-fp-item:hover { background: var(--tb-active-1); color: #fff; }
+}
+.w98-fp-filename {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 11px;
+}
+.w98-fp-name {
+  flex: 1;
+  background: #fff;
+  border: 2px solid;
+  border-color: var(--chrome-dark) var(--chrome-light) var(--chrome-light) var(--chrome-dark);
+  padding: 3px 5px;
+  font-family: var(--ui-font);
+  font-size: 12px;
+}
 .ws-select .ws-value {
   flex: 1;
   padding: 2px 6px;

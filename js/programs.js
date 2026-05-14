@@ -4,6 +4,8 @@
 
 import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js";
 import { FS, findByPath } from "./file-system.js";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js";
+import { win98Prompt } from "./win98-dialogs.js";
 import { ICONS, iconFor } from "./icons.js";
 import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
 import { openPaint } from "./paint.js";
@@ -357,12 +359,35 @@ export function openExplorer(startPath = []) {
     showContextMenu(x, y, [
       { label: "Refresh",            action: () => render() },
       "sep",
+      { label: "New Folder…",        action: () => promptNewFolder() },
+      "sep",
       { label: "View — Large Icons",  action: () => setView("large")  },
       { label: "View — Medium Icons", action: () => setView("medium") },
       { label: "View — Small Icons",  action: () => setView("small")  },
       "sep",
       { label: "Display Properties...", action: () => openSettings() },
     ]);
+  }
+
+  async function promptNewFolder() {
+    const name = await win98Prompt("New folder name:", "New Folder", { title: "New Folder" });
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    createFolder("/" + currentPath.join("/"), trimmed);
+    render();
+  }
+  async function promptRename(item) {
+    const name = await win98Prompt("New name:", item.name, { title: "Rename" });
+    if (name == null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    renameItem("/" + currentPath.join("/"), item.id, trimmed);
+    render();
+  }
+  function deleteUserItem(item) {
+    removeItem("/" + currentPath.join("/"), item.id);
+    render();
   }
 
   function pathKey(path) {
@@ -504,7 +529,14 @@ export function openExplorer(startPath = []) {
   // ---- Pane rendering ----------------------------------------------
 
   function render() {
-    const node = findByPath(currentPath) || FS;
+    // A user-created folder isn't in FS but still has user items. Provide
+    // an empty synthetic folder so the explorer can render it.
+    let node = findByPath(currentPath);
+    if (!node) {
+      node = currentPath.length === 0
+        ? FS
+        : { name: currentPath[currentPath.length - 1], type: "folder", children: [] };
+    }
     const titleName = currentPath.length ? currentPath[currentPath.length - 1] : "Mekibel";
 
     // address
@@ -524,7 +556,9 @@ export function openExplorer(startPath = []) {
 
     // grid
     grid.innerHTML = "";
-    const items = node.children || [];
+    const folderKey = "/" + currentPath.join("/");
+    const userItems = listItems(folderKey);
+    const items = [...(node.children || []), ...userItems];
     if (items.length === 0) {
       const empty = document.createElement("div");
       empty.className = "exp-empty";
@@ -571,6 +605,19 @@ export function openExplorer(startPath = []) {
         tile.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); }
         });
+        // Right-click on a user-created item gives Rename / Delete.
+        if (child.id && String(child.id).startsWith("u_")) {
+          tile.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e.clientX, e.clientY, [
+              { label: "Open",    action: open },
+              "sep",
+              { label: "Rename…", action: () => promptRename(child) },
+              { label: "Delete",  action: () => deleteUserItem(child) },
+            ]);
+          });
+        }
         // Touch: manual double-tap detection (dblclick is unreliable on mobile)
         let lastTap = 0;
         tile.addEventListener("touchend", (e) => {
@@ -755,6 +802,9 @@ export function openExplorer(startPath = []) {
     buildMenuBar();
     render();
   });
+  // Re-render when user-FS changes (new folder, new saved image, etc.)
+  const onUserFs = () => { if (wrap.isConnected) render(); };
+  window.addEventListener("userfs-update", onUserFs);
 
   const initialTitle = currentPath.length ? t(currentPath[currentPath.length - 1]) : "Mekibel";
   winId = openWindow({

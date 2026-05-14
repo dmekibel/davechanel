@@ -2,6 +2,7 @@
 
 import { rootDesktopItems } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
+import { listItems } from "./user-storage.js";
 import { ICONS, iconFor } from "./icons.js";
 import { buildStartMenu, closeAllStartMenus } from "./start-menu.js";
 import { showContextMenu, closeContextMenu } from "./context-menu.js";
@@ -38,6 +39,8 @@ export function initDesktop() {
     const menuEl = document.getElementById("start-menu");
     if (menuEl) buildStartMenu(menuEl);
   });
+  // Re-render desktop when a Paint drawing is saved here, etc.
+  window.addEventListener("userfs-update", () => renderDesktopIcons());
 }
 
 // Re-lay-out the desktop icon grid only when the viewport ORIENTATION
@@ -100,6 +103,14 @@ function renderDesktopIcons() {
           return openFile(item);
         }
       },
+    })),
+    // User-saved items on the desktop (Paint drawings, etc.)
+    ...listItems("desktop").map(item => ({
+      name: item.name,
+      iconHtml: item.kind === "image" && (item.thumb || item.src)
+        ? `<img src="${item.thumb || item.src}" style="max-width:32px;max-height:32px;border:1px solid #555;background:#000">`
+        : iconFor(item, 32),
+      open: () => openFile(item, { children: listItems("desktop") }),
     })),
   ];
 
