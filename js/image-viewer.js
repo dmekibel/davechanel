@@ -578,18 +578,13 @@ export function openImageViewer(arg1, title) {
         finishSwipe();
       }
     } else if (gestureMode === "panning") {
-      if (isFling) {
-        // Zoomed-in fling: commit to next/prev. fit() runs inside loadCurrent
-        // → the new image starts fresh.
-        if (dxTotal < 0) next(); else prev();
-        gestureMode = "idle";
-      } else {
-        // After panning at fit scale, snap the image back inside the stage.
-        const fs = fitScale();
-        if (scale <= fs * 1.05) setTimeout(fit, 0);
-        onUp();
-        gestureMode = "idle";
-      }
+      // Pan mode = zoomed in. Don't navigate from here — the user is
+      // looking around inside the image. Accidental flings while
+      // exploring a zoomed view shouldn't jump to next/prev.
+      const fs = fitScale();
+      if (scale <= fs * 1.05) setTimeout(fit, 0);
+      onUp();
+      gestureMode = "idle";
     } else {
       onUp();
       gestureMode = "idle";
