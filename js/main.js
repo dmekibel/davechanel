@@ -22,6 +22,10 @@ function boot() {
     document.getElementById("login-overlay")?.remove();
     initDesktop();
   }
+  // Reveal the login overlay AFTER scale has been applied so it doesn't
+  // briefly render at zoom=1 before snapping to the user's scale.
+  const login = document.getElementById("login-overlay");
+  if (login) login.style.visibility = "";
 }
 
 function initLangGlobe() {
