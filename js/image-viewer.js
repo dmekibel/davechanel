@@ -58,8 +58,8 @@ export function openImageViewer(arg1, title) {
       <button class="iv-menu" data-menu="file">File</button>
       <button class="iv-menu" data-menu="view">View</button>
       <span class="iv-menubar-spacer"></span>
-      <button class="iv-mb-nav iv-prev" aria-label="Previous image" title="Previous">‹</button>
-      <button class="iv-mb-nav iv-next" aria-label="Next image"     title="Next">›</button>
+      <button class="iv-prev" aria-label="Previous image" hidden></button>
+      <button class="iv-next" aria-label="Next image"     hidden></button>
     </div>
     <div class="iv-toolbar">
       <button class="iv-btn iv-zoom-out"   title="Zoom out">−</button>
@@ -67,8 +67,8 @@ export function openImageViewer(arg1, title) {
       <button class="iv-btn iv-fit"        title="Fit to window">Fit</button>
       <button class="iv-btn iv-actual"     title="Actual size">100%</button>
       <button class="iv-btn iv-fullscreen" title="Full screen (image only)">⛶ Full</button>
-      <button class="iv-btn iv-info-btn"   title="About this piece">ⓘ Info</button>
       <span class="iv-spacer"></span>
+      <button class="iv-btn iv-info-btn"   title="About this piece">ⓘ Info</button>
       <span class="iv-info" hidden></span>
     </div>
     <div class="iv-stage iv-show-arrows">
@@ -174,7 +174,16 @@ export function openImageViewer(arg1, title) {
 
   function setScale(next, center) {
     if (!loaded) return;
-    next = Math.max(0.05, Math.min(20, next));
+    const fs = fitScale();
+    // Normal viewer: clamp at fit on the low end (can't zoom out smaller
+    // than the visible image — keeps users from accidentally shrinking
+    // it into nothing). Fullscreen: pinching well below fit exits.
+    if (fullscreen) {
+      if (next < fs * 0.85) { exitFullscreen(); return; }
+      next = Math.max(0.05, Math.min(20, next));
+    } else {
+      next = Math.max(fs, Math.min(20, next));
+    }
     const w = stage.clientWidth, h = stage.clientHeight;
     const cx = center ? center.x : w / 2;
     const cy = center ? center.y : h / 2;
@@ -617,7 +626,15 @@ export function openImageViewer(arg1, title) {
       if (e.cancelable) e.preventDefault();
       const dist = touchDistance(e);
       const mid = touchMidpoint(e);
-      scale = Math.max(0.05, Math.min(20, pinchStartScale * (dist / pinchStartDist)));
+      const fs = fitScale();
+      let next = pinchStartScale * (dist / pinchStartDist);
+      if (fullscreen) {
+        if (next < fs * 0.85) { exitFullscreen(); return; }
+        next = Math.max(0.05, Math.min(20, next));
+      } else {
+        next = Math.max(fs, Math.min(20, next));     // can't shrink below fit
+      }
+      scale = next;
       tx = mid.x - pinchAnchorImg.ix * scale;
       ty = mid.y - pinchAnchorImg.iy * scale;
       draw();
@@ -772,43 +789,47 @@ export function openImageViewer(arg1, title) {
   }
   wrap.querySelector(".iv-fullscreen").addEventListener("click", enterFullscreen);
 
-  // Double-click / double-tap on the image enters fullscreen.
+  // Double-click / double-tap on the image toggles zoom (fit ↔ 2×) at
+  // the tap point. Fullscreen is now button-only (no accidental entries).
+  function doubleTapZoom(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const center = { x: clientX - rect.left, y: clientY - rect.top };
+    const fs = fitScale();
+    if (scale > fs * 1.5) {
+      // Already zoomed → reset to fit, centered.
+      scale = fs;
+      const w = stage.clientWidth, h = stage.clientHeight;
+      tx = (w - img.naturalWidth  * scale) / 2;
+      ty = (h - img.naturalHeight * scale) / 2;
+      draw();
+    } else {
+      setScale(fs * 2, center);
+    }
+  }
   canvas.addEventListener("dblclick", (e) => {
     e.preventDefault();
-    if (!fullscreen) enterFullscreen();
+    doubleTapZoom(e.clientX, e.clientY);
   });
   // Manual double-tap detection for iOS (dblclick is unreliable on touch).
-  // Only count it as a tap if the touch barely moved — otherwise a quick
-  // pair of swipes between images would mistakenly trigger fullscreen.
   let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
   canvas.addEventListener("touchend", (e) => {
     if (fullscreen) return;
     if (e.changedTouches.length !== 1) return;
     if (e.touches.length !== 0) return;
-    // If this gesture was a swipe or a pan, don't treat it as a tap.
-    if (gestureMode === "swiping" || gestureMode === "panning") {
+    if (gestureMode === "swiping" || gestureMode === "panning" || gestureMode === "info-pull" || gestureMode === "fs-dismiss") {
       lastTapAt = 0;
       return;
     }
     const t = e.changedTouches[0];
-    // Distance from the touchstart — if user moved, it's a drag, not a tap.
     const moved = Math.hypot(t.clientX - swipeStartX, t.clientY - swipeStartY);
-    if (moved > 12) {
-      lastTapAt = 0;
-      return;
-    }
-    // Tap on the edge zones flips prev/next — never double-taps into
-    // fullscreen. Only the CENTER zone is a candidate for double-tap.
-    if (tapZoneFor(t.clientX) !== "center") {
-      lastTapAt = 0;
-      return;
-    }
+    if (moved > 12) { lastTapAt = 0; return; }
+    if (tapZoneFor(t.clientX) !== "center") { lastTapAt = 0; return; }
     const now = Date.now();
     const closeToLast = Math.hypot(t.clientX - lastTapX, t.clientY - lastTapY) < 30;
     if (now - lastTapAt < 350 && closeToLast) {
       lastTapAt = 0;
       e.preventDefault();
-      enterFullscreen();
+      doubleTapZoom(t.clientX, t.clientY);
     } else {
       lastTapAt = now;
       lastTapX = t.clientX;
