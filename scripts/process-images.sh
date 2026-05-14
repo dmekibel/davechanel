@@ -38,7 +38,7 @@ while IFS= read -r -d '' f; do
   masters+=("$f")
 done < <(find "$SRC_DIR" -maxdepth 1 -type f \
   \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \
-     -o -iname '*.tif' -o -iname '*.tiff' \) -print0)
+     -o -iname '*.tif' -o -iname '*.tiff' -o -iname '*.webp' \) -print0)
 
 if [ "${#masters[@]}" -eq 0 ]; then
   echo "No master images found in $SRC_DIR — nothing to do."

@@ -4,8 +4,13 @@
 # Fine-art originals stay local — only web-sized copies (content/images/web/)
 # are shipped. Re-run sips to regenerate.
 content/images/*.png
+content/images/*.PNG
 content/images/*.jpg
+content/images/*.JPG
 content/images/*.jpeg
+content/images/*.JPEG
+content/images/*.webp
+content/images/*.WEBP
 content/images/*.tif
 content/images/*.tiff
 content/images/*.psd
