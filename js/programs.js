@@ -1138,6 +1138,8 @@ export function openWelcome() {
 export function openSettings() {
   const initialWp = getWallpaper();
   let pendingWp = initialWp;
+  const initialIconTheme = getIconTheme();
+  let pendingIconTheme = initialIconTheme;
 
   const wrap = document.createElement("div");
   wrap.className = "settings";
@@ -1215,13 +1217,13 @@ export function openSettings() {
           <label class="settings-label">Icon set</label>
           <div class="icon-theme-slot"></div>
         </div>
-        <p class="settings-hint">Currently the site uses authentic Windows 98 icons. A Windows XP icon set is in the works — the source atlas needs interactive position mapping before it can render correctly.</p>
+        <p class="settings-hint">Pick the set you want, then press <b>Apply</b> or <b>OK</b>. Already-open windows keep their old taskbar / titlebar icons until you close and reopen them — only fresh windows pick up the new theme there.</p>
       `;
       const slot = body.querySelector(".icon-theme-slot");
       slot.appendChild(makeWin98Select(
         ICON_THEMES.map(t => ({ value: t.id, label: t.label })),
-        getIconTheme(),
-        (val) => { setIconTheme(val); }
+        pendingIconTheme,
+        (val) => { pendingIconTheme = val; }    // don't apply until OK/Apply
       ));
     } else if (tab === "appearance") {
       body.innerHTML = `
@@ -1272,14 +1274,17 @@ export function openSettings() {
 
   wrap.querySelector('[data-act="ok"]').addEventListener("click", () => {
     setWallpaper(pendingWp);
+    if (pendingIconTheme !== getIconTheme()) setIconTheme(pendingIconTheme);
     closeWindow(id);
   });
   wrap.querySelector('[data-act="cancel"]').addEventListener("click", () => {
     setWallpaper(initialWp);
+    if (initialIconTheme !== getIconTheme()) setIconTheme(initialIconTheme);
     closeWindow(id);
   });
   wrap.querySelector('[data-act="apply"]').addEventListener("click", () => {
     setWallpaper(pendingWp);
+    if (pendingIconTheme !== getIconTheme()) setIconTheme(pendingIconTheme);
   });
   return id;
 }
