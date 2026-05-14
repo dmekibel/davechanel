@@ -430,6 +430,9 @@ export function openImageViewer(arg1, title) {
   stage.addEventListener("touchstart", (e) => {
     if (!fullscreen) return;
     if (e.touches.length >= 2) { exitPending = false; return; }   // pinch
+    // Edge taps: let the side zone's own click handler flip the image
+    // and keep us in fullscreen. Don't arm the exit.
+    if (e.target.closest(".iv-side")) { exitPending = false; return; }
     const t = e.touches[0];
     exitPending = true;
     exitStartX = t.clientX;
