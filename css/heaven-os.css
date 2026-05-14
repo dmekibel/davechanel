@@ -639,8 +639,12 @@
 }
 .iv-canvas:active { cursor: grabbing; }
 
-/* Side click zones — always clickable to flip prev/next. The arrow
-   indicator inside fades out after the user goes idle for a moment. */
+/* Side arrow visuals — purely decorative. They DO NOT absorb pointer
+   events: swipes that start at the canvas edges have to reach the
+   canvas's touch handlers, otherwise the side button steals the
+   gesture and the swipe never registers. The tap-to-flip and
+   fullscreen-edge-tap behaviors are handled in JS by hit-testing the
+   click coordinates on the canvas. */
 .iv-side {
   position: absolute;
   top: 0; bottom: 0;
@@ -649,11 +653,11 @@
   background: transparent;
   border: 0;
   padding: 0;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 4;
+  pointer-events: none;       /* let touches pass to the canvas */
 }
 .iv-side-prev { left: 0;  justify-content: flex-start; padding-left: 8px;  }
 .iv-side-next { right: 0; justify-content: flex-end;   padding-right: 8px; }
@@ -670,7 +674,7 @@
   border-radius: 4px;
   opacity: 0;
   transition: opacity 240ms ease;
-  pointer-events: none;     /* clicks go through to .iv-side */
+  pointer-events: none;
   user-select: none;
 }
 .iv-stage.iv-show-arrows .iv-side-arrow { opacity: 1; }

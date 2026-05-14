@@ -683,9 +683,6 @@ export function openImageViewer(arg1, title) {
   stage.addEventListener("touchstart", (e) => {
     if (!fullscreen) return;
     if (e.touches.length >= 2) { exitPending = false; return; }   // pinch
-    // Edge taps: let the side zone's own click handler flip the image
-    // and keep us in fullscreen. Don't arm the exit.
-    if (e.target.closest(".iv-side")) { exitPending = false; return; }
     const t = e.touches[0];
     exitPending = true;
     exitStartX = t.clientX;
@@ -703,6 +700,11 @@ export function openImageViewer(arg1, title) {
     if (!fullscreen) return;
     if (exitPending && e.touches.length === 0) {
       exitPending = false;
+      const t = e.changedTouches[0];
+      // Edge tap in fullscreen → flip prev/next, stay in fullscreen.
+      const zone = t ? tapZoneFor(t.clientX) : "center";
+      if (zone === "prev")      { prev(); return; }
+      if (zone === "next")      { next(); return; }
       exitFullscreen();
     }
   });
@@ -724,18 +726,36 @@ export function openImageViewer(arg1, title) {
   stage.addEventListener("click", (e) => {
     if (!fullscreen) return;
     if (mDragged) { mDragged = false; return; }
+    const zone = tapZoneFor(e.clientX);
+    if (zone === "prev") { prev(); return; }
+    if (zone === "next") { next(); return; }
     exitFullscreen();
   });
   prevBtn.addEventListener("click", (e) => { e.stopPropagation(); prev(); });
   nextBtn.addEventListener("click", (e) => { e.stopPropagation(); next(); });
 
-  // Side hit zones — full-height zones on the left and right of the
-  // stage that always cycle prev/next on click. The visible arrow inside
-  // fades out after a moment of inactivity but the zone stays clickable.
+  // Side arrows are pure visuals (pointer-events: none in CSS) so swipes
+  // that start at the edges still reach the canvas. Tap-to-flip is now
+  // detected on the canvas itself by hit-testing the click X.
   const sidePrev = wrap.querySelector(".iv-side-prev");
   const sideNext = wrap.querySelector(".iv-side-next");
-  sidePrev.addEventListener("click", (e) => { e.stopPropagation(); prev(); pingArrows(); });
-  sideNext.addEventListener("click", (e) => { e.stopPropagation(); next(); pingArrows(); });
+  const SIDE_ZONE_FRAC = 0.22;
+  function tapZoneFor(clientX) {
+    const r = canvas.getBoundingClientRect();
+    const localX = clientX - r.left;
+    if (localX < r.width * SIDE_ZONE_FRAC)        return "prev";
+    if (localX > r.width * (1 - SIDE_ZONE_FRAC))  return "next";
+    return "center";
+  }
+  canvas.addEventListener("click", (e) => {
+    // A click only fires when the touch / mouse didn't significantly move,
+    // so this is a tap. In normal viewer use, tap on the edges flips pages.
+    if (gestureMode === "swiping" || gestureMode === "panning") return;
+    if (fullscreen) return;     // fullscreen has its own click handler
+    const zone = tapZoneFor(e.clientX);
+    if (zone === "prev") { prev(); pingArrows(); }
+    else if (zone === "next") { next(); pingArrows(); }
+  });
 
   let arrowFadeTimer = null;
   function pingArrows() {
