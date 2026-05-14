@@ -1217,7 +1217,7 @@ export function openSettings() {
           <label class="settings-label">Icon set</label>
           <div class="icon-theme-slot"></div>
         </div>
-        <p class="settings-hint">Pick the set you want, then press <b>Apply</b> or <b>OK</b>. Already-open windows keep their old taskbar / titlebar icons until you close and reopen them — only fresh windows pick up the new theme there.</p>
+        <p class="settings-hint">Pick a set and press <b>Apply</b> or <b>OK</b>. Already-open windows keep their old taskbar / titlebar icons until you close and reopen them.</p>
       `;
       const slot = body.querySelector(".icon-theme-slot");
       slot.appendChild(makeWin98Select(

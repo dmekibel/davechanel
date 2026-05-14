@@ -4,9 +4,9 @@
 const KEY = "site.icontheme";
 
 export const ICON_THEMES = [
-  { id: "classic", label: "Classic (David's hand-drawn SVGs)" },
-  { id: "win98",   label: "Windows 98 (alexmeub set)" },
-  { id: "xp",      label: "Windows XP (atlas — positions WIP)" },
+  { id: "classic", label: "Classic (hand-drawn SVGs)" },
+  { id: "win98",   label: "Windows 98" },
+  { id: "xp",      label: "Windows XP" },
 ];
 
 export function getIconTheme() {

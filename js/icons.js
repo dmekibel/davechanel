@@ -149,55 +149,43 @@ const POWER = `
 // power, document).
 import { getIconTheme } from "./icon-theme.js";
 
-function png98(file, s) {
-  return `<img class="ico ico-png" src="assets/icons/win98/${file}" width="${s}" height="${s}" alt="" draggable="false" style="image-rendering:pixelated">`;
-}
-// XP icons live in a 736×704 sprite atlas of 32px tiles. (col, row) →
-// CSS background-position with image-rendering: pixelated. Positions
-// below are best-guess from visual inspection — refine via the
-// /icon-picker.html tool when you find a better tile.
-const ATLAS_URL = "assets/icons/winxp/WinIcons_32.png";
-const ATLAS_W = 736, ATLAS_H = 704, TILE = 32;
-function xpSprite(col, row, s) {
-  const k = s / TILE;
-  const sx = col * TILE * k, sy = row * TILE * k;
-  return `<span class="ico ico-xp" style="display:inline-block;width:${s}px;height:${s}px;background:url('${ATLAS_URL}') -${sx}px -${sy}px / ${ATLAS_W * k}px ${ATLAS_H * k}px no-repeat;image-rendering:pixelated;vertical-align:middle"></span>`;
+function pngImg(folder, file, s) {
+  return `<img class="ico ico-png" src="assets/icons/${folder}/${file}" width="${s}" height="${s}" alt="" draggable="false" style="image-rendering:auto;object-fit:contain">`;
 }
 // Three-way theme dispatcher.
-//   classic → original hand-drawn SVG (the one we shipped with first)
-//   win98   → alexmeub PNG
-//   xp      → Null Tale atlas sprite (falls back to win98 if no position)
-function make(svgConst, win98File, xpPos) {
+//   classic → original hand-drawn SVG
+//   win98   → alexmeub Win98 PNG
+//   xp      → softwarehistorysociety XP PNG (from limehawk archive)
+function make(svgConst, file98, fileXp) {
   return (s = 16) => {
     const theme = getIconTheme();
     if (theme === "classic" && svgConst) return wrap(svgConst, s);
-    if (theme === "xp" && xpPos) return xpSprite(xpPos.col, xpPos.row, s);
-    return png98(win98File, s);
+    if (theme === "xp" && fileXp) return pngImg("winxp", fileXp, s);
+    if (file98) return pngImg("win98", file98, s);
+    if (svgConst) return wrap(svgConst, s);
+    return "";
   };
 }
-// XP tile positions — left empty for now. The Null Tale atlas has no
-// sprite-map JSON, and blind-guessing positions from a thumbnail proved
-// unreliable (every icon I tried mapped to the wrong tile). The XP
-// theme falls back to the Win98 PNGs until positions are pinned down
-// via the picker (/icon-picker.html). Add entries here once verified.
-const XP = {};
 
+// Every entry: (SVG hand-drawn, Win98 PNG filename, XP PNG filename).
+// All three must look like the SAME concept — folders are folders,
+// computers are computers, no surprise pictorial substitutions.
 export const ICONS = {
-  folder:      make(FOLDER,       "folder.png",       XP.folder),
-  folderOpen:  make(FOLDER_OPEN,  "folder-open.png",  XP.folderOpen),
+  folder:      make(FOLDER,       "folder.png",       "folder.png"),
+  folderOpen:  make(FOLDER_OPEN,  "folder-open.png",  "folder-open.png"),
   document:    (s = 16) => wrap(DOCUMENT, s),
-  notepad:     make(NOTEPAD,      "notepad.png",      XP.notepad),
-  myComputer:  make(MY_COMPUTER,  "my-computer.png",  XP.myComputer),
-  recycle:     make(RECYCLE,      "recycle.png",      XP.recycle),
-  picture:     make(PICTURE,      "picture.png",      XP.picture),
-  paint:       make(PAINT,        "paint.png",        XP.paint),
-  minesweeper: make(MINESWEEPER,  "minesweeper.png",  XP.minesweeper),
-  briefcase:   make(BRIEFCASE,    "briefcase.png",    XP.briefcase),
-  mail:        make(MAIL,         "mail.png",         XP.mail),
-  movie:       make(MOVIE,        "movie.png",        XP.movie),
-  gear:        make(GEAR,         "gear.png",         XP.gear),
-  help:        make(HELP,         "help.png",         XP.help),
-  calculator:  make(null,         "calculator.png",   XP.calculator),
+  notepad:     make(NOTEPAD,      "notepad.png",      "notepad.png"),
+  myComputer:  make(MY_COMPUTER,  "my-computer.png",  "my-computer.png"),
+  recycle:     make(RECYCLE,      "recycle.png",      "recycle.png"),
+  picture:     make(PICTURE,      "picture.png",      "picture.png"),
+  paint:       make(PAINT,        "paint.png",        "paint.png"),
+  minesweeper: make(MINESWEEPER,  "minesweeper.png",  "minesweeper.png"),
+  briefcase:   make(BRIEFCASE,    "briefcase.png",    "briefcase.png"),
+  mail:        make(MAIL,         "mail.png",         "mail.png"),
+  movie:       make(MOVIE,        "movie.png",        "movie.png"),
+  gear:        make(GEAR,         "gear.png",         "gear.png"),
+  help:        make(HELP,         "help.png",         "help.png"),
+  calculator:  make(null,         "calculator.png",   "calculator.png"),
   arrowLeft:   (s = 16) => wrap(ARROW_LEFT, s),
   arrowRight:  (s = 16) => wrap(ARROW_RIGHT, s),
   arrowUp:     (s = 16) => wrap(ARROW_UP, s),
