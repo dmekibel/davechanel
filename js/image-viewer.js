@@ -686,6 +686,10 @@ export function openImageViewer(arg1, title) {
       if (list.length < 2) swipeOffsetX = dx * 0.3;
       draw();
     } else if (gestureMode === "panning") {
+      // At fit there's nothing to pan — image already fills/fits the stage.
+      // Ignore drags so the image can't be slid off-center accidentally.
+      const fs = fitScale();
+      if (scale <= fs * 1.01) return;
       onMove(t.clientX, t.clientY);
     }
   }, { passive: false });
@@ -774,31 +778,57 @@ export function openImageViewer(arg1, title) {
   let originalParent = null, originalNextSibling = null;
   const EXIT_MOVE_THRESHOLD = 8;   // px of pointer travel that disqualifies a tap
 
+  // Capture the image-space point currently under the stage center.
+  // After the stage resizes (entering / exiting fullscreen), we either:
+  //   (a) refit if we were already at fit, so the new "fit" fills the
+  //       new stage — what the user expects when zoomed-out, or
+  //   (b) reposition tx/ty so the same image-space point stays at the
+  //       new stage center — no jump while zoomed in.
+  function captureCenter() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    return {
+      wasAtFit: scale <= fitScale() * 1.01,
+      ix: (w / 2 - tx) / scale,
+      iy: (h / 2 - ty) / scale,
+    };
+  }
+  function applyCenter(cap) {
+    if (cap.wasAtFit) {
+      fit();
+      return;
+    }
+    const w = stage.clientWidth, h = stage.clientHeight;
+    tx = w / 2 - cap.ix * scale;
+    ty = h / 2 - cap.iy * scale;
+    draw();
+  }
+
   function enterFullscreen() {
     if (fullscreen) return;
+    const cap = loaded ? captureCenter() : null;
     fullscreen = true;
-    // Portal the viewer to <body> so it escapes the window's stacking
-    // context and covers the taskbar / titlebar / everything.
     originalParent = wrap.parentNode;
     originalNextSibling = wrap.nextSibling;
     document.body.appendChild(wrap);
     wrap.classList.add("iv-fullscreen-root");
-    // Preserve current zoom: resize the canvas for the new stage size,
-    // but DON'T call fit() — keep scale and translate so the user keeps
-    // viewing what they were viewing.
-    setTimeout(() => { resize(); }, 30);
+    setTimeout(() => {
+      resize();
+      if (cap) applyCenter(cap);
+    }, 30);
     document.addEventListener("keydown", fsKey, true);
   }
   function exitFullscreen() {
     if (!fullscreen) return;
+    const cap = loaded ? captureCenter() : null;
     fullscreen = false;
     wrap.classList.remove("iv-fullscreen-root");
     if (originalParent) originalParent.insertBefore(wrap, originalNextSibling);
     originalParent = originalNextSibling = null;
     document.removeEventListener("keydown", fsKey, true);
-    // Preserve zoom on exit too. If the user was beyond fit, they stay
-    // there; setScale's clamp will bring them back to fit on next interaction.
-    setTimeout(() => { resize(); }, 30);
+    setTimeout(() => {
+      resize();
+      if (cap) applyCenter(cap);
+    }, 30);
   }
   function fsKey(e) {
     if (e.key === "Escape") { e.preventDefault(); exitFullscreen(); }
