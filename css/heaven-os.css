@@ -626,6 +626,24 @@
 .iv-side:active .iv-side-arrow { background: rgba(0,0,0,0.55); }
 /* Hide the side controls entirely when there is only one image. */
 .iv-stage.iv-no-nav .iv-side { display: none; }
+
+/* === Image Viewer fullscreen ======================================== */
+/* When .iv-fullscreen-root is on the viewer's root, take over the
+   viewport: just black + image. All chrome (menubar / toolbar / side
+   arrows / navigator) is hidden. Only two-finger pinch zoom is allowed;
+   any other tap exits (handled in JS). */
+.iv.iv-fullscreen-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000005;       /* above windows, taskbar, login overlay */
+  background: #000;
+}
+.iv.iv-fullscreen-root .iv-menubar,
+.iv.iv-fullscreen-root .iv-toolbar,
+.iv.iv-fullscreen-root .iv-side,
+.iv.iv-fullscreen-root .iv-navigator { display: none; }
+.iv.iv-fullscreen-root .iv-stage { background: #000; }
+.iv.iv-fullscreen-root .iv-canvas { cursor: zoom-out; }
 .iv-nav {
   position: absolute;
   top: 50%;
@@ -1424,19 +1442,20 @@ body[data-wallpaper="sky"] .desktop {
 
 .desktop-icon {
   position: absolute;
-  width: 84px;
+  width: 76px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 6px 4px;
+  gap: 4px;
+  padding: 4px 3px;
   cursor: default;
-  font-family: var(--pixel-font);
-  font-size: 18px;
+  font-family: var(--ui-font);
+  font-size: 12px;
+  font-weight: 400;
   color: #fff;
   text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
   text-align: center;
-  line-height: 1.05;
+  line-height: 1.1;
   user-select: none;
   pointer-events: auto;
   touch-action: none;

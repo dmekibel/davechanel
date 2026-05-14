@@ -61,10 +61,11 @@ export function openImageViewer(arg1, title) {
       <button class="iv-mb-nav iv-next" aria-label="Next image"     title="Next">›</button>
     </div>
     <div class="iv-toolbar">
-      <button class="iv-btn iv-zoom-out" title="Zoom out">−</button>
-      <button class="iv-btn iv-zoom-in"  title="Zoom in">+</button>
-      <button class="iv-btn iv-fit"      title="Fit to window">Fit</button>
-      <button class="iv-btn iv-actual"   title="Actual size">100%</button>
+      <button class="iv-btn iv-zoom-out"   title="Zoom out">−</button>
+      <button class="iv-btn iv-zoom-in"    title="Zoom in">+</button>
+      <button class="iv-btn iv-fit"        title="Fit to window">Fit</button>
+      <button class="iv-btn iv-actual"     title="Actual size">100%</button>
+      <button class="iv-btn iv-fullscreen" title="Full screen (image only)">⛶ Full</button>
       <span class="iv-spacer"></span>
       <span class="iv-info"></span>
     </div>
@@ -387,6 +388,61 @@ export function openImageViewer(arg1, title) {
   wrap.querySelector(".iv-zoom-out").addEventListener("click", () => setScale(scale / 1.25));
   wrap.querySelector(".iv-fit").addEventListener("click",      fit);
   wrap.querySelector(".iv-actual").addEventListener("click",   () => setScale(1));
+
+  // ---- Full-screen mode ---------------------------------------------------
+  // Drops all chrome and locks the viewer over the whole viewport. Only
+  // two-finger pinch zoom is allowed inside; anything else (tap, click,
+  // ESC) exits back to the normal viewer.
+  let fullscreen = false;
+  let exitPending = false;
+
+  function enterFullscreen() {
+    if (fullscreen) return;
+    fullscreen = true;
+    wrap.classList.add("iv-fullscreen-root");
+    setTimeout(() => { resize(); fit(); }, 30);
+    document.addEventListener("keydown", fsKey, true);
+  }
+  function exitFullscreen() {
+    if (!fullscreen) return;
+    fullscreen = false;
+    wrap.classList.remove("iv-fullscreen-root");
+    document.removeEventListener("keydown", fsKey, true);
+    setTimeout(() => { resize(); fit(); }, 30);
+  }
+  function fsKey(e) {
+    if (e.key === "Escape") { e.preventDefault(); exitFullscreen(); }
+  }
+  wrap.querySelector(".iv-fullscreen").addEventListener("click", enterFullscreen);
+
+  // Stage-level handlers: in fullscreen, any non-pinch tap exits.
+  // Pinch (2 touches) defers the exit and lets the existing pinch
+  // handler on .iv-canvas handle the zoom.
+  stage.addEventListener("touchstart", (e) => {
+    if (!fullscreen) return;
+    if (e.touches.length >= 2) {
+      // pinching — don't exit
+      exitPending = false;
+      return;
+    }
+    exitPending = true;
+  }, { passive: true });
+  stage.addEventListener("touchmove", (e) => {
+    // If a second finger lands during the gesture, abort the exit.
+    if (fullscreen && e.touches.length >= 2) exitPending = false;
+  }, { passive: true });
+  stage.addEventListener("touchend", (e) => {
+    if (!fullscreen) return;
+    if (exitPending && e.touches.length === 0) {
+      exitPending = false;
+      exitFullscreen();
+    }
+  });
+  // Desktop: any click in fullscreen exits (except on the canvas during
+  // a wheel-zoom; wheel events don't fire click, so plain click is fine).
+  stage.addEventListener("click", (e) => {
+    if (fullscreen) exitFullscreen();
+  });
   prevBtn.addEventListener("click", (e) => { e.stopPropagation(); prev(); });
   nextBtn.addEventListener("click", (e) => { e.stopPropagation(); next(); });
 
