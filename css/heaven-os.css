@@ -748,6 +748,31 @@
   white-space: pre-wrap;
 }
 
+/* Classic Win98 Imaging-style status bar at the bottom of the viewer. */
+.iv-statusbar {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  border-top: 1px solid var(--chrome-light);
+  background: var(--chrome);
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: #000;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.iv-status-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iv-status-dims { color: #444; }
+.iv.iv-fullscreen-root .iv-statusbar { display: none; }
+
 /* === Image Viewer fullscreen ======================================== */
 /* When .iv-fullscreen-root is on the viewer's root, take over the
    viewport: just black + image. All chrome (menubar / toolbar / side

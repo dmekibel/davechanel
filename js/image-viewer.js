@@ -95,6 +95,10 @@ export function openImageViewer(arg1, title) {
         <p>No images in this portfolio yet.</p>
       </div>
     </div>
+    <div class="iv-statusbar">
+      <span class="iv-status-name">—</span>
+      <span class="iv-status-dims"></span>
+    </div>
   `;
 
   const stage    = wrap.querySelector(".iv-stage");
@@ -407,7 +411,14 @@ export function openImageViewer(arg1, title) {
       return;
     }
     const cur = list[index];
-    setTitle(cur.name || "Image Viewer");
+    // Win98 Imaging-style: "<filename> - Preview" in the titlebar.
+    const fname = cur.filename || cur.name || "Untitled";
+    setTitle(`${fname} - Preview`);
+    // Status bar at the bottom carries the same filename + master dims.
+    const sb = wrap.querySelector(".iv-status-name");
+    const sbDims = wrap.querySelector(".iv-status-dims");
+    if (sb) sb.textContent = fname;
+    if (sbDims) sbDims.textContent = (cur.detailW && cur.detailH) ? `${cur.detailW} × ${cur.detailH}` : "";
     // Only reset loaded if there's no pre-seeded image to display.
     if (!opts.startLevel) loaded = false;
 
@@ -772,7 +783,10 @@ export function openImageViewer(arg1, title) {
     originalNextSibling = wrap.nextSibling;
     document.body.appendChild(wrap);
     wrap.classList.add("iv-fullscreen-root");
-    setTimeout(() => { resize(); fit(); }, 30);
+    // Preserve current zoom: resize the canvas for the new stage size,
+    // but DON'T call fit() — keep scale and translate so the user keeps
+    // viewing what they were viewing.
+    setTimeout(() => { resize(); }, 30);
     document.addEventListener("keydown", fsKey, true);
   }
   function exitFullscreen() {
@@ -782,7 +796,9 @@ export function openImageViewer(arg1, title) {
     if (originalParent) originalParent.insertBefore(wrap, originalNextSibling);
     originalParent = originalNextSibling = null;
     document.removeEventListener("keydown", fsKey, true);
-    setTimeout(() => { resize(); fit(); }, 30);
+    // Preserve zoom on exit too. If the user was beyond fit, they stay
+    // there; setScale's clamp will bring them back to fit on next interaction.
+    setTimeout(() => { resize(); }, 30);
   }
   function fsKey(e) {
     if (e.key === "Escape") { e.preventDefault(); exitFullscreen(); }

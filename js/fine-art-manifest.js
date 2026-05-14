@@ -3,6 +3,7 @@
 export const FINE_ART = [
   {
     name: "Goddess of Memory",
+    filename: "Goddess of Memory.png",
     type: "file",
     kind: "image",
     thumb:    "content/images/web/thumb/goddess-of-memory.jpg",
@@ -13,6 +14,7 @@ export const FINE_ART = [
   },
   {
     name: "Furies",
+    filename: "Furies.jpg",
     type: "file",
     kind: "image",
     thumb:    "content/images/web/thumb/furies.jpg",
@@ -23,6 +25,7 @@ export const FINE_ART = [
   },
   {
     name: "Eve",
+    filename: "Eve.jpeg",
     type: "file",
     kind: "image",
     thumb:    "content/images/web/thumb/eve.jpg",
@@ -33,6 +36,7 @@ export const FINE_ART = [
   },
   {
     name: "Adam",
+    filename: "Adam.jpeg",
     type: "file",
     kind: "image",
     thumb:    "content/images/web/thumb/adam.jpg",

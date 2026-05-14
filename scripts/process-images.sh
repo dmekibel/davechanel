@@ -98,6 +98,7 @@ for src in "${sorted_masters[@]}"; do
 
   entries+="  {\n"
   entries+="    name: \"${displayName}\",\n"
+  entries+="    filename: \"${filename}\",\n"
   entries+="    type: \"file\",\n"
   entries+="    kind: \"image\",\n"
   entries+="    thumb:    \"content/images/web/thumb/${slug}.jpg\",\n"

@@ -142,25 +142,35 @@ const POWER = `
   <rect x="7.4" y="2.4" width="1.2" height="5.2" fill="#fff"/>
 `;
 
+// Real Win98 PNG icons (from win98icons.alexmeub.com) live in
+// /assets/icons/win98/. Rendered as <img> so they keep crisp pixel-art
+// edges. The little SVGs above are kept for chrome elements we couldn't
+// find a Win98 equivalent for (arrows, search, run, logout, restart,
+// power, document).
+function png(file, s) {
+  return `<img class="ico ico-png" src="assets/icons/win98/${file}" width="${s}" height="${s}" alt="" draggable="false" style="image-rendering:pixelated">`;
+}
+
 export const ICONS = {
-  folder:      (s = 16) => wrap(FOLDER, s),
-  folderOpen:  (s = 16) => wrap(FOLDER_OPEN, s),
+  folder:      (s = 16) => png("folder.png", s),
+  folderOpen:  (s = 16) => png("folder-open.png", s),
   document:    (s = 16) => wrap(DOCUMENT, s),
-  notepad:     (s = 16) => wrap(NOTEPAD, s),
-  myComputer:  (s = 16) => wrap(MY_COMPUTER, s),
-  recycle:     (s = 16) => wrap(RECYCLE, s),
-  picture:     (s = 16) => wrap(PICTURE, s),
-  paint:       (s = 16) => wrap(PAINT, s),
-  minesweeper: (s = 16) => wrap(MINESWEEPER, s),
-  briefcase:   (s = 16) => wrap(BRIEFCASE, s),
-  mail:        (s = 16) => wrap(MAIL, s),
-  movie:       (s = 16) => wrap(MOVIE, s),
+  notepad:     (s = 16) => png("notepad.png", s),
+  myComputer:  (s = 16) => png("my-computer.png", s),
+  recycle:     (s = 16) => png("recycle.png", s),
+  picture:     (s = 16) => png("picture.png", s),
+  paint:       (s = 16) => png("paint.png", s),
+  minesweeper: (s = 16) => png("minesweeper.png", s),
+  briefcase:   (s = 16) => png("briefcase.png", s),
+  mail:        (s = 16) => png("mail.png", s),
+  movie:       (s = 16) => png("movie.png", s),
+  gear:        (s = 16) => png("gear.png", s),
+  help:        (s = 16) => png("help.png", s),
+  calculator:  (s = 16) => png("calculator.png", s),
   arrowLeft:   (s = 16) => wrap(ARROW_LEFT, s),
   arrowRight:  (s = 16) => wrap(ARROW_RIGHT, s),
   arrowUp:     (s = 16) => wrap(ARROW_UP, s),
-  gear:        (s = 16) => wrap(GEAR, s),
   search:      (s = 16) => wrap(SEARCH, s),
-  help:        (s = 16) => wrap(HELP, s),
   run:         (s = 16) => wrap(RUN, s),
   logout:      (s = 16) => wrap(LOGOUT, s),
   restart:     (s = 16) => wrap(RESTART, s),
