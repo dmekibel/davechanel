@@ -671,9 +671,10 @@ export function openImageViewer(arg1, title) {
         } else if (Math.abs(dx) > Math.abs(dy)) {
           gestureMode = list.length > 1 ? "swiping" : "panning";
         } else {
-          if (fullscreen && dy > 0) gestureMode = "fs-dismiss";
-          else if (!fullscreen && dy < 0) gestureMode = "info-pull";
-          else gestureMode = "panning";
+          // Vertical-dominant gesture.
+          if (dy < 0) gestureMode = "info-pull";        // swipe up = info, in either mode
+          else if (fullscreen) gestureMode = "fs-dismiss"; // swipe down in fullscreen = exit
+          else gestureMode = "panning";                    // swipe down in normal = no-op at fit
         }
       }
     }

@@ -773,6 +773,21 @@
 .iv-status-dims { color: #444; }
 .iv.iv-fullscreen-root .iv-statusbar { display: none; }
 
+/* In fullscreen, the info panel goes pure dark — no Win98 chrome, no
+   grey filler, just text on a deep glassy black so it sits comfortably
+   over the image. */
+.iv.iv-fullscreen-root .iv-info-panel { background: rgba(0,0,0,0.78); }
+.iv.iv-fullscreen-root .iv-info-content {
+  background: transparent;
+  color: #f0f0f0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 18px;
+}
+.iv.iv-fullscreen-root .iv-info-title { color: #fff; }
+.iv.iv-fullscreen-root .iv-info-meta  { color: #b8b8b8; }
+.iv.iv-fullscreen-root .iv-info-text  { color: #e6e6e6; }
+.iv.iv-fullscreen-root .iv-info-handle::before { background: rgba(255,255,255,0.45); }
+
 /* === Image Viewer fullscreen ======================================== */
 /* When .iv-fullscreen-root is on the viewer's root, take over the
    viewport: just black + image. All chrome (menubar / toolbar / side
