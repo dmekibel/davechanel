@@ -3,12 +3,14 @@
 import { initDesktop } from "./desktop.js";
 import { shouldShowLogin, showLogin } from "./login.js";
 import { applyWallpaper } from "./wallpaper.js";
+import { applyIconTheme } from "./icon-theme.js";
 import { applyDomTranslations, getLang } from "./i18n.js";
 import { applyScale } from "./scale.js";
 
 function boot() {
   disableZoom();
   applyWallpaper();
+  applyIconTheme();
   applyScale();
   // Translate any static HTML strings BEFORE anything renders
   applyDomTranslations();

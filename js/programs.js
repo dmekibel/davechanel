@@ -12,6 +12,7 @@ import { openPaint } from "./paint.js";
 import { openImageViewer } from "./image-viewer.js";
 import { openMinesweeper } from "./minesweeper.js";
 import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
+import { ICON_THEMES, getIconTheme, setIconTheme } from "./icon-theme.js";
 import { showContextMenu } from "./context-menu.js";
 import { currentZoom } from "./scale.js";
 import { t } from "./i18n.js";
@@ -805,6 +806,9 @@ export function openExplorer(startPath = []) {
   // Re-render when user-FS changes (new folder, new saved image, etc.)
   const onUserFs = () => { if (wrap.isConnected) render(); };
   window.addEventListener("userfs-update", onUserFs);
+  // Re-render when icon theme flips so file tiles refresh.
+  const onIconTheme = () => { if (wrap.isConnected) { render(); renderTree(); buildMenuBar(); } };
+  window.addEventListener("icontheme-update", onIconTheme);
 
   const initialTitle = currentPath.length ? t(currentPath[currentPath.length - 1]) : "Mekibel";
   winId = openWindow({
@@ -1141,6 +1145,7 @@ export function openSettings() {
     <div class="settings-tabs" role="tablist">
       <button role="tab" data-tab="background" class="active">Background</button>
       <button role="tab" data-tab="screensaver">Screen Saver</button>
+      <button role="tab" data-tab="icons">Icons</button>
       <button role="tab" data-tab="appearance">Appearance</button>
       <button role="tab" data-tab="effects">Effects</button>
       <button role="tab" data-tab="settings">Settings</button>
@@ -1204,6 +1209,22 @@ export function openSettings() {
         (val) => setSaver(val)
       ));
       body.querySelector("#ss-preview").addEventListener("click", () => startScreensaver());
+    } else if (tab === "icons") {
+      body.innerHTML = `
+        <div class="settings-row">
+          <label class="settings-label">Icon set</label>
+          <div class="icon-theme-slot"></div>
+        </div>
+        <p class="settings-hint">Switch between Windows 98 and Windows XP icon styles. XP positions are best-guesses; some may need tuning.</p>
+      `;
+      const slot = body.querySelector(".icon-theme-slot");
+      slot.appendChild(makeWin98Select(
+        ICON_THEMES.map(t => ({ value: t.id, label: t.label })),
+        getIconTheme(),
+        (val) => {
+          setIconTheme(val);
+        }
+      ));
     } else if (tab === "appearance") {
       body.innerHTML = `
         <p class="settings-hint">Color schemes — coming soon.</p>

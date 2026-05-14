@@ -147,26 +147,62 @@ const POWER = `
 // edges. The little SVGs above are kept for chrome elements we couldn't
 // find a Win98 equivalent for (arrows, search, run, logout, restart,
 // power, document).
-function png(file, s) {
+import { getIconTheme } from "./icon-theme.js";
+
+function png98(file, s) {
   return `<img class="ico ico-png" src="assets/icons/win98/${file}" width="${s}" height="${s}" alt="" draggable="false" style="image-rendering:pixelated">`;
 }
+// XP icons live in a 736×704 sprite atlas of 32px tiles. (col, row) →
+// CSS background-position with image-rendering: pixelated. Positions
+// below are best-guess from visual inspection — refine via the
+// /icon-picker.html tool when you find a better tile.
+const ATLAS_URL = "assets/icons/winxp/WinIcons_32.png";
+const ATLAS_W = 736, ATLAS_H = 704, TILE = 32;
+function xpSprite(col, row, s) {
+  const k = s / TILE;
+  const sx = col * TILE * k, sy = row * TILE * k;
+  return `<span class="ico ico-xp" style="display:inline-block;width:${s}px;height:${s}px;background:url('${ATLAS_URL}') -${sx}px -${sy}px / ${ATLAS_W * k}px ${ATLAS_H * k}px no-repeat;image-rendering:pixelated;vertical-align:middle"></span>`;
+}
+function make(win98File, xpPos) {
+  return (s = 16) => {
+    if (getIconTheme() === "xp" && xpPos) return xpSprite(xpPos.col, xpPos.row, s);
+    return png98(win98File, s);
+  };
+}
+// XP tile positions (col, row) — initial guesses. Replace via icon-picker.html.
+const XP = {
+  folder:      { col:  5, row:  0 },
+  folderOpen:  { col:  2, row:  3 },
+  recycle:     { col:  0, row:  2 },
+  help:        { col:  2, row:  1 },
+  notepad:     { col:  2, row:  4 },
+  picture:     { col:  0, row:  4 },
+  paint:       { col:  4, row:  4 },
+  myComputer:  { col:  1, row:  9 },
+  briefcase:   { col:  6, row:  8 },
+  mail:        { col:  4, row:  2 },
+  movie:       { col:  4, row: 12 },
+  minesweeper: { col:  3, row: 16 },
+  gear:        { col:  4, row:  8 },
+  calculator:  { col:  2, row:  6 },
+};
 
 export const ICONS = {
-  folder:      (s = 16) => png("folder.png", s),
-  folderOpen:  (s = 16) => png("folder-open.png", s),
+  folder:      make("folder.png",       XP.folder),
+  folderOpen:  make("folder-open.png",  XP.folderOpen),
   document:    (s = 16) => wrap(DOCUMENT, s),
-  notepad:     (s = 16) => png("notepad.png", s),
-  myComputer:  (s = 16) => png("my-computer.png", s),
-  recycle:     (s = 16) => png("recycle.png", s),
-  picture:     (s = 16) => png("picture.png", s),
-  paint:       (s = 16) => png("paint.png", s),
-  minesweeper: (s = 16) => png("minesweeper.png", s),
-  briefcase:   (s = 16) => png("briefcase.png", s),
-  mail:        (s = 16) => png("mail.png", s),
-  movie:       (s = 16) => png("movie.png", s),
-  gear:        (s = 16) => png("gear.png", s),
-  help:        (s = 16) => png("help.png", s),
-  calculator:  (s = 16) => png("calculator.png", s),
+  notepad:     make("notepad.png",      XP.notepad),
+  myComputer:  make("my-computer.png",  XP.myComputer),
+  recycle:     make("recycle.png",      XP.recycle),
+  picture:     make("picture.png",      XP.picture),
+  paint:       make("paint.png",        XP.paint),
+  minesweeper: make("minesweeper.png",  XP.minesweeper),
+  briefcase:   make("briefcase.png",    XP.briefcase),
+  mail:        make("mail.png",         XP.mail),
+  movie:       make("movie.png",        XP.movie),
+  gear:        make("gear.png",         XP.gear),
+  help:        make("help.png",         XP.help),
+  calculator:  make("calculator.png",   XP.calculator),
   arrowLeft:   (s = 16) => wrap(ARROW_LEFT, s),
   arrowRight:  (s = 16) => wrap(ARROW_RIGHT, s),
   arrowUp:     (s = 16) => wrap(ARROW_UP, s),

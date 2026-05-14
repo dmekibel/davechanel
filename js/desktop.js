@@ -41,6 +41,12 @@ export function initDesktop() {
   });
   // Re-render desktop when a Paint drawing is saved here, etc.
   window.addEventListener("userfs-update", () => renderDesktopIcons());
+  // Icon theme swap (Win98 ↔ XP) also triggers a full re-render.
+  window.addEventListener("icontheme-update", () => {
+    renderDesktopIcons();
+    const menuEl = document.getElementById("start-menu");
+    if (menuEl) buildStartMenu(menuEl);
+  });
 }
 
 // Re-lay-out the desktop icon grid only when the viewport ORIENTATION
