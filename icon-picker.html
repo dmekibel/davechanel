@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XP icon picker</title>
+<style>
+  body { margin: 0; background: #008080; font-family: Tahoma, sans-serif; color: #fff; padding: 12px; }
+  h1 { font-size: 14px; margin: 0 0 8px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+  .atlas-wrap { position: relative; display: inline-block; image-rendering: pixelated; }
+  .atlas {
+    image-rendering: pixelated;
+    display: block;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.18) 0 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.18) 0 1px, transparent 1px);
+    background-size: var(--cell) var(--cell);
+    pointer-events: none;
+  }
+  .hover-box {
+    position: absolute; width: var(--cell); height: var(--cell);
+    border: 2px solid #ffe900; pointer-events: none; display: none;
+  }
+  .pick-box {
+    position: absolute; width: var(--cell); height: var(--cell);
+    border: 2px solid #ff3a3a; pointer-events: none;
+  }
+  .sidebar {
+    background: #002040; color: #fff; padding: 10px 14px; border-radius: 4px;
+    min-width: 260px; font-size: 12px; line-height: 1.5;
+  }
+  .sidebar code { background: rgba(255,255,255,0.12); padding: 1px 4px; border-radius: 2px; }
+  .controls label { display: block; margin: 6px 0; }
+  .controls input[type=text] { width: 100%; background: #001020; color: #fff; border: 1px solid #335; padding: 4px 6px; font-family: inherit; font-size: 12px; }
+  button { background: #225; color: #fff; border: 1px solid #557; padding: 4px 10px; cursor: pointer; }
+  button:hover { background: #336; }
+  .picks { margin-top: 12px; max-height: 320px; overflow-y: auto; }
+  .picks .pick { display: flex; align-items: center; gap: 8px; padding: 4px; border-bottom: 1px solid #114; }
+  .picks .pick img { image-rendering: pixelated; width: 32px; height: 32px; background: #008; }
+  .picks .pick .meta { flex: 1; }
+  .picks .pick .name { font-weight: 700; }
+  .picks .pick .coord { color: #9bf; font-size: 11px; }
+  .toggle { margin: 8px 0; }
+  .toggle button { margin-right: 4px; }
+  pre.export {
+    background: #001020; color: #9bf; padding: 8px; border-radius: 4px;
+    font-size: 11px; max-height: 180px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+  }
+</style>
+</head><body>
+<h1>WinXP atlas picker — click a tile to record (name, col, row, x, y)</h1>
+<div class="row">
+  <div class="atlas-wrap" id="aw" style="--cell:32px">
+    <img class="atlas" id="atlas" src="assets/icons/winxp/WinIcons_32.png">
+    <div class="grid"></div>
+    <div class="hover-box" id="hover"></div>
+    <div id="picks-overlay"></div>
+  </div>
+  <div class="sidebar">
+    <div class="toggle">
+      Size:
+      <button onclick="setSize(32)">32 px</button>
+      <button onclick="setSize(48)">48 px</button>
+    </div>
+    <div class="controls">
+      <label>Next pick name:
+        <input id="name" type="text" value="my-computer">
+      </label>
+      <button onclick="reset()">Clear picks</button>
+    </div>
+    <div class="picks" id="picks"></div>
+    <h3 style="margin:14px 0 4px;font-size:12px">CSS export</h3>
+    <pre class="export" id="exportCss"></pre>
+    <h3 style="margin:14px 0 4px;font-size:12px">JS map</h3>
+    <pre class="export" id="exportJs"></pre>
+  </div>
+</div>
+<script>
+  let cell = 32;
+  let atlasSrc = "assets/icons/winxp/WinIcons_32.png";
+  const aw = document.getElementById("aw");
+  const atlas = document.getElementById("atlas");
+  const hover = document.getElementById("hover");
+  const picksEl = document.getElementById("picks");
+  const overlay = document.getElementById("picks-overlay");
+  const nameInput = document.getElementById("name");
+  const picks = JSON.parse(localStorage.getItem("xp-picks") || "[]");
+
+  function setSize(s) {
+    cell = s;
+    atlasSrc = s === 48 ? "assets/icons/winxp/WinIcons_48.png" : "assets/icons/winxp/WinIcons_32.png";
+    atlas.src = atlasSrc;
+    aw.style.setProperty("--cell", s + "px");
+    render();
+  }
+  function tileFromEvent(e) {
+    const r = atlas.getBoundingClientRect();
+    const px = e.clientX - r.left;
+    const py = e.clientY - r.top;
+    return {
+      col: Math.floor(px / cell),
+      row: Math.floor(py / cell),
+      x: Math.floor(px / cell) * cell,
+      y: Math.floor(py / cell) * cell,
+    };
+  }
+  atlas.addEventListener("mousemove", (e) => {
+    const t = tileFromEvent(e);
+    hover.style.display = "block";
+    hover.style.left = t.x + "px";
+    hover.style.top  = t.y + "px";
+  });
+  atlas.addEventListener("mouseleave", () => { hover.style.display = "none"; });
+  atlas.addEventListener("click", (e) => {
+    const t = tileFromEvent(e);
+    const name = (nameInput.value || "icon-" + picks.length).trim();
+    picks.push({ name, col: t.col, row: t.row, x: t.x, y: t.y, cell });
+    save(); render();
+  });
+  function save() {
+    localStorage.setItem("xp-picks", JSON.stringify(picks));
+  }
+  function reset() { picks.length = 0; save(); render(); }
+  function render() {
+    overlay.innerHTML = "";
+    for (const p of picks) {
+      if (p.cell !== cell) continue;
+      const box = document.createElement("div");
+      box.className = "pick-box";
+      box.style.left = p.x + "px";
+      box.style.top  = p.y + "px";
+      overlay.appendChild(box);
+    }
+    picksEl.innerHTML = picks.map((p, i) => `
+      <div class="pick">
+        <img src="assets/icons/winxp/WinIcons_${p.cell}.png" style="object-fit:none;object-position:-${p.x}px -${p.y}px;width:${p.cell}px;height:${p.cell}px">
+        <div class="meta">
+          <div class="name">${p.name}</div>
+          <div class="coord">col ${p.col}, row ${p.row}  ·  (${p.x}, ${p.y})  ·  ${p.cell}px</div>
+        </div>
+        <button onclick="picks.splice(${i},1);save();render()">×</button>
+      </div>
+    `).join("");
+    document.getElementById("exportCss").textContent = picks.map(p =>
+      `.xp-ico-${p.name} { background-image: url("assets/icons/winxp/WinIcons_${p.cell}.png"); background-position: -${p.x}px -${p.y}px; width: ${p.cell}px; height: ${p.cell}px; }`
+    ).join("\n");
+    document.getElementById("exportJs").textContent = "export const XP_ICONS = {\n" + picks.map(p =>
+      `  "${p.name}": { x: ${p.x}, y: ${p.y}, size: ${p.cell} },`
+    ).join("\n") + "\n};";
+  }
+  render();
+</script>
+</body></html>
+</content>
