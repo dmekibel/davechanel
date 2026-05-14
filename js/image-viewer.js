@@ -250,17 +250,26 @@ export function openImageViewer(arg1, title) {
     if (list.length < 2) return;
     const prevItem = list[(index - 1 + list.length) % list.length];
     const nextItem = list[(index + 1) % list.length];
-    const make = (slot, item) => {
-      // Warm the THUMB so the next loadCurrent's first-paint is instant
-      // even on slow networks. Then load the preview, which is what
-      // gets shown during the swipe transition.
-      if (item.thumb) { const w = new Image(); w.src = item.thumb; }
+    // Load thumb AND preview for each neighbor. Whichever lands first
+    // becomes the placeholder we use during the next swipe / on commit;
+    // the higher level replaces the lower as it arrives. The `_level`
+    // tag prevents a late-arriving thumb from downgrading a preview.
+    const make = (slot, level, url) => {
+      if (!url) return;
       const im = new Image();
-      im.onload = () => { neighbors[slot] = im; };
-      im.src = item.preview || item.thumb || item.src;
+      im.onload = () => {
+        const cur = neighbors[slot];
+        if (!cur || (cur._level || 0) < level) {
+          im._level = level;
+          neighbors[slot] = im;
+        }
+      };
+      im.src = url;
     };
-    make("prev", prevItem);
-    make("next", nextItem);
+    make("prev", 1, prevItem.thumb);
+    make("prev", 2, prevItem.preview);
+    make("next", 1, nextItem.thumb);
+    make("next", 2, nextItem.preview);
   }
 
   // Animate swipeOffsetX from its current value to `target`, then run cb.
@@ -381,7 +390,7 @@ export function openImageViewer(arg1, title) {
   // previous load can't overwrite the current image.
   let loadToken = 0;
 
-  function loadCurrent() {
+  function loadCurrent(opts = {}) {
     if (!list.length || index < 0 || index >= list.length) {
       loaded = false;
       updateNavVisibility();
@@ -390,15 +399,19 @@ export function openImageViewer(arg1, title) {
     }
     const cur = list[index];
     setTitle(cur.name || "Image Viewer");
-    loaded = false;
+    // Only reset loaded if there's no pre-seeded image to display.
+    if (!opts.startLevel) loaded = false;
 
     const myToken = ++loadToken;
     const tinyURL = cur.thumb || cur.preview || cur.src;
     const mainURL = cur.preview || cur.src;
     const fullURL = cur.src;
 
-    let currentLevel = 0;       // 0 nothing, 1 thumb, 2 preview, 3 detail
-    let hasInitialFit = false;
+    // Seed level from caller (e.g. next() set `img` to a preloaded preview
+    // → startLevel = 2, so we skip the thumb/preview fetches and only
+    // upgrade to detail). Same for hasInitialFit — already fit when preset.
+    let currentLevel  = opts.startLevel || 0;
+    let hasInitialFit = currentLevel > 0;
 
     const apply = (next, level) => {
       // Bail if user has navigated away to a different image since.
@@ -438,8 +451,9 @@ export function openImageViewer(arg1, title) {
       next.src = url;
     };
 
-    fetchAt(tinyURL, 1);
-    if (mainURL && mainURL !== tinyURL) fetchAt(mainURL, 2);
+    // Skip fetches we've already satisfied via the preloaded neighbor.
+    if (currentLevel < 1) fetchAt(tinyURL, 1);
+    if (mainURL && mainURL !== tinyURL && currentLevel < 2) fetchAt(mainURL, 2);
     if (fullURL && fullURL !== mainURL) fetchAt(fullURL, 3);
 
     updateNavVisibility();
@@ -511,17 +525,30 @@ export function openImageViewer(arg1, title) {
     pinchStartDist = 0;
     pinchAnchorImg = null;
   }
+  function seedFromPreloaded(slot) {
+    // Use whatever quality is in neighbors[slot] as the immediate img so
+    // the user never sees a blank "Loading…" between nav and first paint.
+    const pre = neighbors[slot];
+    if (!pre || !pre.naturalWidth) return 0;
+    img = pre;
+    loaded = true;
+    return pre._level || 1;
+  }
   function prev() {
     if (list.length < 2) return;
     resetGestureState();
+    const level = seedFromPreloaded("prev");
     index = (index - 1 + list.length) % list.length;
-    loadCurrent();
+    if (level) { setTimeout(() => { resize(); fit(); }, 0); }
+    loadCurrent({ startLevel: level });
   }
   function next() {
     if (list.length < 2) return;
     resetGestureState();
+    const level = seedFromPreloaded("next");
     index = (index + 1) % list.length;
-    loadCurrent();
+    if (level) { setTimeout(() => { resize(); fit(); }, 0); }
+    loadCurrent({ startLevel: level });
   }
 
   // Pan with drag
