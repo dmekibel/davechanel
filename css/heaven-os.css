@@ -1618,6 +1618,14 @@ body[data-wallpaper="sky"] .desktop {
     linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
 }
 
+/* XP wallpapers — placeholder gradients until real Bliss/Azul images land */
+body[data-wallpaper="bliss"]  .desktop {
+  background: linear-gradient(180deg, #4a90d9 0%, #6cc04b 65%, #2a7a3a 100%);
+}
+body[data-wallpaper="azul"]   .desktop {
+  background: linear-gradient(180deg, #1e5db8 0%, #3aa3d9 50%, #1a3a8b 100%);
+}
+
 /* Mini-desktop preview inside Settings respects the same data-wp values */
 .mini-desk[data-wp="sky"] {
   background:
@@ -1635,6 +1643,12 @@ body[data-wallpaper="sky"] .desktop {
   background: url("../assets/icons/clouds.jpg") repeat;
   image-rendering: pixelated;
   background-size: 80px;
+}
+.mini-desk[data-wp="bliss"]  {
+  background: linear-gradient(180deg, #4a90d9 0%, #6cc04b 65%, #2a7a3a 100%);
+}
+.mini-desk[data-wp="azul"]   {
+  background: linear-gradient(180deg, #1e5db8 0%, #3aa3d9 50%, #1a3a8b 100%);
 }
 
 /* === Desktop ======================================================= */

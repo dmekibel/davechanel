@@ -11,8 +11,11 @@ import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
 import { openPaint } from "./paint.js";
 import { openImageViewer } from "./image-viewer.js";
 import { openMinesweeper } from "./minesweeper.js";
-import { WALLPAPERS, getWallpaper, setWallpaper } from "./wallpaper.js";
-import { ICON_THEMES, getIconTheme, setIconTheme } from "./icon-theme.js";
+import {
+  MODES, MODE_LIST,
+  getMode, setMode,
+  getWallpaper, setWallpaper,
+} from "./os-mode.js";
 import { showContextMenu } from "./context-menu.js";
 import { currentZoom } from "./scale.js";
 import { t } from "./i18n.js";
@@ -1136,10 +1139,12 @@ export function openWelcome() {
 }
 
 export function openSettings() {
+  const initialMode = getMode();
+  let pendingMode = initialMode;
   const initialWp = getWallpaper();
-  let pendingWp = initialWp;
-  const initialIconTheme = getIconTheme();
-  let pendingIconTheme = initialIconTheme;
+  // pendingWp is per-mode so switching mode in the UI doesn't lose the
+  // other mode's wallpaper pick when the user cancels.
+  const pendingWpByMode = { win98: getWallpaper("win98"), xp: getWallpaper("xp") };
 
   const wrap = document.createElement("div");
   wrap.className = "settings";
@@ -1147,7 +1152,6 @@ export function openSettings() {
     <div class="settings-tabs" role="tablist">
       <button role="tab" data-tab="background" class="active">Background</button>
       <button role="tab" data-tab="screensaver">Screen Saver</button>
-      <button role="tab" data-tab="icons">Icons</button>
       <button role="tab" data-tab="appearance">Appearance</button>
       <button role="tab" data-tab="effects">Effects</button>
       <button role="tab" data-tab="settings">Settings</button>
@@ -1166,33 +1170,54 @@ export function openSettings() {
   function renderTab(tab) {
     body.dataset.pane = tab;
     if (tab === "background") {
+      const curWp = pendingWpByMode[pendingMode];
       body.innerHTML = `
         <div class="settings-preview">
           <div class="monitor">
             <div class="monitor-screen">
-              <div class="mini-desk" data-wp="${pendingWp}"></div>
+              <div class="mini-desk" data-wp="${curWp}" data-os="${pendingMode}"></div>
             </div>
             <div class="monitor-stand"></div>
             <div class="monitor-base"></div>
           </div>
         </div>
         <div class="settings-row">
+          <label class="settings-label">Theme</label>
+          <div class="mode-select-slot"></div>
+        </div>
+        <div class="settings-row">
           <label class="settings-label">Wallpaper</label>
           <div class="wp-select-slot"></div>
         </div>
-        <p class="settings-hint">Pick a wallpaper, then click <b>Apply</b> or <b>OK</b>. <b>Cancel</b> reverts.</p>
+        <p class="settings-hint">Theme switches icons, chrome, and wallpaper set together. Each theme has its own wallpaper choices.</p>
       `;
-      const slot = body.querySelector(".wp-select-slot");
+      const modeSlot = body.querySelector(".mode-select-slot");
+      const wpSlot = body.querySelector(".wp-select-slot");
       const desk = body.querySelector(".mini-desk");
-      const sel = makeWin98Select(
-        WALLPAPERS.map(w => ({ value: w.id, label: w.label })),
-        pendingWp,
+
+      const rebuildWpSelect = () => {
+        wpSlot.innerHTML = "";
+        wpSlot.appendChild(makeWin98Select(
+          MODES[pendingMode].wallpapers.map(w => ({ value: w.id, label: w.label })),
+          pendingWpByMode[pendingMode],
+          (val) => {
+            pendingWpByMode[pendingMode] = val;
+            desk.dataset.wp = val;
+          }
+        ));
+      };
+
+      modeSlot.appendChild(makeWin98Select(
+        MODE_LIST.map(m => ({ value: m.id, label: m.label })),
+        pendingMode,
         (val) => {
-          pendingWp = val;
-          desk.dataset.wp = pendingWp;
+          pendingMode = val;
+          desk.dataset.os = val;
+          desk.dataset.wp = pendingWpByMode[val];
+          rebuildWpSelect();
         }
-      );
-      slot.appendChild(sel);
+      ));
+      rebuildWpSelect();
     } else if (tab === "screensaver") {
       body.innerHTML = `
         <div class="settings-row">
@@ -1211,20 +1236,6 @@ export function openSettings() {
         (val) => setSaver(val)
       ));
       body.querySelector("#ss-preview").addEventListener("click", () => startScreensaver());
-    } else if (tab === "icons") {
-      body.innerHTML = `
-        <div class="settings-row">
-          <label class="settings-label">Icon set</label>
-          <div class="icon-theme-slot"></div>
-        </div>
-        <p class="settings-hint">Pick a set and press <b>Apply</b> or <b>OK</b>. Already-open windows keep their old taskbar / titlebar icons until you close and reopen them.</p>
-      `;
-      const slot = body.querySelector(".icon-theme-slot");
-      slot.appendChild(makeWin98Select(
-        ICON_THEMES.map(t => ({ value: t.id, label: t.label })),
-        pendingIconTheme,
-        (val) => { pendingIconTheme = val; }    // don't apply until OK/Apply
-      ));
     } else if (tab === "appearance") {
       body.innerHTML = `
         <p class="settings-hint">Color schemes — coming soon.</p>
@@ -1272,20 +1283,24 @@ export function openSettings() {
     flush: true,
   });
 
+  const applyPending = () => {
+    // Apply the wallpaper picks for both modes (they persist independently)
+    setWallpaper(pendingWpByMode.win98, "win98");
+    setWallpaper(pendingWpByMode.xp,    "xp");
+    // Then switch mode if it changed
+    if (pendingMode !== getMode()) setMode(pendingMode);
+  };
   wrap.querySelector('[data-act="ok"]').addEventListener("click", () => {
-    setWallpaper(pendingWp);
-    if (pendingIconTheme !== getIconTheme()) setIconTheme(pendingIconTheme);
+    applyPending();
     closeWindow(id);
   });
   wrap.querySelector('[data-act="cancel"]').addEventListener("click", () => {
-    setWallpaper(initialWp);
-    if (initialIconTheme !== getIconTheme()) setIconTheme(initialIconTheme);
+    // Restore initial mode + initial wallpaper of that mode
+    if (getMode() !== initialMode) setMode(initialMode);
+    if (getWallpaper(initialMode) !== initialWp) setWallpaper(initialWp, initialMode);
     closeWindow(id);
   });
-  wrap.querySelector('[data-act="apply"]').addEventListener("click", () => {
-    setWallpaper(pendingWp);
-    if (pendingIconTheme !== getIconTheme()) setIconTheme(pendingIconTheme);
-  });
+  wrap.querySelector('[data-act="apply"]').addEventListener("click", applyPending);
   return id;
 }
 

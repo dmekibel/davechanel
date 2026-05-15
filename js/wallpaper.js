@@ -1,32 +1,23 @@
-// Wallpaper / desktop background controller.
-// Persists choice in localStorage; applies a data-wallpaper attribute on <body>.
-// The wallpaper paints inside .desktop only — body stays solid black so the
-// iOS safe-area side bands read as a deliberate device-bezel frame.
+// DEPRECATED — use os-mode.js directly.
+// This file is a backward-compat shim from when wallpaper was a flat
+// 5-option list independent of icon theme. The unified os-mode model
+// scopes wallpapers under each mode (win98 / xp). New code should import
+// from ./os-mode.js.
 
-const KEY = "heaven-os.wallpaper";
+import {
+  apply,
+  getMode,
+  getWallpaper as osGetWallpaper,
+  setWallpaper as osSetWallpaper,
+  MODES,
+} from "./os-mode.js";
 
+// Legacy flat list — union of all modes' wallpapers, keeps id+label shape.
 export const WALLPAPERS = [
-  { id: "teal",   label: "Classic Win98 Teal (default)" },
-  { id: "sky",    label: "Sky" },
-  { id: "clouds", label: "Pixel Clouds" },
-  { id: "purple", label: "Purple Twilight" },
-  { id: "black",  label: "Black" },
+  ...MODES.win98.wallpapers,
+  ...MODES.xp.wallpapers,
 ];
 
-export function getWallpaper() {
-  try {
-    const v = localStorage.getItem(KEY);
-    if (v === "heaven-sky") return "sky";   // migrate legacy id
-    return v || "teal";
-  } catch (_) { return "teal"; }
-}
-
-export function setWallpaper(id) {
-  try { localStorage.setItem(KEY, id); } catch (_) {}
-  applyWallpaper();
-}
-
-export function applyWallpaper() {
-  const id = getWallpaper();
-  if (document.body) document.body.dataset.wallpaper = id;
-}
+export const getWallpaper = () => osGetWallpaper(getMode());
+export const setWallpaper = (id) => osSetWallpaper(id, getMode());
+export const applyWallpaper = apply;

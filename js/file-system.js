@@ -7,6 +7,21 @@
 // data is the payload (string, url, html, or folder path).
 
 import { FINE_ART } from "./fine-art-manifest.js";
+import { UPSCALES } from "./upscale-manifest.js";
+
+// Dev mode: ?dev=1 in the URL surfaces the "Upscale Tests" folder so
+// David can review gpt-image-2 variants via the Image Viewer. Persists
+// for the rest of the browser session so reloads keep the flag.
+const isDev = (() => {
+  try {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("dev")) {
+      sessionStorage.setItem("dev", params.get("dev") || "1");
+    }
+    return (sessionStorage.getItem("dev") || "") !== "" && sessionStorage.getItem("dev") !== "0";
+  } catch (_) { return false; }
+})();
 
 export const FS = {
   name: "Mekibel",
@@ -29,6 +44,13 @@ export const FS = {
         // Add new pieces by dropping the originals into content/images/
         // and running ./scripts/process-images.sh
         ...FINE_ART,
+        // Dev-only — gpt-image-2 upscale variants for review, gated by ?dev=1
+        ...(isDev ? [{
+          name: "Upscale Tests (dev)",
+          type: "folder",
+          icon: "🔬",
+          children: UPSCALES,
+        }] : []),
       ],
     },
     {
