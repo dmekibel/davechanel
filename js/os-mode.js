@@ -33,8 +33,13 @@ export const MODES = {
     label: "Windows 98",
     default_wallpaper: "teal",
     wallpapers: [
-      { id: "teal",   label: "Classic Teal" },
-      { id: "clouds", label: "Clouds" },
+      { id: "teal",         label: "Classic Teal" },
+      { id: "clouds",       label: "Clouds" },
+      { id: "setup",        label: "Setup" },
+      { id: "forest",       label: "Forest" },
+      { id: "sandstone",    label: "Sandstone" },
+      { id: "black-thatch", label: "Black Thatch" },
+      { id: "triangles",    label: "Triangles" },
     ],
   },
   xp: {
@@ -42,8 +47,12 @@ export const MODES = {
     label: "Windows XP",
     default_wallpaper: "bliss",
     wallpapers: [
-      { id: "bliss", label: "Bliss" },
-      { id: "azul",  label: "Azul" },
+      { id: "bliss",            label: "Bliss" },
+      { id: "azul",             label: "Azul" },
+      { id: "autumn",           label: "Autumn" },
+      { id: "crystal",          label: "Crystal" },
+      { id: "red-moon-desert",  label: "Red Moon Desert" },
+      { id: "stonehenge",       label: "Stonehenge" },
     ],
   },
 };

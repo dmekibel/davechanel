@@ -1606,24 +1606,36 @@ body[data-wallpaper="purple"] .desktop {
     radial-gradient(ellipse at 50% 100%, rgba(255,200,255,0.18) 0%, transparent 60%),
     linear-gradient(180deg, #2a1a4d 0%, #5b3a8e 60%, #1a1a3a 100%);
 }
-body[data-wallpaper="clouds"] .desktop {
-  background:
-    url("../assets/icons/clouds.jpg") repeat,
-    #6dbcf0;
-  image-rendering: pixelated;
-}
 body[data-wallpaper="sky"] .desktop {
   background:
     radial-gradient(ellipse at 50% 70%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 55%),
     linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
 }
 
-/* XP wallpapers — placeholder gradients until real Bliss/Azul images land */
-body[data-wallpaper="bliss"]  .desktop {
-  background: linear-gradient(180deg, #4a90d9 0%, #6cc04b 65%, #2a7a3a 100%);
-}
-body[data-wallpaper="azul"]   .desktop {
-  background: linear-gradient(180deg, #1e5db8 0%, #3aa3d9 50%, #1a3a8b 100%);
+/* XP wallpapers — originals from WINNT-Moments/Windows-Wallpaper-Archive,
+   shipped at 800x600 native, cover-scaled to viewport (intentionally
+   retro at modern resolutions). */
+body[data-wallpaper="bliss"]            .desktop { background: url("../assets/wallpapers/xp/bliss.jpg")            center / cover no-repeat; }
+body[data-wallpaper="azul"]             .desktop { background: url("../assets/wallpapers/xp/azul.jpg")             center / cover no-repeat; }
+body[data-wallpaper="autumn"]           .desktop { background: url("../assets/wallpapers/xp/autumn.jpg")           center / cover no-repeat; }
+body[data-wallpaper="crystal"]          .desktop { background: url("../assets/wallpapers/xp/crystal.jpg")          center / cover no-repeat; }
+body[data-wallpaper="red-moon-desert"]  .desktop { background: url("../assets/wallpapers/xp/red-moon-desert.jpg")  center / cover no-repeat; }
+body[data-wallpaper="stonehenge"]       .desktop { background: url("../assets/wallpapers/xp/stonehenge.jpg")       center / cover no-repeat; }
+
+/* Win98 wallpapers — cover (full image) + tile (repeating pattern) variants.
+   Tiles use pixelated rendering for crisp pixel-art edges. */
+body[data-wallpaper="setup"]        .desktop { background: url("../assets/wallpapers/win98/setup.jpg")        center / cover no-repeat; }
+body[data-wallpaper="forest"]       .desktop { background: url("../assets/wallpapers/win98/forest.png")       repeat; image-rendering: pixelated; }
+body[data-wallpaper="sandstone"]    .desktop { background: url("../assets/wallpapers/win98/sandstone.png")    repeat; image-rendering: pixelated; }
+body[data-wallpaper="black-thatch"] .desktop { background: url("../assets/wallpapers/win98/black-thatch.png") repeat #000; image-rendering: pixelated; }
+body[data-wallpaper="triangles"]    .desktop { background: url("../assets/wallpapers/win98/triangles.png")    repeat #008080; image-rendering: pixelated; }
+
+/* Replace the old "clouds" rule (was pointing at icons/clouds.jpg) with the
+   real Win98 cover wallpaper. The earlier rule wins because it appears first,
+   but we override it here for clarity. */
+body[data-wallpaper="clouds"] .desktop {
+  background: url("../assets/wallpapers/win98/clouds.jpg") center / cover no-repeat;
+  image-rendering: auto;
 }
 
 /* Mini-desktop preview inside Settings respects the same data-wp values */
@@ -1639,17 +1651,18 @@ body[data-wallpaper="azul"]   .desktop {
     radial-gradient(ellipse at 50% 100%, rgba(255,200,255,0.18) 0%, transparent 60%),
     linear-gradient(180deg, #2a1a4d 0%, #5b3a8e 60%, #1a1a3a 100%);
 }
-.mini-desk[data-wp="clouds"] {
-  background: url("../assets/icons/clouds.jpg") repeat;
-  image-rendering: pixelated;
-  background-size: 80px;
-}
-.mini-desk[data-wp="bliss"]  {
-  background: linear-gradient(180deg, #4a90d9 0%, #6cc04b 65%, #2a7a3a 100%);
-}
-.mini-desk[data-wp="azul"]   {
-  background: linear-gradient(180deg, #1e5db8 0%, #3aa3d9 50%, #1a3a8b 100%);
-}
+.mini-desk[data-wp="clouds"]          { background: url("../assets/wallpapers/win98/clouds.jpg") center / cover no-repeat; }
+.mini-desk[data-wp="setup"]           { background: url("../assets/wallpapers/win98/setup.jpg")  center / cover no-repeat; }
+.mini-desk[data-wp="forest"]          { background: url("../assets/wallpapers/win98/forest.png") repeat; image-rendering: pixelated; background-size: 40px; }
+.mini-desk[data-wp="sandstone"]       { background: url("../assets/wallpapers/win98/sandstone.png") repeat; image-rendering: pixelated; background-size: 40px; }
+.mini-desk[data-wp="black-thatch"]    { background: url("../assets/wallpapers/win98/black-thatch.png") repeat #000; image-rendering: pixelated; background-size: 14px; }
+.mini-desk[data-wp="triangles"]       { background: url("../assets/wallpapers/win98/triangles.png") repeat #008080; image-rendering: pixelated; background-size: 12px; }
+.mini-desk[data-wp="bliss"]           { background: url("../assets/wallpapers/xp/bliss.jpg")            center / cover no-repeat; }
+.mini-desk[data-wp="azul"]            { background: url("../assets/wallpapers/xp/azul.jpg")             center / cover no-repeat; }
+.mini-desk[data-wp="autumn"]          { background: url("../assets/wallpapers/xp/autumn.jpg")           center / cover no-repeat; }
+.mini-desk[data-wp="crystal"]         { background: url("../assets/wallpapers/xp/crystal.jpg")          center / cover no-repeat; }
+.mini-desk[data-wp="red-moon-desert"] { background: url("../assets/wallpapers/xp/red-moon-desert.jpg")  center / cover no-repeat; }
+.mini-desk[data-wp="stonehenge"]      { background: url("../assets/wallpapers/xp/stonehenge.jpg")       center / cover no-repeat; }
 
 /* === Desktop ======================================================= */
 
