@@ -280,9 +280,10 @@ function actTAKE_PICKUP(s) {
   const idx = s.turn;
   const n = draw(s, idx, s.demand.count);
   s.consecutivePasses = 0;
-  s.log.push(`${s.players[idx].name} takes the pickup (${n}).`);
-  s.turn = nextIdx(s, idx);
-  s.demand = demandFromTop(s); // next faces a normal color demand from the pair's top
+  // taking the penalty does NOT end your turn — you keep playing, now answering
+  // the pair's own colour demand
+  s.demand = demandFromTop(s);
+  s.log.push(`${s.players[idx].name} takes the pickup (${n}) and plays on.`);
   return s;
 }
 

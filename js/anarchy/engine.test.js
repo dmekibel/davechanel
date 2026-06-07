@@ -57,9 +57,9 @@ section("T1: fresh pair -> opponent takes pickup of 1");
   eq(s.turn, 1, "turn passes to opponent");
   const before = s.players[1].hand.length;
   s = reduce(s, { type: "TAKE_PICKUP" });
-  eq(s.players[1].hand.length, before + 1, "opponent draws exactly 1");
-  eq(s.demand.type, "color", "after taking, next faces a color demand");
-  eq(s.turn, 0, "turn returns to the pair-layer's left (2p wrap)");
+  eq(s.players[1].hand.length, before + 1, "taker draws exactly 1");
+  eq(s.demand.type, "color", "after taking, the taker faces the pair's colour demand");
+  eq(s.turn, 1, "taking keeps your turn — you draw then play on");
 }
 
 // ---------------------------------------------------------------------------

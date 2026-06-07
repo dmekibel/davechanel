@@ -67,7 +67,7 @@ export function openAnarchy() {
           <h3>Direction (the core rule)</h3>
           <p>The top card's <b>colour</b> tells the next player what to do. <b>Red</b> → play <b>equal or higher</b>. <b>Black</b> → play <b>equal or lower</b>. Equal rank always works, so matching the rank is always legal.</p>
           <h3>Pairs (punish forward)</h3>
-          <p>Play two of a kind and the <i>next</i> player must <b>pick up 1</b> — unless they stack a third, switch with a 7/Ace, or take it.</p>
+          <p>Play two of a kind and the <i>next</i> player must <b>pick up 1</b> — but taking it doesn't cost their turn: they draw 1, then play on against the pair. They can instead stack a third or switch it away with a 7/Ace.</p>
           <h3>Matching &amp; three of a kind (punish back)</h3>
           <p>Play the <b>same rank</b> that's on top and the <i>previous</i> player draws: a 2nd of that rank makes them draw 1, a 3rd — a <b>triple</b> — makes them draw 2. A triple otherwise sets a normal demand; its one special power is that the 4th can be slapped.</p>
           <h3>Four of a kind</h3>
