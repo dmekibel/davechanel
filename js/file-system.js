@@ -12,7 +12,7 @@ import { UPSCALES } from "./upscale-manifest.js";
 // Dev mode: ?dev=1 in the URL surfaces the "Upscale Tests" folder so
 // David can review gpt-image-2 variants via the Image Viewer. Persists
 // for the rest of the browser session so reloads keep the flag.
-const isDev = (() => {
+export const isDev = (() => {
   try {
     if (typeof window === "undefined") return false;
     const params = new URLSearchParams(window.location.search);

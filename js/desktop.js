@@ -1,6 +1,6 @@
 // Heaven OS — desktop init: icons, start menu, clock
 
-import { rootDesktopItems } from "./file-system.js";
+import { rootDesktopItems, isDev } from "./file-system.js";
 import { openProgram, openFile } from "./programs.js";
 import { listItems } from "./user-storage.js";
 import { ICONS, iconFor } from "./icons.js";
@@ -25,6 +25,8 @@ const DESKTOP_SHORTCUTS = [
   { name: "Paint",       iconFn: () => ICONS.paint(28),       program: "paint"       },
   { name: "Minesweeper", iconFn: () => ICONS.minesweeper(28), program: "minesweeper" },
 ];
+// Dev-gated card game (?dev=1) until placement on the curated desktop is decided.
+if (isDev) DESKTOP_SHORTCUTS.push({ name: "Anarchy", iconFn: () => ICONS.anarchy(28), program: "anarchy" });
 
 export function initDesktop() {
   document.title = "David Mekibel";

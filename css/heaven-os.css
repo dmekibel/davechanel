@@ -2724,3 +2724,76 @@ body.lang-ru .login-logo {
   .exp-body { grid-template-columns: 1fr; }
   .exp-tree { display: none; }
 }
+
+/* ===== Anarchy (card game) ===================================== */
+.anarchy { display: flex; flex-direction: column; height: 100%; font-family: Tahoma, "MS Sans Serif", sans-serif; background: #c0c0c0; position: relative; }
+.anarchy-menubar { background: #c0c0c0; border-bottom: 1px solid #808080; padding: 1px 2px; flex: 0 0 auto; }
+.anarchy-menu { font-family: inherit; font-size: 12px; background: transparent; border: 1px solid transparent; padding: 2px 8px; cursor: pointer; }
+.anarchy-menu:hover { border-color: #fff #808080 #808080 #fff; }
+
+.anarchy-felt { flex: 1 1 auto; background: #047a32; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 8px 6px; overflow: hidden; position: relative; }
+.anarchy-opponents { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; min-height: 44px; }
+.anarchy-opp { display: flex; flex-direction: column; align-items: center; gap: 2px; color: #eafff0; font-size: 11px; padding: 3px 6px; border: 2px solid transparent; border-radius: 3px; }
+.anarchy-opp.active { border-color: #ffe14d; background: rgba(255,225,77,.14); }
+.anarchy-opp-back { width: 26px; height: 36px; border-radius: 3px; background: #1f3a8a; border: 1px solid #0b1c52; box-shadow: 2px 0 0 #1f3a8a, 3px 1px 0 #0b1c52; }
+.anarchy-opp-name { font-weight: bold; }
+.anarchy-opp-count { background: #002a14; padding: 0 6px; border-radius: 8px; }
+
+.anarchy-center { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 auto; justify-content: center; }
+.anarchy-badge { font-size: 14px; font-weight: bold; letter-spacing: .5px; color: #222; background: #ffe14d; padding: 5px 14px; border: 2px solid; border-color: #fffae0 #b59a00 #b59a00 #fffae0; border-radius: 2px; text-align: center; }
+.anarchy-badge.pickup { background: #ff8a5b; color: #3a1400; border-color: #ffd0bd #a23c14 #a23c14 #ffd0bd; }
+.anarchy-badge.flash { background: #d83a3a; color: #fff; }
+.anarchy-pile { display: flex; align-items: center; min-height: 64px; }
+.anarchy-run { color: #d6ffe6; font-size: 11px; min-height: 14px; font-weight: bold; }
+.anarchy-log { width: 100%; max-width: 520px; height: 58px; overflow-y: auto; background: rgba(0,0,0,.28); color: #d9ffe7; font-size: 11px; line-height: 1.45; padding: 4px 8px; border-radius: 3px; }
+.anarchy-log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* cards */
+.acard { width: 46px; height: 64px; background: #fff; border: 1px solid #333; border-radius: 4px; box-shadow: 1px 1px 2px rgba(0,0,0,.35); display: flex; flex-direction: column; justify-content: space-between; padding: 3px 4px; box-sizing: border-box; user-select: none; flex: 0 0 auto; }
+.acard.red { color: #c40000; } .acard.black { color: #111; }
+.acard .acard-r { font-size: 15px; font-weight: bold; line-height: 1; }
+.acard .acard-s { font-size: 18px; text-align: right; line-height: 1; }
+.acard.back { background: repeating-linear-gradient(45deg, #2748b0 0 4px, #1f3a8a 4px 8px); border-color: #0b1c52; }
+.acard.empty { background: transparent; border: 2px dashed rgba(255,255,255,.5); box-shadow: none; }
+
+.anarchy-hand-wrap { flex: 0 0 auto; background: #c0c0c0; border-top: 2px solid #fff; padding: 8px 8px 10px; box-shadow: 0 -1px 0 #808080 inset; }
+.anarchy-hand { display: flex; gap: 4px; overflow-x: auto; padding: 4px 2px 8px; min-height: 76px; align-items: flex-end; }
+.anarchy-hand .acard { cursor: default; transition: transform .08s; }
+.anarchy-hand .acard.legal { cursor: pointer; box-shadow: 0 0 0 2px #2a7fff, 1px 1px 2px rgba(0,0,0,.35); }
+.anarchy-hand .acard.legal:hover { transform: translateY(-6px); }
+.anarchy-hand .acard.sel { transform: translateY(-12px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
+.anarchy-hand .acard.dim { opacity: .55; }
+
+.anarchy-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 28px; }
+.anarchy-btn { font-family: Tahoma, sans-serif; font-size: 12px; padding: 4px 12px; background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
+.anarchy-btn:active { border-color: #808080 #fff #fff #808080; }
+.anarchy-btn.primary { font-weight: bold; }
+.anarchy-btn.slap { background: #d83a3a; color: #fff; border-color: #ff9a9a #7a1414 #7a1414 #ff9a9a; font-weight: bold; animation: anarchyPulse .7s infinite alternate; }
+.anarchy-btn.toggle { background: #e8e8e8; }
+@keyframes anarchyPulse { from { filter: brightness(1); } to { filter: brightness(1.35); } }
+.anarchy-wait { font-size: 12px; color: #555; font-style: italic; }
+
+.anarchy-setup { position: absolute; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 5; }
+.anarchy-setup-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 22px; max-width: 320px; text-align: center; }
+.anarchy-setup-box h2 { margin: 0 0 8px; font-size: 20px; letter-spacing: 3px; }
+.anarchy-setup-box p { margin: 0 0 14px; font-size: 12px; color: #333; }
+.anarchy-setup-btns { display: flex; gap: 8px; justify-content: center; }
+.anarchy-setup-btns button { font-family: Tahoma, sans-serif; font-size: 12px; padding: 6px 12px; background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
+.anarchy-setup-btns button:active { border-color: #808080 #fff #fff #808080; }
+.anarchy-setup-section { font-size: 11px; font-weight: bold; color: #333; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* opponents as a fan of face-down cards + count */
+.acard { position: relative; }
+.acard.mini { width: 22px; height: 30px; padding: 2px; border-radius: 3px; box-shadow: none; }
+.anarchy-opp-fan { display: flex; justify-content: center; margin-bottom: 3px; min-height: 30px; }
+.anarchy-opp-fan .acard { margin-left: -14px; }
+.anarchy-opp-fan .acard:first-child { margin-left: 0; }
+.anarchy-opp-meta { display: flex; flex-direction: column; align-items: center; line-height: 1.3; }
+.anarchy-opp-count { background: #002a14; padding: 0 6px; border-radius: 8px; font-size: 10px; }
+
+/* pass-and-play */
+.anarchy-handname { font-size: 11px; color: #333; padding: 0 2px 4px; font-weight: bold; }
+.anarchy-handoff { position: absolute; inset: 0; background: rgba(0,0,0,.62); display: flex; align-items: center; justify-content: center; z-index: 6; }
+.anarchy-handoff .anarchy-setup-box { text-align: center; }
+.anarchy-handoff-name { font-size: 15px; font-weight: bold; margin: 0 0 6px; }
+.anarchy-handoff-sub { font-size: 11px; color: #555; margin: 0 0 14px; }

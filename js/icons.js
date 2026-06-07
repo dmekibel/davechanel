@@ -167,6 +167,13 @@ function make(svgConst, file98, fileXp) {
   };
 }
 
+const ANARCHY = `
+  <rect x="1" y="3" width="8" height="11" fill="#fff" stroke="#000"/>
+  <rect x="3" y="5" width="3" height="3" fill="#d00000"/>
+  <rect x="6" y="2" width="8" height="11" fill="#fff" stroke="#000"/>
+  <rect x="9" y="4" width="3" height="3" fill="#000"/>
+`;
+
 // Every entry: (SVG hand-drawn, Win98 PNG filename, XP PNG filename).
 // All three must look like the SAME concept — folders are folders,
 // computers are computers, no surprise pictorial substitutions.
@@ -180,6 +187,7 @@ export const ICONS = {
   picture:     make(PICTURE,      "picture.png",      "picture.png"),
   paint:       make(PAINT,        "paint.png",        "paint.png"),
   minesweeper: make(MINESWEEPER,  "minesweeper.png",  "minesweeper.png"),
+  anarchy:     (s = 16) => wrap(ANARCHY, s),
   briefcase:   make(BRIEFCASE,    "briefcase.png",    "briefcase.png"),
   mail:        make(MAIL,         "mail.png",         "mail.png"),
   movie:       make(MOVIE,        "movie.png",        "movie.png"),

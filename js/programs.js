@@ -11,6 +11,7 @@ import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js";
 import { openPaint } from "./paint.js";
 import { openImageViewer } from "./image-viewer.js";
 import { openMinesweeper } from "./minesweeper.js";
+import { openAnarchy } from "./anarchy/ui.js";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
@@ -874,6 +875,7 @@ export function openProgram(progId) {
     case "paint":        return openPaint();
     case "image-viewer": return openImageViewer("", "Image Viewer");
     case "minesweeper":  return openMinesweeper();
+    case "anarchy":      return openAnarchy();
     case "welcome":      return openWelcome();
     case "settings":     return openSettings();
     case "control-panel":return openSettings();
