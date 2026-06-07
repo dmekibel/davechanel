@@ -107,6 +107,7 @@ export function openAnarchy() {
   let handoffPending = false; // local mode: hide the hand until the next player confirms
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
+  let lastTopId = null, lastPileLen = 0, oppSeatMap = {}; // for deal-in / бита animations
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
@@ -143,6 +144,35 @@ export function openAnarchy() {
     d.dataset.id = card.id;
     d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
     return d;
+  }
+
+  // where a freshly played card should fly in from (your hand, or an opponent's seat)
+  function dealOrigin(idx) {
+    if (idx == null || idx === viewer()) return { x: 0, y: 150 };
+    switch (oppSeatMap[idx]) {
+      case "seat-left": return { x: -170, y: 0 };
+      case "seat-right": return { x: 170, y: 0 };
+      case "seat-tl": return { x: -150, y: -120 };
+      case "seat-tr": return { x: 150, y: -120 };
+      default: return { x: 0, y: -130 }; // seat-top
+    }
+  }
+  // a quick sweep of the table to the бита pile
+  function biteFlyAway() {
+    const fly = document.createElement("div");
+    fly.className = "acard back anarchy-bita-card";
+    fly.style.left = "28px"; fly.style.top = "18px";
+    elPile.appendChild(fly);
+    requestAnimationFrame(() => {
+      fly.style.transition = "transform .45s ease-in, opacity .45s ease-in";
+      fly.style.transform = "translate(210px, 180px) scale(.55) rotate(18deg)";
+      fly.style.opacity = "0";
+    });
+    setTimeout(() => fly.remove(), 480);
+    const toast = document.createElement("div");
+    toast.className = "anarchy-bita-toast"; toast.textContent = "бита";
+    elPile.appendChild(toast);
+    setTimeout(() => toast.remove(), 750);
   }
 
   // ---- the move the current selection maps to (or null) ----
@@ -209,8 +239,12 @@ export function openAnarchy() {
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
-    // tapping a selected card peels it off: pair -> single -> nothing
-    if (selection.includes(id)) { selection = selection.filter((x) => x !== id); aceTake = false; render(); return; }
+    // tapping a selected card cycles it: pair -> just-this-one -> nothing
+    // (keep the card you actually tapped, so no stray twin is left raised)
+    if (selection.includes(id)) {
+      selection = selection.length === 2 ? [id] : [];
+      aceTake = false; render(); return;
+    }
     // default to the whole pair when two of a kind can be played; 7s play one at a time
     let pick = [id];
     if (card.rank !== 7) {
@@ -243,18 +277,24 @@ export function openAnarchy() {
       $(".anarchy-handoff-name").textContent = `${state.players[state.turn].name}, it's your turn.`;
     }
 
-    // opponents = everyone except the current viewer, each as a fan of face-down cards + count
+    // opponents seated around the table: 1 across the top, 2 in the upper corners,
+    // 3 as left / top / right. Each holds a compact fan (not a spread) + a count.
     elOpp.innerHTML = "";
-    state.players.forEach((p, i) => {
-      if (i === viewer()) return;
+    const opps = state.players.map((p, i) => ({ p, i })).filter((o) => o.i !== viewer());
+    const seatsByCount = { 1: ["seat-top"], 2: ["seat-tl", "seat-tr"], 3: ["seat-left", "seat-top", "seat-right"] };
+    const seats = seatsByCount[opps.length] || ["seat-top"];
+    oppSeatMap = {};
+    opps.forEach((o, k) => {
+      oppSeatMap[o.i] = seats[k] || "seat-top";
       const box = document.createElement("div");
-      box.className = "anarchy-opp" + (state.turn === i ? " active" : "");
+      box.className = "anarchy-opp " + (seats[k] || "seat-top") + (state.turn === o.i ? " active" : "");
       const fan = document.createElement("div");
       fan.className = "anarchy-opp-fan";
-      for (let k = 0; k < p.hand.length; k++) fan.appendChild(cardEl(null, { mini: true, faceUp: false }));
+      const showN = Math.min(o.p.hand.length, 8); // a held fan, capped so seats stay tidy
+      for (let j = 0; j < showN; j++) fan.appendChild(cardEl(null, { mini: true, faceUp: false }));
       const meta = document.createElement("div");
       meta.className = "anarchy-opp-meta";
-      meta.innerHTML = `<span class="anarchy-opp-name">${p.name}</span><span class="anarchy-opp-count">${p.hand.length} cards</span>`;
+      meta.innerHTML = `<span class="anarchy-opp-name">${o.p.name}</span><span class="anarchy-opp-count">${o.p.hand.length} cards</span>`;
       box.appendChild(fan); box.appendChild(meta);
       elOpp.appendChild(box);
     });
@@ -276,6 +316,18 @@ export function openAnarchy() {
       elPile.appendChild(e);
     });
     elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "pair ×2" : "";
+
+    // animations: deal the newest card in from whoever played it; sweep to бита on a clear
+    const topId = state.pile.length ? state.pile[state.pile.length - 1].id : null;
+    if (topId && topId !== lastTopId && elPile.lastChild) {
+      const front = elPile.lastChild, o = dealOrigin(state.lastPlacer);
+      front.style.transition = "none";
+      front.style.transform = `translate(${o.x}px, ${o.y}px) scale(.85)`;
+      requestAnimationFrame(() => { front.style.transition = "transform .26s ease-out"; front.style.transform = ""; });
+    }
+    if (lastPileLen > 0 && state.pile.length === 0) biteFlyAway();
+    lastTopId = topId;
+    lastPileLen = state.pile.length;
 
     elLog.innerHTML = state.log.slice(-4).map((l) => `<div>${l}</div>`).join("");
     elLog.scrollTop = elLog.scrollHeight;
@@ -382,7 +434,7 @@ export function openAnarchy() {
     if (state.demand.type === "pickup") add("Take " + state.demand.count, () => apply({ type: "TAKE_PICKUP" }), "");
 
     const reserved = reservedSet();
-    const { active, legal: activeLegal } = activeAndLegal();
+    const { active } = activeAndLegal();
     // hold a straight off to the side (bluff a bigger hand; dump it later, ideally to go out)
     if (!reserved.size) {
       const straights = findStraights(active);
@@ -393,10 +445,8 @@ export function openAnarchy() {
         add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
       }
     }
-    // pass only when the active hand genuinely can't answer a color demand
-    if (state.demand.type === "color" &&
-        !activeLegal.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH"))
-      add("Pass", () => apply({ type: "PASS" }), "");
+    // pass is always available under a colour demand — it sweeps the table to бита
+    if (state.demand.type === "color") add("Pass (clear table)", () => apply({ type: "PASS" }), "");
   }
 
   // ---- new game ----
@@ -409,6 +459,7 @@ export function openAnarchy() {
     const humanIndices = m === "cpu" ? [0] : names.map((_, i) => i);
     state = createGame({ numPlayers, humanIndices, names });
     selection = []; aceTake = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
+    lastTopId = null; lastPileLen = 0; // don't fire a stray бита on the first render
     render();
     scheduleBots();
   }

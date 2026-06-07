@@ -319,12 +319,17 @@ function actDUMP(s, action) {
 function actPASS(s) {
   if (s.demand.type === "pickup") throw new Error("cannot PASS a pickup; take it or switch");
   const idx = s.turn;
-  const n = draw(s, idx, 1);
-  s.log.push(`${s.players[idx].name} passes${n ? " and draws 1" : ""}.`);
+  // passing "beats" the table (бита): the play pile is swept away and the next
+  // player leads from scratch on an open table
+  s.removed.push(...s.pile);
+  s.pile = [];
+  recomputeTop(s);
+  s.demand = { type: "open" };
+  s.lastPlacer = null;
   s.turn = nextIdx(s, idx);
-  s.consecutivePasses += 1;
-  if (s.stock.length === 0 && s.consecutivePasses >= s.players.length) return stalemateEnd(s);
-  return s; // color demand persists across passes (15.5)
+  s.consecutivePasses = 0;
+  s.log.push(`${s.players[idx].name} passes — table to бита; ${s.players[s.turn].name} leads.`);
+  return s;
 }
 
 const HANDLERS = {
