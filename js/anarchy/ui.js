@@ -63,19 +63,23 @@ export function openAnarchy() {
       <div class="anarchy-help-box">
         <h2>HOW TO PLAY</h2>
         <div class="anarchy-help-body">
-          <p><b>Goal:</b> be the first to empty your hand.</p>
+          <p><b>Goal:</b> empty your hand first. The instant your last card lands, you win.</p>
           <h3>Direction (the core rule)</h3>
-          <p>The top card's <b>colour</b> tells the next player what to do. <b>Red</b> top → play <b>equal or higher</b>. <b>Black</b> top → play <b>equal or lower</b>. Equal rank always works.</p>
-          <h3>Pairs</h3>
-          <p>Play two of a kind and the next player must <b>pick up 1</b> — unless they stack a third, play a 7/Ace, or take it.</p>
-          <h3>Matching &amp; four of a kind</h3>
-          <p>Play the <b>same rank</b> as the top and the previous player draws cards. Complete <b>four of a kind</b> to clear the table and lead again. Holding the 4th card showing? <b>Slap</b> it anytime.</p>
+          <p>The top card's <b>colour</b> tells the next player what to do. <b>Red</b> → play <b>equal or higher</b>. <b>Black</b> → play <b>equal or lower</b>. Equal rank always works, so matching the rank is always legal.</p>
+          <h3>Pairs (punish forward)</h3>
+          <p>Play two of a kind and the <i>next</i> player must <b>pick up 1</b> — unless they stack a third, switch with a 7/Ace, or take it.</p>
+          <h3>Matching &amp; three of a kind (punish back)</h3>
+          <p>Play the <b>same rank</b> that's on top and the <i>previous</i> player draws: a 2nd of that rank makes them draw 1, a 3rd — a <b>triple</b> — makes them draw 2. A triple otherwise sets a normal demand; its one special power is that the 4th can be slapped.</p>
+          <h3>Four of a kind</h3>
+          <p>Completing four of a kind deals everyone else a card, clears the table, and you lead again. While a triple is showing, anyone holding the 4th can <b>Slap</b> it — in or out of turn.</p>
           <h3>The 7 (switch)</h3>
-          <p>Play a 7 anytime, even out of turn. It ignores direction and takes the card beneath it into your hand.</p>
+          <p>Play a 7 anytime, even out of turn. It ignores direction, cancels a pick-up, and takes the card beneath it into your hand. <b>7s go one at a time</b> — you can't play two as a pair.</p>
           <h3>The Ace</h3>
-          <p>Highest card. A black Ace lets the next player play anything; a red Ace forces another Ace.</p>
+          <p>Highest card. A <b>black</b> Ace lets the next player play anything; a <b>red</b> Ace forces another Ace (equal counts, and nothing beats an Ace) — the hardest card to follow.</p>
           <h3>Straights</h3>
-          <p>5+ in a row within 2–6 or 8–A (never crossing the 7). <b>Set aside</b> a straight to bluff a bigger hand, then <b>Dump it</b> to shed them all at once — ideally to go out.</p>
+          <p>5+ in a row within 2–6 or 8–A (never crossing the 7). <b>Set aside</b> a straight to bluff a bigger hand, then <b>Dump it</b> to shed it all at once — ideally to go out.</p>
+          <h3>Good to know</h3>
+          <p>• Can't follow a colour demand? You draw 1 and pass; the demand stays for the next player.<br>• Going out wins immediately — before any pick-up or combo the card would otherwise cause.<br>• Once the draw pile is empty there are no more draws: pure shedding to the end.</p>
         </div>
         <div class="anarchy-setup-btns"><button class="anarchy-help-close">Got it</button></div>
       </div>
@@ -154,15 +158,16 @@ export function openAnarchy() {
       if (c.rank === 14 && d.type === "pickup") return { label: "Cancel with Ace", action: { type: "ACE_CANCEL", card: c.id, take: aceTake } };
       if (c.rank === 14) return { label: aceTake ? "Play Ace + take" : "Play Ace", action: { type: "ACE_SWITCH", card: c.id, take: aceTake } };
     }
-    const want = new Set(selection);
-    const move = activeAndLegal().legal.find(
-      (m) => m.type === "PLAY" && m.cards.length === want.size && m.cards.every((id) => want.has(id))
-    );
-    if (move) {
-      const four = d.type === "pickup" && sel.length === 2;
-      return { label: four ? "Make four!" : sel.length === 2 ? "Play pair" : "Play", action: move };
-    }
-    return null;
+    // generic single/pair, matched by RANK (the engine lists one card per rank,
+    // so match on rank+count and play whatever copies are actually selected)
+    const r = sel[0].rank;
+    if (!sel.every((c) => c.rank === r)) return null;
+    const hasMove = activeAndLegal().legal.some((m) =>
+      m.type === "PLAY" && m.cards.length === sel.length &&
+      m.cards.every((cid) => ((hand.find((x) => x.id === cid) || {}).rank === r)));
+    if (!hasMove) return null;
+    const four = d.type === "pickup" && sel.length === 2;
+    return { label: four ? "Make four!" : sel.length === 2 ? "Play pair" : "Play", action: { type: "PLAY", cards: [...selection] } };
   }
 
   function apply(action) {
@@ -204,14 +209,17 @@ export function openAnarchy() {
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
-    if (selection.includes(id)) { selection = selection.filter((x) => x !== id); render(); return; }
-    if (selection.length === 1) {
-      const first = hand.find((c) => c.id === selection[0]);
-      if (first && first.rank === card.rank) selection = [selection[0], id]; // try a pair
-      else selection = [id];
-    } else {
-      selection = [id];
+    // tapping a selected card peels it off: pair -> single -> nothing
+    if (selection.includes(id)) { selection = selection.filter((x) => x !== id); aceTake = false; render(); return; }
+    // default to the whole pair when two of a kind can be played; 7s play one at a time
+    let pick = [id];
+    if (card.rank !== 7) {
+      const pair = activeAndLegal().legal.find((m) =>
+        m.type === "PLAY" && m.cards.length === 2 &&
+        m.cards.every((cid) => ((hand.find((x) => x.id === cid) || {}).rank === card.rank)));
+      if (pair) pick = [...pair.cards];
     }
+    selection = pick;
     aceTake = false;
     render();
   }
@@ -300,6 +308,22 @@ export function openAnarchy() {
       e.addEventListener("click", () => onCardClick(c.id));
       elHand.appendChild(e);
     });
+    fitHand();
+  }
+
+  // overlap the hand so every card fits on screen without horizontal scrolling
+  function fitHand() {
+    const cards = [...elHand.children];
+    cards.forEach((el) => (el.style.marginLeft = ""));
+    if (cards.length < 2) return;
+    const cw = cards[0].offsetWidth || 46;
+    const containerW = elHand.clientWidth;
+    if (!containerW) return;
+    const gap = 4;
+    const natural = cards.length * cw + (cards.length - 1) * gap;
+    if (natural <= containerW) return;
+    const overlap = (natural - containerW) / (cards.length - 1) + 0.5;
+    cards.forEach((el, i) => { if (i) el.style.marginLeft = `-${overlap}px`; });
   }
 
   // the set-aside tray: a saved straight kept off to the side until you choose to dump it
@@ -399,5 +423,8 @@ export function openAnarchy() {
   $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
 
   newGame("cpu", 2); // standard 1-on-1 vs the computer; the Game menu offers more
-  return openWindow({ title: "Anarchy", icon: ICONS.anarchy(14), iconHtml: true, content: root, width: 600, height: 660, flush: true });
+  const winId = openWindow({ title: "Anarchy", icon: ICONS.anarchy(14), iconHtml: true, content: root, width: 600, height: 660, flush: true });
+  requestAnimationFrame(() => { if (document.body.contains(root)) fitHand(); }); // fit once laid out
+  window.addEventListener("resize", () => { if (document.body.contains(root)) render(); }); // re-fit on rotate/resize
+  return winId;
 }
