@@ -14,7 +14,10 @@ export function openAnarchy() {
   const root = document.createElement("div");
   root.className = "anarchy";
   root.innerHTML = `
-    <div class="anarchy-menubar"><button class="anarchy-menu" data-act="new">Game</button></div>
+    <div class="anarchy-menubar">
+      <button class="anarchy-menu" data-act="new">Game</button>
+      <button class="anarchy-menu" data-act="help">How to Play</button>
+    </div>
     <div class="anarchy-felt">
       <div class="anarchy-opponents"></div>
       <div class="anarchy-center">
@@ -25,6 +28,7 @@ export function openAnarchy() {
       <div class="anarchy-log"></div>
     </div>
     <div class="anarchy-hand-wrap">
+      <div class="anarchy-aside"></div>
       <div class="anarchy-handname"></div>
       <div class="anarchy-hand"></div>
       <div class="anarchy-actions"></div>
@@ -54,6 +58,27 @@ export function openAnarchy() {
         <p class="anarchy-handoff-sub">The previous player's hand is hidden. Tap when you're ready.</p>
         <div class="anarchy-setup-btns"><button class="anarchy-handoff-go">Show my hand</button></div>
       </div>
+    </div>
+    <div class="anarchy-help">
+      <div class="anarchy-help-box">
+        <h2>HOW TO PLAY</h2>
+        <div class="anarchy-help-body">
+          <p><b>Goal:</b> be the first to empty your hand.</p>
+          <h3>Direction (the core rule)</h3>
+          <p>The top card's <b>colour</b> tells the next player what to do. <b>Red</b> top → play <b>equal or higher</b>. <b>Black</b> top → play <b>equal or lower</b>. Equal rank always works.</p>
+          <h3>Pairs</h3>
+          <p>Play two of a kind and the next player must <b>pick up 1</b> — unless they stack a third, play a 7/Ace, or take it.</p>
+          <h3>Matching &amp; four of a kind</h3>
+          <p>Play the <b>same rank</b> as the top and the previous player draws cards. Complete <b>four of a kind</b> to clear the table and lead again. Holding the 4th card showing? <b>Slap</b> it anytime.</p>
+          <h3>The 7 (switch)</h3>
+          <p>Play a 7 anytime, even out of turn. It ignores direction and takes the card beneath it into your hand.</p>
+          <h3>The Ace</h3>
+          <p>Highest card. A black Ace lets the next player play anything; a red Ace forces another Ace.</p>
+          <h3>Straights</h3>
+          <p>5+ in a row within 2–6 or 8–A (never crossing the 7). <b>Set aside</b> a straight to bluff a bigger hand, then <b>Dump it</b> to shed them all at once — ideally to go out.</p>
+        </div>
+        <div class="anarchy-setup-btns"><button class="anarchy-help-close">Got it</button></div>
+      </div>
     </div>`;
 
   const $ = (sel) => root.querySelector(sel);
@@ -63,10 +88,12 @@ export function openAnarchy() {
   const elRun = $(".anarchy-run");
   const elLog = $(".anarchy-log");
   const elHand = $(".anarchy-hand");
+  const elAside = $(".anarchy-aside");
   const elHandName = $(".anarchy-handname");
   const elActions = $(".anarchy-actions");
   const elSetup = $(".anarchy-setup");
   const elHandoff = $(".anarchy-handoff");
+  const elHelp = $(".anarchy-help");
 
   let state = null;
   let mode = "cpu";          // "cpu" | "local"
@@ -75,12 +102,33 @@ export function openAnarchy() {
   let botTimer = null;
   let handoffPending = false; // local mode: hide the hand until the next player confirms
   let flashMsg = "";
+  const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
   const canAct = () =>
     state && state.status === "playing" && !handoffPending &&
     state.players[state.turn].isHuman && state.turn === viewer();
+  // cards the viewer has set aside; pruned to whatever is still in hand
+  function reservedSet() {
+    const v = viewer();
+    if (!reservedByPlayer.has(v)) reservedByPlayer.set(v, new Set());
+    const set = reservedByPlayer.get(v);
+    const ids = new Set(state.players[v].hand.map((c) => c.id));
+    for (const id of [...set]) if (!ids.has(id)) set.delete(id);
+    return set;
+  }
+  // legal moves computed against only the cards NOT set aside (so a reserved
+  // duplicate rank doesn't hide its still-playable twin)
+  function activeAndLegal() {
+    const v = viewer();
+    const reserved = reservedSet();
+    const full = state.players[v].hand;
+    const active = full.filter((c) => !reserved.has(c.id));
+    if (active.length === full.length) return { active, legal: legalMoves(state) };
+    const tmp = { ...state, players: state.players.map((p, i) => (i === v ? { ...p, hand: active } : p)) };
+    return { active, legal: legalMoves(tmp) };
+  }
 
   // ---- card markup ----
   function cardEl(card, { mini = false, faceUp = true } = {}) {
@@ -107,7 +155,7 @@ export function openAnarchy() {
       if (c.rank === 14) return { label: aceTake ? "Play Ace + take" : "Play Ace", action: { type: "ACE_SWITCH", card: c.id, take: aceTake } };
     }
     const want = new Set(selection);
-    const move = legalMoves(state).find(
+    const move = activeAndLegal().legal.find(
       (m) => m.type === "PLAY" && m.cards.length === want.size && m.cards.every((id) => want.has(id))
     );
     if (move) {
@@ -206,16 +254,26 @@ export function openAnarchy() {
     // badge + pile (a growing stack of past plays) + run
     elBadge.textContent = flashMsg || badgeText();
     elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (state.demand.type === "pickup" ? " pickup" : "");
+    // newest play sits in front, fully visible; the prior two stay buried showing only a corner
     elPile.innerHTML = "";
-    const shown = state.pile.slice(-14);
-    if (!shown.length) { const e = document.createElement("div"); e.className = "acard empty"; elPile.appendChild(e); }
-    shown.forEach((c, i) => { const e = cardEl(c); e.style.marginLeft = i ? "-30px" : "0"; e.style.zIndex = String(i); elPile.appendChild(e); });
+    const shown = state.pile.slice(-3);
+    if (!shown.length) { const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = "28px"; e.style.top = "18px"; elPile.appendChild(e); }
+    shown.forEach((c, i) => {
+      const e = cardEl(c);
+      const depth = shown.length - 1 - i; // 0 = newest
+      e.style.left = (28 - depth * 14) + "px";
+      e.style.top = (18 - depth * 9) + "px";
+      e.style.zIndex = String(10 - depth);
+      if (depth) e.classList.add("buried");
+      elPile.appendChild(e);
+    });
     elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "pair ×2" : "";
 
     elLog.innerHTML = state.log.slice(-4).map((l) => `<div>${l}</div>`).join("");
     elLog.scrollTop = elLog.scrollHeight;
 
     renderHand();
+    renderAside();
     renderActions();
   }
 
@@ -224,16 +282,15 @@ export function openAnarchy() {
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
     if (mode === "local" && handoffPending) return; // keep the hand hidden during a handoff
-    const hand = state.players[viewer()].hand;
     if (mode === "local") elHandName.textContent = `${state.players[viewer()].name}'s hand`;
+    const { active, legal } = activeAndLegal();
     const act = canAct();
-    const legal = act ? legalMoves(state) : [];
     const playableIds = new Set();
-    for (const m of legal) {
+    if (act) for (const m of legal) {
       if (m.type === "PLAY") m.cards.forEach((id) => playableIds.add(id));
       if (m.type === "SWITCH7" || m.type === "ACE_SWITCH" || m.type === "ACE_CANCEL") playableIds.add(m.card);
     }
-    [...hand].sort((a, b) => a.rank - b.rank || a.suit.localeCompare(b.suit)).forEach((c) => {
+    [...active].sort((a, b) => a.rank - b.rank || a.suit.localeCompare(b.suit)).forEach((c) => {
       const e = cardEl(c);
       const isSel = selection.includes(c.id);
       const isLegal = act && playableIds.has(c.id);
@@ -243,6 +300,31 @@ export function openAnarchy() {
       e.addEventListener("click", () => onCardClick(c.id));
       elHand.appendChild(e);
     });
+  }
+
+  // the set-aside tray: a saved straight kept off to the side until you choose to dump it
+  function renderAside() {
+    elAside.innerHTML = "";
+    const hide = !state || state.status !== "playing" || (mode === "local" && handoffPending);
+    const reserved = hide ? null : reservedSet();
+    if (hide || !reserved.size) { elAside.style.display = "none"; return; }
+    elAside.style.display = "flex";
+    const label = document.createElement("div");
+    label.className = "anarchy-aside-label";
+    label.textContent = "Set aside (still counts as your cards) — dump it to shed in one shot:";
+    elAside.appendChild(label);
+    const row = document.createElement("div");
+    row.className = "anarchy-aside-cards";
+    state.players[viewer()].hand.filter((c) => reserved.has(c.id))
+      .sort((a, b) => a.rank - b.rank).forEach((c) => row.appendChild(cardEl(c, { mini: true })));
+    const dump = document.createElement("button");
+    dump.className = "anarchy-btn slap"; dump.textContent = "Dump it";
+    dump.addEventListener("click", () => apply({ type: "DUMP", by: viewer(), cards: [...reserved] }));
+    const ret = document.createElement("button");
+    ret.className = "anarchy-btn"; ret.textContent = "Return to hand";
+    ret.addEventListener("click", () => { reserved.clear(); render(); });
+    row.appendChild(dump); row.appendChild(ret);
+    elAside.appendChild(row);
   }
 
   function renderActions() {
@@ -274,13 +356,23 @@ export function openAnarchy() {
       add(aceTake ? "☑ take below" : "☐ take below", () => { aceTake = !aceTake; render(); }, "toggle");
 
     if (state.demand.type === "pickup") add("Take " + state.demand.count, () => apply({ type: "TAKE_PICKUP" }), "");
-    const straights = findStraights(hand);
-    if (straights.length) {
-      const longest = straights.reduce((a, b) => (b.length > a.length ? b : a));
-      const groups = new Map(); hand.forEach((c) => { if (!groups.has(c.rank)) groups.set(c.rank, c); });
-      add("Dump straight", () => apply({ type: "DUMP", by: viewer(), cards: longest.map((r) => groups.get(r).id) }), "");
+
+    const reserved = reservedSet();
+    const { active, legal: activeLegal } = activeAndLegal();
+    // hold a straight off to the side (bluff a bigger hand; dump it later, ideally to go out)
+    if (!reserved.size) {
+      const straights = findStraights(active);
+      if (straights.length) {
+        const longest = straights.reduce((a, b) => (b.length > a.length ? b : a));
+        const g = new Map(); active.forEach((c) => { if (!g.has(c.rank)) g.set(c.rank, c); });
+        const ids = longest.map((r) => g.get(r).id);
+        add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
+      }
     }
-    if (legalMoves(state).some((m) => m.type === "PASS")) add("Pass", () => apply({ type: "PASS" }), "");
+    // pass only when the active hand genuinely can't answer a color demand
+    if (state.demand.type === "color" &&
+        !activeLegal.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH"))
+      add("Pass", () => apply({ type: "PASS" }), "");
   }
 
   // ---- new game ----
@@ -292,7 +384,7 @@ export function openAnarchy() {
       : Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
     const humanIndices = m === "cpu" ? [0] : names.map((_, i) => i);
     state = createGame({ numPlayers, humanIndices, names });
-    selection = []; aceTake = false; flashMsg = ""; handoffPending = false;
+    selection = []; aceTake = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
     render();
     scheduleBots();
   }
@@ -300,7 +392,11 @@ export function openAnarchy() {
   root.querySelectorAll("[data-mode]").forEach((b) =>
     b.addEventListener("click", () => newGame(b.dataset.mode, parseInt(b.dataset.players, 10))));
   $(".anarchy-handoff-go").addEventListener("click", () => { handoffPending = false; render(); });
-  $(".anarchy-menu").addEventListener("click", () => { clearTimeout(botTimer); state = null; selection = []; handoffPending = false; render(); });
+  root.querySelectorAll(".anarchy-menu").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.act === "help") { elHelp.style.display = "flex"; return; }
+    clearTimeout(botTimer); state = null; selection = []; handoffPending = false; render(); // Game = new game
+  }));
+  $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
 
   newGame("cpu", 2); // standard 1-on-1 vs the computer; the Game menu offers more
   return openWindow({ title: "Anarchy", icon: ICONS.anarchy(14), iconHtml: true, content: root, width: 600, height: 660, flush: true });
