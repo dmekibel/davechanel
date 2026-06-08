@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=174";
-import { ICONS } from "../icons.js?v=174";
+import { openWindow } from "../window-manager.js?v=175";
+import { ICONS } from "../icons.js?v=175";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=174";
-import { chooseAction, botSlap } from "./bot.js?v=174";
-import { currentZoom } from "../scale.js?v=174";
+} from "./engine.js?v=175";
+import { chooseAction, botSlap } from "./bot.js?v=175";
+import { currentZoom } from "../scale.js?v=175";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -352,20 +352,19 @@ export function openAnarchy() {
     elFelt.appendChild(el);
     setTimeout(() => el.remove(), 1300);
   }
-  // fire the intake banner when a play forces a pickup (demand) or punishes
-  // a player backward (they draw on the spot). count >= 2 → grand variant.
+  // Only YOU pick-ups get a big banner (you must act). Opponents' pickups read
+  // through their flying card + the log, so we don't pile up big notifications.
   function announceIntakes(action, prevDemandType, before) {
     if (!state || state.status !== "playing") return;
-    const who = (i) => (i === viewer() ? "YOU" : state.players[i].name);
     if (state.demand.type === "pickup" && prevDemandType !== "pickup") {
       const i = state.turn, n = state.demand.count || 1;
-      announce(`${who(i)} — PICK UP ${n}`, i === viewer()); // red only when it's YOU
+      if (i === viewer()) announce(`YOU — PICK UP ${n}`, true);
       return;
     }
     if (action.type === "PLAY") {
       for (let i = 0; i < state.players.length; i++) {
         const grew = state.players[i].hand.length - (before[i] || 0);
-        if (grew > 0) { announce(`${who(i)} — PICK UP ${grew}`, i === viewer()); return; }
+        if (grew > 0) { if (i === viewer()) announce(`YOU — PICK UP ${grew}`, true); return; }
       }
     }
   }
@@ -889,10 +888,15 @@ export function openAnarchy() {
   function flipPairTop(frontId) {
     const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
     if (els.length !== 2) { render(); return; }
-    // positions are already set — only the ring + z-order change (no re-layout, no flip)
+    // the two cards switch spots (slide past each other) but stay tight — no flip,
+    // no splitting apart: just swap their horizontal offset and the z-order
+    const [a, b] = els;
+    const pa = a.style.getPropertyValue("--px"), pb = b.style.getPropertyValue("--px");
+    a.style.setProperty("--px", pb); b.style.setProperty("--px", pa);
     els.forEach((el) => {
       const front = el.dataset.id === frontId;
       el.classList.toggle("sel-top", front);
+      el.style.transition = "transform .15s ease, box-shadow .15s ease";
       el.style.zIndex = front ? "23" : "22";
     });
     renderActions();
