@@ -1,11 +1,11 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js";
-import { ICONS } from "../icons.js";
+import { openWindow } from "../window-manager.js?v=156";
+import { ICONS } from "../icons.js?v=156";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js";
-import { chooseAction, botSlap } from "./bot.js";
+} from "./engine.js?v=156";
+import { chooseAction, botSlap } from "./bot.js?v=156";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const BOT_DELAY = 2000; // slow, real-game pace so each CPU play is easy to follow
@@ -87,7 +87,7 @@ export function openAnarchy() {
           <h3>The 7 (switch)</h3>
           <p>Play a 7 anytime, even out of turn. It ignores direction, cancels a pick-up, and takes the card beneath it into your hand. <b>7s go one at a time</b> — you can't play two as a pair.</p>
           <h3>The Ace</h3>
-          <p>Highest card. A <b>black</b> Ace lets the next player play anything; a <b>red</b> Ace forces another Ace (equal counts, and nothing beats an Ace) — the hardest card to follow.</p>
+          <p>Highest card. A <b>black</b> Ace lets the next player play anything; a <b>red</b> Ace can only be beaten by another Ace — or switched away with a 7.</p>
           <h3>Straights</h3>
           <p>5+ in a row within 2–6 or 8–A (never crossing the 7). <b>Set aside</b> a straight to bluff a bigger hand, then <b>Dump it</b> to shed it all at once — ideally to go out.</p>
           <h3>Good to know</h3>

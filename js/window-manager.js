@@ -1,7 +1,7 @@
 // Window manager
 // Vanilla JS. No deps. Each Window is a real DOM node managed by this module.
 
-import { currentZoom } from "./scale.js";
+import { currentZoom } from "./scale.js?v=156";
 
 const root = () => document.getElementById("windows-root");
 const taskbarEntries = () => document.getElementById("taskbar-entries");
