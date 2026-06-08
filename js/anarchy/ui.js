@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=178";
-import { ICONS } from "../icons.js?v=178";
+import { openWindow } from "../window-manager.js?v=179";
+import { ICONS } from "../icons.js?v=179";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=178";
-import { chooseAction, botSlap } from "./bot.js?v=178";
-import { currentZoom } from "../scale.js?v=178";
+} from "./engine.js?v=179";
+import { chooseAction, botSlap } from "./bot.js?v=179";
+import { currentZoom } from "../scale.js?v=179";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -179,6 +179,13 @@ export function openAnarchy() {
   const canAct = () =>
     state && state.status === "playing" && !handoffPending &&
     state.players[state.turn].isHuman && state.turn === viewer();
+  // you can slip a 7 in OUT OF TURN (a switch) during a bot's window, as long as
+  // there's a card on the table to take and you don't owe a draw. Speed matters.
+  const canInterrupt = () =>
+    mode === "cpu" && state && state.status === "playing" && !handoffPending &&
+    state.turn !== viewer() && !state.players[viewer()].finished &&
+    state.pile.length > 0 && (state.players[viewer()].pendingDraw || 0) === 0 &&
+    state.players[viewer()].hand.some((c) => c.rank === 7);
   // cards the viewer has set aside; pruned to whatever is still in hand
   function reservedSet() {
     const v = viewer();
@@ -609,7 +616,14 @@ export function openAnarchy() {
 
   // ---- interaction ----
   function onCardClick(id) {
-    if (!canAct()) return;
+    if (!canAct()) {
+      // out of turn: a 7 can still be slipped in as a switch (race the bot)
+      if (canInterrupt()) {
+        const c = state.players[viewer()].hand.find((x) => x.id === id);
+        if (c && c.rank === 7) apply({ type: "SWITCH7", card: id, by: viewer() });
+      }
+      return;
+    }
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
@@ -864,6 +878,7 @@ export function openAnarchy() {
     if (mode === "local") elHandName.textContent = `${state.players[viewer()].name}'s hand`;
     const { active, legal } = activeAndLegal();
     const act = canAct();
+    const interrupt = !act && canInterrupt(); // a bot's turn, but you could slip a 7 in
     const playRanks = new Set(); // ranks with a legal PLAY — every copy of that rank is playable
     const playIds = new Set();   // specific cards: 7 switch, Ace
     if (act) for (const m of legal) {
@@ -874,13 +889,15 @@ export function openAnarchy() {
       const e = cardEl(c);
       const isSel = selection.includes(c.id);
       const isLegal = act && (playRanks.has(c.rank) || playIds.has(c.id));
+      const is7Int = interrupt && c.rank === 7; // tap to switch in, out of turn
       const isFresh = newCardIds.has(c.id); // just drawn / picked up
       if (isSel) e.classList.add("sel");
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
-      if (isLegal) e.classList.add("legal");
+      if (isLegal || is7Int) e.classList.add("legal");
+      if (is7Int) e.classList.add("interrupt"); // distinct "you can cut in" pulse
       if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
-      if (!isSel && !isLegal) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
+      if (!isSel && !isLegal && !is7Int) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
       if (justRevealed) e.classList.add("flip-in");
       e.style.touchAction = "none"; // let us handle the upward-throw gesture
       bindCardGestures(e, c.id);
@@ -1014,7 +1031,10 @@ export function openAnarchy() {
       if (card) add("SLAP!", () => apply({ type: "SLAP", by: viewer(), card: card.id }), "slap");
     }
     if (!canAct()) {
-      if (!elActions.children.length) elActions.innerHTML = `<span class="anarchy-wait">${state.players[state.turn].name} is playing…</span>`;
+      if (!elActions.children.length) {
+        const tip = canInterrupt() ? " — quick, tap a 7 to cut in!" : "";
+        elActions.innerHTML = `<span class="anarchy-wait">${state.players[state.turn].name} is playing…${tip}</span>`;
+      }
       return;
     }
 
