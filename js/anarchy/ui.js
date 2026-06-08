@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=159";
-import { ICONS } from "../icons.js?v=159";
+import { openWindow } from "../window-manager.js?v=160";
+import { ICONS } from "../icons.js?v=160";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=159";
-import { chooseAction, botSlap } from "./bot.js?v=159";
-import { currentZoom } from "../scale.js?v=159";
+} from "./engine.js?v=160";
+import { chooseAction, botSlap } from "./bot.js?v=160";
+import { currentZoom } from "../scale.js?v=160";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -203,8 +203,9 @@ export function openAnarchy() {
   }
   // felt-relative position of an element's top-left
   function feltPos(el) {
+    const z = currentZoom() || 1; // getBoundingClientRect is post-zoom; convert to the felt's own px
     const f = elFelt.getBoundingClientRect(), r = el.getBoundingClientRect();
-    return { x: r.left - f.left, y: r.top - f.top, w: r.width, h: r.height };
+    return { x: (r.left - f.left) / z, y: (r.top - f.top) / z, w: r.width / z, h: r.height / z };
   }
   // a small stack of face-down cards + a count, for the draw and бита piles
   function renderSidePile(el, count, label) {
@@ -222,21 +223,27 @@ export function openAnarchy() {
     lbl.className = "anarchy-pile-label"; lbl.textContent = `${label} ${count}`;
     el.appendChild(stack); el.appendChild(lbl);
   }
-  // fly a face-down card from the stock to whoever just drew
-  function flyDraw(idx, count) {
+  // fly drawn cards from the stock to whoever drew; the viewer's flip face-up on arrival
+  function flyDraw(idx, cards) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!target || !elStock) return;
     const from = feltPos(elStock), to = feltPos(target);
-    const toX = to.x + to.w / 2 - 11, toY = to.y + (idx === viewer() ? 0 : to.h / 2);
-    for (let k = 0; k < Math.min(count, 3); k++) {
+    const toX = to.x + to.w / 2 - 16, toY = to.y + (idx === viewer() ? -4 : to.h / 2);
+    const reveal = idx === viewer();
+    cards.slice(0, 3).forEach((card, k) => {
       const fly = cardEl(null, { mini: true, faceUp: false });
       fly.classList.add("anarchy-fly");
       fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
       elFelt.appendChild(fly);
-      const d = k * 110;
-      setTimeout(() => { fly.style.transition = "transform .5s ease-in-out, opacity .5s"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.3)`; fly.style.opacity = "0"; }, d + 10);
-      setTimeout(() => fly.remove(), d + 540);
-    }
+      const d = k * 150;
+      setTimeout(() => { fly.style.transition = "transform .6s ease-in-out"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.7)`; }, d + 10);
+      if (reveal && card) setTimeout(() => { // flip face-up so you can see the card you drew
+        fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
+        fly.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+      }, d + 460);
+      setTimeout(() => { fly.style.transition = "opacity .3s"; fly.style.opacity = "0"; }, d + 820);
+      setTimeout(() => fly.remove(), d + 1120);
+    });
   }
   // a switch (7/Ace) takes the card beneath it: fly that card from the table to the player
   function flyFromPile(idx) {
@@ -393,9 +400,13 @@ export function openAnarchy() {
     const card = hand.find((c) => c.id === id);
     if (!card) return;
     if (selection.includes(id)) {
-      // a selected pair: tapping switches which card sits on top (its colour sets the next demand)
-      if (selection.length === 2) { selection = [selection[1], selection[0]]; render(); return; }
-      // a selected single: tap again to play it (or throw it up)
+      // a selected pair: the card you click becomes the one on top (its colour sets the next demand)
+      if (selection.length === 2) {
+        const other = selection.find((x) => x !== id);
+        selection = [other, id];
+        render(); return;
+      }
+      // a selected single: click/tap again to play it (or throw it up)
       const sa = selectionAction();
       if (sa) apply(sa.action); else { selection = []; render(); }
       return;
@@ -552,7 +563,7 @@ export function openAnarchy() {
     // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
-      if (grew > 0) { flyDraw(i, grew); floatPickup(i, grew); }
+      if (grew > 0) { flyDraw(i, p.hand.slice(p.hand.length - grew)); floatPickup(i, grew); } // drawn cards are appended
     });
     lastHandCounts = state.players.map((p) => p.hand.length);
 

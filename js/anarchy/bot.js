@@ -2,7 +2,7 @@
 // Strategy (from the spec's suggested baseline): dump straights for free, prefer a
 // fresh pair to force a pickup, otherwise play the most restrictive legal single,
 // escape with a 7 when stuck, and just take a single-card pickup rather than burn a switch.
-import { legalMoves } from "./engine.js?v=159";
+import { legalMoves } from "./engine.js?v=160";
 
 // How much a single card constrains the next player once it's on top.
 // Low black (forces "equal or lower" from a low rank) and high red (forces

@@ -220,10 +220,10 @@ function actPLAY(s, action) {
     s.turn = nextIdx(s, idx);
     s.demand = demandFromTop(s);
   } else if (ids.length === 2) {
-    // fresh pair -> forward pickup equal to the number of cards played (2)
+    // fresh pair -> the next player picks up 1
     s.lastPlacer = idx;
     s.turn = nextIdx(s, idx);
-    s.demand = { type: "pickup", rank: R, count: ids.length };
+    s.demand = { type: "pickup", rank: R, count: 1 };
   } else {
     // fresh single -> color demand
     s.lastPlacer = idx;

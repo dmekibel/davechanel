@@ -53,11 +53,11 @@ section("T1: fresh pair -> opponent takes pickup of 1");
   let s = scenario({ hands: [["5H", "5D", "9S"], ["8C", "8H"]], stock: ["2C", "3C"], turn: 0, demand: { type: "open" } });
   s = reduce(s, { type: "PLAY", cards: ["5H", "5D"] });
   eq(s.demand.type, "pickup", "fresh pair creates a pickup demand");
-  eq(s.demand.count, 2, "pickup count equals the pair size (2)");
+  eq(s.demand.count, 1, "a pair makes the next player pick up 1");
   eq(s.turn, 1, "turn passes to opponent");
   const before = s.players[1].hand.length;
   s = reduce(s, { type: "TAKE_PICKUP" });
-  eq(s.players[1].hand.length, before + 2, "taker draws the full pickup (2)");
+  eq(s.players[1].hand.length, before + 1, "taker draws 1");
   eq(s.demand.type, "color", "after taking, the taker faces the pair's colour demand");
   eq(s.turn, 1, "taking keeps your turn — you draw then play on");
 }
