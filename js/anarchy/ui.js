@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=162";
-import { ICONS } from "../icons.js?v=162";
+import { openWindow } from "../window-manager.js?v=163";
+import { ICONS } from "../icons.js?v=163";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=162";
-import { chooseAction, botSlap } from "./bot.js?v=162";
-import { currentZoom } from "../scale.js?v=162";
+} from "./engine.js?v=163";
+import { chooseAction, botSlap } from "./bot.js?v=163";
+import { currentZoom } from "../scale.js?v=163";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -246,6 +246,29 @@ export function openAnarchy() {
       setTimeout(() => fly.remove(), d + 1120);
     });
   }
+  // a deliberately BIG, slow pickup: a full-size card glides from the draw deck into
+  // the taker's hand and flips face-up, so the forced draw is impossible to miss.
+  function flyPickup(idx, cards) {
+    const target = idx === viewer() ? elHand : oppBoxMap[idx];
+    if (!target || !elStock) return;
+    const from = feltPos(elStock), to = feltPos(target);
+    const reveal = idx === viewer();
+    const toX = to.x + to.w / 2 - 18, toY = to.y + (idx === viewer() ? -12 : to.h / 2);
+    cards.slice(0, 3).forEach((card, k) => {
+      const fly = cardEl(null, { faceUp: false });
+      fly.classList.add("anarchy-fly", "anarchy-fly-pickup");
+      fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
+      elFelt.appendChild(fly);
+      const d = k * 220;
+      setTimeout(() => { fly.style.transition = "transform .85s cubic-bezier(.18,.7,.2,1)"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.15)`; }, d + 20);
+      if (reveal && card) setTimeout(() => { // flip face-up so you clearly see what you took
+        fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
+        fly.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+      }, d + 560);
+      setTimeout(() => { fly.style.transition = "opacity .35s"; fly.style.opacity = "0"; }, d + 1150);
+      setTimeout(() => fly.remove(), d + 1520);
+    });
+  }
   // a switch (7/Ace) takes the card beneath it: fly that card from the table to the player
   function flyFromPile(idx) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
@@ -393,7 +416,7 @@ export function openAnarchy() {
     render();
     if (takingPickup && pickupTaker >= 0) {
       const h = state.players[pickupTaker].hand;
-      flyDraw(pickupTaker, h.slice(h.length - pickupCount), elPile); // card flies from the play pile
+      flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // big card slides from the draw deck
     }
     if (taker != null && hadPile) flyFromPile(taker); // switch: card from below flies to the player
     announceIntakes(action, prevDemandType, beforeCounts);
@@ -435,7 +458,7 @@ export function openAnarchy() {
       render();
       if (takingPickup && pickupTaker >= 0) {
         const h = state.players[pickupTaker].hand;
-        flyDraw(pickupTaker, h.slice(h.length - pickupCount), elPile); // enemy pickup flies to their seat
+        flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // enemy pickup slides from deck to their seat
       }
       if (taker != null && hadPile) flyFromPile(taker); // enemy switch: card from below flies to them
       announceIntakes(action, prevDemandType, beforeCounts);
@@ -614,6 +637,16 @@ export function openAnarchy() {
     // visible draw (stock) and бита (discard) piles, kept separate
     renderSidePile(elStock, state.stock.length, "Draw");
     renderSidePile(elBita, state.removed.length, "Discard");
+    // facing a pickup? the draw deck itself becomes a tap target to take it
+    const facingPickup = canAct() && state.demand.type === "pickup";
+    elStock.classList.toggle("pickup-ready", facingPickup);
+    elStock.onclick = facingPickup ? () => apply({ type: "TAKE_PICKUP" }) : null;
+    if (facingPickup) {
+      const hint = document.createElement("div");
+      hint.className = "anarchy-pickup-hint";
+      hint.textContent = `Tap to pick up ${state.demand.count}`;
+      elStock.appendChild(hint);
+    }
     // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);

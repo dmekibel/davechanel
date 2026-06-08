@@ -2760,9 +2760,16 @@ body.lang-ru .login-logo {
 .anarchy-stock, .anarchy-bita-pile { position: absolute; top: 50%; transform: translateY(-50%); text-align: center; color: #cfeede; pointer-events: none; }
 .anarchy-stock { left: 21%; }
 .anarchy-bita-pile { right: 21%; }
+/* when you owe a pickup, the draw deck lights up and accepts a tap */
+.anarchy-stock.pickup-ready { pointer-events: auto; cursor: pointer; animation: anarchyDeckPulse 1s ease-in-out infinite; }
+.anarchy-stock.pickup-ready .anarchy-sidepile-stack { filter: drop-shadow(0 0 6px #ffe14d); }
+@keyframes anarchyDeckPulse { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.12); } }
+.anarchy-pickup-hint { margin-top: 3px; font-size: 9px; font-weight: bold; color: #ffe14d; background: rgba(0,0,0,.45); border-radius: 8px; padding: 1px 6px; white-space: nowrap; animation: anarchyHintBlink 1s steps(1) infinite; }
+@keyframes anarchyHintBlink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 .anarchy-sidepile-stack { position: relative; width: 24px; height: 32px; margin: 0 auto 3px; }
 .anarchy-pile-label { font-size: 9px; letter-spacing: .5px; font-weight: bold; white-space: nowrap; }
 .anarchy-fly { position: absolute; z-index: 40; pointer-events: none; }
+.anarchy-fly-pickup { z-index: 48; box-shadow: 0 0 14px rgba(255,225,77,.8); }
 .acard.mini.empty { background: transparent; border: 1px dashed rgba(255,255,255,.45); box-shadow: none; }
 .anarchy-run { color: #d6ffe6; font-size: 11px; min-height: 14px; font-weight: bold; }
 .anarchy-log { width: 100%; max-width: 520px; height: 58px; overflow-y: auto; background: rgba(0,0,0,.28); color: #d9ffe7; font-size: 11px; line-height: 1.45; padding: 4px 8px; border-radius: 3px; }
