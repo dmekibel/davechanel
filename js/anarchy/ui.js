@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=167";
-import { ICONS } from "../icons.js?v=167";
+import { openWindow } from "../window-manager.js?v=168";
+import { ICONS } from "../icons.js?v=168";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=167";
-import { chooseAction, botSlap } from "./bot.js?v=167";
-import { currentZoom } from "../scale.js?v=167";
+} from "./engine.js?v=168";
+import { chooseAction, botSlap } from "./bot.js?v=168";
+import { currentZoom } from "../scale.js?v=168";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -293,18 +293,24 @@ export function openAnarchy() {
       setTimeout(() => fly.remove(), d + 1520);
     });
   }
-  // a switch (7/Ace) takes the card beneath it: fly that card from the table to the player
-  function flyFromPile(idx) {
+  // a switch (7/Ace) scoops the card beneath it into the player's hand — show that
+  // EXACT card, face-up, sliding big and slow from the table to them so it's clear.
+  function flyFromPile(idx, card) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!target || !elPile) return;
     const from = feltPos(elPile), to = feltPos(target);
-    const fly = cardEl(null, { mini: true, faceUp: false });
-    fly.classList.add("anarchy-fly");
-    fly.style.left = (from.x + 24) + "px"; fly.style.top = (from.y + 16) + "px";
+    const fly = card ? cardEl(card) : cardEl(null, { mini: true, faceUp: false });
+    fly.classList.add("anarchy-fly", "anarchy-fly-pickup");
+    const fromX = from.x + 26, fromY = from.y + 20;
+    fly.style.left = fromX + "px"; fly.style.top = fromY + "px";
     elFly.appendChild(fly);
-    const toX = to.x + to.w / 2 - 11, toY = to.y + (idx === viewer() ? 0 : to.h / 2);
-    requestAnimationFrame(() => { fly.style.transition = "transform .55s ease-in-out, opacity .55s"; fly.style.transform = `translate(${toX - from.x - 24}px, ${toY - from.y - 16}px) scale(1.2)`; fly.style.opacity = "0"; });
-    setTimeout(() => fly.remove(), 600);
+    const toX = to.x + to.w / 2 - 22, toY = to.y + (idx === viewer() ? -8 : to.h / 2);
+    requestAnimationFrame(() => {
+      fly.style.transition = "transform .8s cubic-bezier(.2,.7,.2,1), opacity .8s ease-in";
+      fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${idx === viewer() ? 1.1 : 0.85})`;
+      fly.style.opacity = "0";
+    });
+    setTimeout(() => fly.remove(), 820);
   }
   // a clear "+N pick up" tag floating off whoever just drew
   function floatPickup(idx, n) {
@@ -514,6 +520,7 @@ export function openAnarchy() {
     const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
     const taker = isSwitchTake ? (action.by == null ? prevTurn : action.by) : null;
     const hadPile = state.pile.length > 0;
+    const switchCard = isSwitchTake && hadPile ? state.pile[state.pile.length - 1] : null; // the exact card the switch will scoop
     // taking a pickup: the card(s) should appear to come off the play pile, not the stock
     const takingPickup = action.type === "TAKE_PICKUP";
     const pickupTaker = takingPickup ? state.turn : -1;
@@ -534,7 +541,7 @@ export function openAnarchy() {
       const h = state.players[pickupTaker].hand;
       flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // big card slides from the draw deck
     }
-    if (taker != null && hadPile) flyFromPile(taker); // switch: card from below flies to the player
+    if (taker != null && hadPile) flyFromPile(taker, switchCard); // switch: the card below flies to the player
     announceIntakes(action, prevDemandType, beforeCounts);
     if (action.type === "PASS") announcePass(prevTurn);
     scheduleBots();
@@ -565,6 +572,7 @@ export function openAnarchy() {
       const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
       const taker = isSwitchTake ? (action.by == null ? state.turn : action.by) : null;
       const hadPile = state.pile.length > 0;
+      const switchCard = isSwitchTake && hadPile ? state.pile[state.pile.length - 1] : null; // the card the switch scoops
       const takingPickup = action.type === "TAKE_PICKUP";
       const pickupTaker = takingPickup ? state.turn : -1;
       const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
@@ -578,7 +586,7 @@ export function openAnarchy() {
         const h = state.players[pickupTaker].hand;
         flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // enemy pickup slides from deck to their seat
       }
-      if (taker != null && hadPile) flyFromPile(taker); // enemy switch: card from below flies to them
+      if (taker != null && hadPile) flyFromPile(taker, switchCard); // enemy switch: the card below flies to them
       announceIntakes(action, prevDemandType, beforeCounts);
       if (action.type === "PASS") announcePass(passer);
       scheduleBots();
