@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=177";
-import { ICONS } from "../icons.js?v=177";
+import { openWindow } from "../window-manager.js?v=178";
+import { ICONS } from "../icons.js?v=178";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=177";
-import { chooseAction, botSlap } from "./bot.js?v=177";
-import { currentZoom } from "../scale.js?v=177";
+} from "./engine.js?v=178";
+import { chooseAction, botSlap } from "./bot.js?v=178";
+import { currentZoom } from "../scale.js?v=178";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -120,6 +120,7 @@ export function openAnarchy() {
     <div class="anarchy-win">
       <div class="anarchy-win-box">
         <h2 class="anarchy-win-title">YOU WIN!</h2>
+        <div class="anarchy-win-standings"></div>
         <div class="anarchy-setup-btns"><button class="anarchy-win-again">Play again</button></div>
       </div>
     </div>`;
@@ -152,6 +153,7 @@ export function openAnarchy() {
   root.appendChild(elFly);
   const elWin = $(".anarchy-win");
   const elWinTitle = $(".anarchy-win-title");
+  const elWinStandings = $(".anarchy-win-standings");
 
   let state = null;
   let mode = "cpu";          // "cpu" | "local"
@@ -709,9 +711,16 @@ export function openAnarchy() {
     const finished = state.status === "finished";
     elWin.style.display = finished ? "flex" : "none";
     if (finished) {
-      const w = state.winner;
-      const youWon = mode !== "cpu" || w === 0; // beat the AI (or any human winner in pass-and-play)
-      elWinTitle.textContent = (mode === "cpu" && w === 0) ? "YOU WIN!" : `${state.players[w].name} WINS!`;
+      const places = state.places && state.places.length ? state.places : [state.winner];
+      const ord = (n) => ["", "1st", "2nd", "3rd", "4th"][n] || `${n}th`;
+      const myPlace = mode === "cpu" ? places.indexOf(0) + 1 : 0;
+      const youWon = mode !== "cpu" || state.winner === 0;
+      elWinTitle.textContent = mode === "cpu"
+        ? (myPlace === 1 ? "YOU WIN!" : `YOU CAME ${ord(myPlace)}`)
+        : `${state.players[state.winner].name} WINS!`;
+      elWinStandings.innerHTML = places.length > 2
+        ? places.map((i, k) => `<div>${ord(k + 1)} — ${i === 0 && mode === "cpu" ? "You" : state.players[i].name}</div>`).join("")
+        : "";
       if (youWon) startWinCascade(); else startFireworks();
     } else { stopFireworks(); stopWinCascade(); }
 
@@ -839,6 +848,12 @@ export function openAnarchy() {
     elHand.innerHTML = "";
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
+    if (state.players[viewer()].finished) { // you're out, but others play on for the lower places
+      const place = (state.places.indexOf(viewer()) + 1) || 1;
+      elHandName.style.color = "#ffe14d";
+      elHandName.textContent = `You're out — ${["", "1st", "2nd", "3rd", "4th"][place] || place + "th"}. Watching for the final places…`;
+      return;
+    }
     elHandName.style.color = mode === "local" ? colorFor(viewer()) : "#eafff0";
     if (mode === "local" && handoffPending) { // show the next player's hand face-down until they reveal
       elHandName.textContent = `${state.players[viewer()].name} — pass the phone, then tap Reveal`;

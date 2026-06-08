@@ -2874,6 +2874,8 @@ body.lang-ru .login-logo {
 .anarchy-win { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 55; pointer-events: none; }
 .anarchy-win-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 26px; text-align: center; pointer-events: auto; box-shadow: 3px 3px 8px rgba(0,0,0,.4); }
 .anarchy-win-title { margin: 0 0 14px; font-size: 24px; letter-spacing: 2px; color: #b8860b; }
+.anarchy-win-standings { margin: 0 0 14px; font-size: 13px; color: #222; line-height: 1.6; }
+.anarchy-win-standings div:first-child { font-weight: bold; color: #b8860b; }
 .anarchy-win-again { font-family: Tahoma, sans-serif; font-size: 13px; padding: 7px 16px; background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; font-weight: bold; }
 .anarchy-win-again:active { border-color: #808080 #fff #fff #808080; }
 

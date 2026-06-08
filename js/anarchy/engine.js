@@ -50,6 +50,7 @@ export function createGame({ numPlayers = 2, names, humanIndices = [0], seed } =
       isHuman: humanIndices.includes(i),
       hand: deck.splice(0, 9),
       pendingDraw: 0, // cards owed (a matched/combo penalty) — NEVER auto-drawn; you tap the deck to take them on your turn
+      finished: false, // went out (took a place) — skipped in the rotation
     });
   }
   const state = {
@@ -67,6 +68,7 @@ export function createGame({ numPlayers = 2, names, humanIndices = [0], seed } =
     consecutivePasses: 0,
     status: "playing",
     winner: null,
+    places: [], // finish order (1st, 2nd, …) as players go out
     log: [`New game: ${numPlayers} players, stock ${deck.length}.`],
   };
   return state;
@@ -83,7 +85,14 @@ export function recomputeTop(s) {
   s.topRun = run;
 }
 
-const nextIdx = (s, i) => (i + 1) % s.players.length;
+// next seat that's still in the game (skips players who already went out)
+const nextIdx = (s, i) => {
+  for (let k = 1; k <= s.players.length; k++) {
+    const j = (i + k) % s.players.length;
+    if (!s.players[j].finished) return j;
+  }
+  return i;
+};
 const demandFromTop = (s) => ({ type: "color", dir: s.topColor === "red" ? "up" : "down", rank: s.topRank });
 
 function satisfiesDir(rank, demand) {
@@ -145,9 +154,26 @@ export function totalCards(s) {
 
 // ---- terminal transitions ----
 function win(s, idx) {
-  s.status = "finished";
-  s.winner = idx;
-  s.log.push(`${s.players[idx].name} goes out and wins.`);
+  // a player who empties their hand takes the next PLACE and drops out. The rest
+  // keep playing for the remaining places; the game ends when one player is left.
+  s.players[idx].finished = true;
+  s.places.push(idx);
+  s.log.push(`${s.players[idx].name} goes out — place ${s.places.length}.`);
+  const stillIn = s.players.map((p, i) => i).filter((i) => !s.players[i].finished);
+  if (stillIn.length <= 1) {
+    if (stillIn.length === 1) { s.players[stillIn[0]].finished = true; s.places.push(stillIn[0]); } // last = last place
+    s.status = "finished";
+    s.winner = s.places[0];
+    s.log.push(`Game over — ${s.places.map((i) => s.players[i].name).join(", ")}.`);
+    return s;
+  }
+  // keep going: the next still-in player responds to the top card (the side effect
+  // the winning card would otherwise cause is skipped — going out wins immediately)
+  s.demand = demandFromTop(s);
+  s.lastPlacer = idx;
+  s.lastPlayCount = 0;
+  s.consecutivePasses = 0;
+  s.turn = nextIdx(s, idx);
   return s;
 }
 function stalemateEnd(s) {
@@ -163,7 +189,7 @@ function stalemateEnd(s) {
 // four-of-a-kind combo (sections 7, 8)
 function combo(s, completer) {
   // everyone else OWES 1 (cleared by tapping the deck on their turn — never auto-drawn)
-  if (s.stock.length > 0) for (let i = 1; i < s.players.length; i++) { const q = s.players[(completer + i) % s.players.length]; q.pendingDraw = (q.pendingDraw || 0) + 1; }
+  if (s.stock.length > 0) for (let i = 1; i < s.players.length; i++) { const q = s.players[(completer + i) % s.players.length]; if (!q.finished) q.pendingDraw = (q.pendingDraw || 0) + 1; }
   s.removed.push(...s.pile);
   s.pile = [];
   recomputeTop(s);

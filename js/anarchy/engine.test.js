@@ -24,10 +24,10 @@ function scenario({ hands, pile = [], stock = [], demand, turn = 0, lastPlacer =
   const stockCards = stock.map(mk); claim(stock);
   const removed = freshDeck().filter((c) => !used.has(c.id));
   const s = {
-    players: handCards.map((h, i) => ({ id: `p${i}`, name: i === 0 ? "P0" : `P${i}`, isHuman: i === 0, hand: h, pendingDraw: 0 })),
+    players: handCards.map((h, i) => ({ id: `p${i}`, name: i === 0 ? "P0" : `P${i}`, isHuman: i === 0, hand: h, pendingDraw: 0, finished: false })),
     stock: stockCards, pile: pileCards, removed,
     turn, demand: demand || { type: "open" }, topRank: null, topColor: null, topRun: 0,
-    lastPlacer, consecutivePasses: 0, status: "playing", winner: null, log: [],
+    lastPlacer, consecutivePasses: 0, status: "playing", winner: null, places: [], log: [],
   };
   recomputeTop(s);
   ok(totalCards(s) === 52, `scenario builds a 52-card state (got ${totalCards(s)})`);
@@ -184,6 +184,16 @@ section("T10: dumping four-of-a-kind from hand clears the table; others owe 1");
   eq(s.demand.type, "open", "P0 leads on an open table");
   eq(s.turn, 0, "P0 leads");
   eq(s.players[1].pendingDraw, 1, "P1 owes 1 (combo deal)");
+}
+
+section("T11: in 3-player, the first to go out takes 1st and play continues");
+{
+  let s = scenario({ hands: [["5H"], ["8C", "13H"], ["9C", "12S"]], stock: ["2C", "3C"], turn: 0, demand: { type: "open" } });
+  s = reduce(s, { type: "PLAY", cards: ["5H"] }); // P0 plays their last card
+  eq(s.status, "playing", "game keeps going — others still hold cards");
+  eq(s.players[0].finished, true, "P0 is out");
+  eq(s.places[0], 0, "P0 took 1st place");
+  ok(s.turn !== 0 && !s.players[s.turn].finished, "turn moved to an active player");
 }
 
 // ---------------------------------------------------------------------------
