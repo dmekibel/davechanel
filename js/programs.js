@@ -2,25 +2,25 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=168";
-import { FS, findByPath } from "./file-system.js?v=168";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=168";
-import { win98Prompt } from "./win98-dialogs.js?v=168";
-import { ICONS, iconFor } from "./icons.js?v=168";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=168";
-import { openPaint } from "./paint.js?v=168";
-import { openImageViewer } from "./image-viewer.js?v=168";
-import { openMinesweeper } from "./minesweeper.js?v=168";
-import { openAnarchy } from "./anarchy/ui.js?v=168";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=169";
+import { FS, findByPath } from "./file-system.js?v=169";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=169";
+import { win98Prompt } from "./win98-dialogs.js?v=169";
+import { ICONS, iconFor } from "./icons.js?v=169";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=169";
+import { openPaint } from "./paint.js?v=169";
+import { openImageViewer } from "./image-viewer.js?v=169";
+import { openMinesweeper } from "./minesweeper.js?v=169";
+import { openAnarchy } from "./anarchy/ui.js?v=169";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=168";
-import { showContextMenu } from "./context-menu.js?v=168";
-import { currentZoom } from "./scale.js?v=168";
-import { t } from "./i18n.js?v=168";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=168";
+} from "./os-mode.js?v=169";
+import { showContextMenu } from "./context-menu.js?v=169";
+import { currentZoom } from "./scale.js?v=169";
+import { t } from "./i18n.js?v=169";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=169";
 
 // ---- Notepad --------------------------------------------------------
 

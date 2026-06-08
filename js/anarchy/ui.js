@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=168";
-import { ICONS } from "../icons.js?v=168";
+import { openWindow } from "../window-manager.js?v=169";
+import { ICONS } from "../icons.js?v=169";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=168";
-import { chooseAction, botSlap } from "./bot.js?v=168";
-import { currentZoom } from "../scale.js?v=168";
+} from "./engine.js?v=169";
+import { chooseAction, botSlap } from "./bot.js?v=169";
+import { currentZoom } from "../scale.js?v=169";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -166,6 +166,11 @@ export function openAnarchy() {
   let pairFlipId = null; // when swapping which of a selected pair is on top, the card to flip forward
   let newCardIds = new Set(); // cards just added to YOUR hand (draw/pickup) — flagged "new" until you play
   let fxTimer = null, lastMode = "cpu", lastNum = 2, lastNames = null, justRevealed = false;
+
+  // click empty table / hand background (anything that isn't a card or a button) to clear the selection
+  const deselectOnBlank = (e) => { if (selection.length && !e.target.closest(".acard") && !e.target.closest("button")) { selection = []; render(); } };
+  elFelt.addEventListener("click", deselectOnBlank);
+  elHandWrap.addEventListener("click", deselectOnBlank);
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
