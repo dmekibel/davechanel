@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=160";
-import { ICONS } from "../icons.js?v=160";
+import { openWindow } from "../window-manager.js?v=161";
+import { ICONS } from "../icons.js?v=161";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=160";
-import { chooseAction, botSlap } from "./bot.js?v=160";
-import { currentZoom } from "../scale.js?v=160";
+} from "./engine.js?v=161";
+import { chooseAction, botSlap } from "./bot.js?v=161";
+import { currentZoom } from "../scale.js?v=161";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -146,7 +146,7 @@ export function openAnarchy() {
   let handoffPending = false; // local mode: hide the hand until the next player confirms
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
-  let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = []; // animation state
+  let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = [], suppressDrawIdx = -1; // animation state
   let fxTimer = null, lastMode = "cpu", lastNum = 2, lastNames = null, justRevealed = false;
 
   // whose hand is shown / who may act right now
@@ -224,10 +224,11 @@ export function openAnarchy() {
     el.appendChild(stack); el.appendChild(lbl);
   }
   // fly drawn cards from the stock to whoever drew; the viewer's flip face-up on arrival
-  function flyDraw(idx, cards) {
+  function flyDraw(idx, cards, fromEl) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
-    if (!target || !elStock) return;
-    const from = feltPos(elStock), to = feltPos(target);
+    const src = fromEl || elStock;
+    if (!target || !src) return;
+    const from = feltPos(src), to = feltPos(target);
     const toX = to.x + to.w / 2 - 16, toY = to.y + (idx === viewer() ? -4 : to.h / 2);
     const reveal = idx === viewer();
     cards.slice(0, 3).forEach((card, k) => {
@@ -348,6 +349,10 @@ export function openAnarchy() {
     const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
     const taker = isSwitchTake ? (action.by == null ? prevTurn : action.by) : null;
     const hadPile = state.pile.length > 0;
+    // taking a pickup: the card(s) should appear to come off the play pile, not the stock
+    const takingPickup = action.type === "TAKE_PICKUP";
+    const pickupTaker = takingPickup ? state.turn : -1;
+    const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
     selection = []; aceTake = false;
@@ -356,7 +361,12 @@ export function openAnarchy() {
       handoffPending = true;
       flipHandArea();
     }
+    if (takingPickup && pickupTaker >= 0) suppressDrawIdx = pickupTaker; // skip the generic stock-fly for the taker
     render();
+    if (takingPickup && pickupTaker >= 0) {
+      const h = state.players[pickupTaker].hand;
+      flyDraw(pickupTaker, h.slice(h.length - pickupCount), elPile); // card flies from the play pile
+    }
     if (taker != null && hadPile) flyFromPile(taker); // switch: card from below flies to the player
     scheduleBots();
   }
@@ -563,8 +573,9 @@ export function openAnarchy() {
     // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
-      if (grew > 0) { flyDraw(i, p.hand.slice(p.hand.length - grew)); floatPickup(i, grew); } // drawn cards are appended
+      if (grew > 0 && i !== suppressDrawIdx) { flyDraw(i, p.hand.slice(p.hand.length - grew)); floatPickup(i, grew); } // drawn cards are appended
     });
+    suppressDrawIdx = -1;
     lastHandCounts = state.players.map((p) => p.hand.length);
 
     elLog.innerHTML = state.log.slice(-4).map((l) => `<div>${l}</div>`).join("");
