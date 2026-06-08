@@ -2754,6 +2754,15 @@ body.lang-ru .login-logo {
 .anarchy-bita-card { position: absolute; width: 46px; height: 64px; z-index: 30; }
 .anarchy-bita-toast { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); color: #ffe14d; font-weight: bold; font-size: 17px; letter-spacing: 3px; text-transform: uppercase; z-index: 31; pointer-events: none; text-shadow: 1px 1px 0 #000; animation: anarchyBita .75s ease-out forwards; }
 @keyframes anarchyBita { 0% { opacity: 0; transform: translateX(-50%) scale(.6); } 30% { opacity: 1; transform: translateX(-50%) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-22px) scale(1); } }
+
+/* visible draw + бита piles (flanking the play pile) and flying cards */
+.anarchy-stock, .anarchy-bita-pile { position: absolute; top: 50%; transform: translateY(-50%); text-align: center; color: #cfeede; pointer-events: none; }
+.anarchy-stock { left: 21%; }
+.anarchy-bita-pile { right: 21%; }
+.anarchy-sidepile-stack { position: relative; width: 24px; height: 32px; margin: 0 auto 3px; }
+.anarchy-pile-label { font-size: 9px; letter-spacing: .5px; font-weight: bold; white-space: nowrap; }
+.anarchy-fly { position: absolute; z-index: 40; pointer-events: none; }
+.acard.mini.empty { background: transparent; border: 1px dashed rgba(255,255,255,.45); box-shadow: none; }
 .anarchy-run { color: #d6ffe6; font-size: 11px; min-height: 14px; font-weight: bold; }
 .anarchy-log { width: 100%; max-width: 520px; height: 58px; overflow-y: auto; background: rgba(0,0,0,.28); color: #d9ffe7; font-size: 11px; line-height: 1.45; padding: 4px 8px; border-radius: 3px; }
 .anarchy-log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

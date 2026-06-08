@@ -319,6 +319,7 @@ function actDUMP(s, action) {
 function actPASS(s) {
   if (s.demand.type === "pickup") throw new Error("cannot PASS a pickup; take it or switch");
   const idx = s.turn;
+  const drew = draw(s, idx, 1); // you take a card from the stock for passing
   // passing "beats" the table (бита): the play pile is swept away and the next
   // player leads from scratch on an open table
   s.removed.push(...s.pile);
@@ -328,7 +329,7 @@ function actPASS(s) {
   s.lastPlacer = null;
   s.turn = nextIdx(s, idx);
   s.consecutivePasses = 0;
-  s.log.push(`${s.players[idx].name} passes — table to бита; ${s.players[s.turn].name} leads.`);
+  s.log.push(`${s.players[idx].name} passes${drew ? " (draws 1)" : ""} — table to бита; ${s.players[s.turn].name} leads.`);
   return s;
 }
 

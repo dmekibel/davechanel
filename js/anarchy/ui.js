@@ -20,6 +20,8 @@ export function openAnarchy() {
     </div>
     <div class="anarchy-felt">
       <div class="anarchy-opponents"></div>
+      <div class="anarchy-stock"></div>
+      <div class="anarchy-bita-pile"></div>
       <div class="anarchy-center">
         <div class="anarchy-badge">YOUR LEAD</div>
         <div class="anarchy-pile"></div>
@@ -98,6 +100,9 @@ export function openAnarchy() {
   const elSetup = $(".anarchy-setup");
   const elHandoff = $(".anarchy-handoff");
   const elHelp = $(".anarchy-help");
+  const elFelt = $(".anarchy-felt");
+  const elStock = $(".anarchy-stock");
+  const elBita = $(".anarchy-bita-pile");
 
   let state = null;
   let mode = "cpu";          // "cpu" | "local"
@@ -107,7 +112,7 @@ export function openAnarchy() {
   let handoffPending = false; // local mode: hide the hand until the next player confirms
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
-  let lastTopId = null, lastPileLen = 0, oppSeatMap = {}; // for deal-in / бита animations
+  let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = []; // animation state
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
@@ -157,15 +162,53 @@ export function openAnarchy() {
       default: return { x: 0, y: -130 }; // seat-top
     }
   }
-  // a quick sweep of the table to the бита pile
+  // felt-relative position of an element's top-left
+  function feltPos(el) {
+    const f = elFelt.getBoundingClientRect(), r = el.getBoundingClientRect();
+    return { x: r.left - f.left, y: r.top - f.top, w: r.width, h: r.height };
+  }
+  // a small stack of face-down cards + a count, for the draw and бита piles
+  function renderSidePile(el, count, label) {
+    el.innerHTML = "";
+    const stack = document.createElement("div");
+    stack.className = "anarchy-sidepile-stack";
+    const n = Math.min(count, 4);
+    for (let i = 0; i < n; i++) {
+      const c = cardEl(null, { mini: true, faceUp: false });
+      c.style.position = "absolute"; c.style.left = i + "px"; c.style.top = -i + "px"; c.style.zIndex = String(i);
+      stack.appendChild(c);
+    }
+    if (!n) { const e = document.createElement("div"); e.className = "acard mini empty"; stack.appendChild(e); }
+    const lbl = document.createElement("div");
+    lbl.className = "anarchy-pile-label"; lbl.textContent = `${label} ${count}`;
+    el.appendChild(stack); el.appendChild(lbl);
+  }
+  // fly a face-down card from the stock to whoever just drew
+  function flyDraw(idx, count) {
+    const target = idx === viewer() ? elHand : oppBoxMap[idx];
+    if (!target || !elStock) return;
+    const from = feltPos(elStock), to = feltPos(target);
+    const toX = to.x + to.w / 2 - 11, toY = to.y + (idx === viewer() ? 0 : to.h / 2);
+    for (let k = 0; k < Math.min(count, 3); k++) {
+      const fly = cardEl(null, { mini: true, faceUp: false });
+      fly.classList.add("anarchy-fly");
+      fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
+      elFelt.appendChild(fly);
+      const d = k * 90;
+      setTimeout(() => { fly.style.transition = "transform .42s ease-in-out, opacity .42s"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.3)`; fly.style.opacity = "0"; }, d + 10);
+      setTimeout(() => fly.remove(), d + 460);
+    }
+  }
+  // sweep the table to the бита pile when it clears
   function biteFlyAway() {
+    const from = feltPos(elPile), to = feltPos(elBita);
     const fly = document.createElement("div");
     fly.className = "acard back anarchy-bita-card";
-    fly.style.left = "28px"; fly.style.top = "18px";
-    elPile.appendChild(fly);
+    fly.style.left = (from.x + 28) + "px"; fly.style.top = (from.y + 18) + "px";
+    elFelt.appendChild(fly);
     requestAnimationFrame(() => {
       fly.style.transition = "transform .45s ease-in, opacity .45s ease-in";
-      fly.style.transform = "translate(210px, 180px) scale(.55) rotate(18deg)";
+      fly.style.transform = `translate(${to.x - from.x - 28}px, ${to.y - from.y - 18}px) scale(.6) rotate(16deg)`;
       fly.style.opacity = "0";
     });
     setTimeout(() => fly.remove(), 480);
@@ -185,7 +228,7 @@ export function openAnarchy() {
     if (sel.length === 1) {
       const c = sel[0];
       if (c.rank === 7) return { label: "Switch 7", action: { type: "SWITCH7", card: c.id } };
-      if (c.rank === 14 && d.type === "pickup") return { label: "Cancel with Ace", action: { type: "ACE_CANCEL", card: c.id, take: aceTake } };
+      if (c.rank === 14 && d.type === "pickup") return { label: "Cancel (Ace switch)", action: { type: "ACE_CANCEL", card: c.id, take: true } };
       if (c.rank === 14) return { label: aceTake ? "Play Ace + take" : "Play Ace", action: { type: "ACE_SWITCH", card: c.id, take: aceTake } };
     }
     // generic single/pair, matched by RANK (the engine lists one card per rank,
@@ -283,10 +326,11 @@ export function openAnarchy() {
     const opps = state.players.map((p, i) => ({ p, i })).filter((o) => o.i !== viewer());
     const seatsByCount = { 1: ["seat-top"], 2: ["seat-tl", "seat-tr"], 3: ["seat-left", "seat-top", "seat-right"] };
     const seats = seatsByCount[opps.length] || ["seat-top"];
-    oppSeatMap = {};
+    oppSeatMap = {}; oppBoxMap = {};
     opps.forEach((o, k) => {
       oppSeatMap[o.i] = seats[k] || "seat-top";
       const box = document.createElement("div");
+      oppBoxMap[o.i] = box;
       box.className = "anarchy-opp " + (seats[k] || "seat-top") + (state.turn === o.i ? " active" : "");
       const fan = document.createElement("div");
       fan.className = "anarchy-opp-fan";
@@ -329,6 +373,16 @@ export function openAnarchy() {
     lastTopId = topId;
     lastPileLen = state.pile.length;
 
+    // visible draw (stock) and бита (discard) piles, kept separate
+    renderSidePile(elStock, state.stock.length, "Draw");
+    renderSidePile(elBita, state.removed.length, "бита");
+    // animate any card a player just took (flies from the stock to that player)
+    state.players.forEach((p, i) => {
+      const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
+      if (grew > 0) flyDraw(i, grew);
+    });
+    lastHandCounts = state.players.map((p) => p.hand.length);
+
     elLog.innerHTML = state.log.slice(-4).map((l) => `<div>${l}</div>`).join("");
     elLog.scrollTop = elLog.scrollHeight;
 
@@ -345,15 +399,16 @@ export function openAnarchy() {
     if (mode === "local") elHandName.textContent = `${state.players[viewer()].name}'s hand`;
     const { active, legal } = activeAndLegal();
     const act = canAct();
-    const playableIds = new Set();
+    const playRanks = new Set(); // ranks with a legal PLAY — every copy of that rank is playable
+    const playIds = new Set();   // specific cards: 7 switch, Ace
     if (act) for (const m of legal) {
-      if (m.type === "PLAY") m.cards.forEach((id) => playableIds.add(id));
-      if (m.type === "SWITCH7" || m.type === "ACE_SWITCH" || m.type === "ACE_CANCEL") playableIds.add(m.card);
+      if (m.type === "PLAY") { const c0 = active.find((c) => c.id === m.cards[0]); if (c0) playRanks.add(c0.rank); }
+      else if (m.type === "SWITCH7" || m.type === "ACE_SWITCH" || m.type === "ACE_CANCEL") playIds.add(m.card);
     }
     [...active].sort((a, b) => a.rank - b.rank || a.suit.localeCompare(b.suit)).forEach((c) => {
       const e = cardEl(c);
       const isSel = selection.includes(c.id);
-      const isLegal = act && playableIds.has(c.id);
+      const isLegal = act && (playRanks.has(c.rank) || playIds.has(c.id));
       if (isSel) e.classList.add("sel");
       if (isLegal) e.classList.add("legal");
       if (!isSel && !isLegal) e.classList.add("dim");
@@ -460,6 +515,7 @@ export function openAnarchy() {
     state = createGame({ numPlayers, humanIndices, names });
     selection = []; aceTake = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
     lastTopId = null; lastPileLen = 0; // don't fire a stray бита on the first render
+    lastHandCounts = state.players.map((p) => p.hand.length); // the deal isn't a "draw"
     render();
     scheduleBots();
   }
