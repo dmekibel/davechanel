@@ -1,11 +1,11 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=157";
-import { ICONS } from "../icons.js?v=157";
+import { openWindow } from "../window-manager.js?v=158";
+import { ICONS } from "../icons.js?v=158";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=157";
-import { chooseAction, botSlap } from "./bot.js?v=157";
+} from "./engine.js?v=158";
+import { chooseAction, botSlap } from "./bot.js?v=158";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -391,8 +391,10 @@ export function openAnarchy() {
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
-    // tapping an already-raised card commits the play (fast: tap to raise, tap to play)
     if (selection.includes(id)) {
+      // a selected pair: tapping switches which card sits on top (its colour sets the next demand)
+      if (selection.length === 2) { selection = [selection[1], selection[0]]; render(); return; }
+      // a selected single: tap again to play it (or throw it up)
       const sa = selectionAction();
       if (sa) apply(sa.action); else { selection = []; render(); }
       return;
@@ -427,18 +429,24 @@ export function openAnarchy() {
     e.addEventListener("pointermove", (ev) => {
       if (sy == null) return;
       const dy = ev.clientY - sy, dx = ev.clientX - sx;
-      if (dy < -6 && Math.abs(dy) > Math.abs(dx)) { dragging = true; e.style.transition = "none"; e.style.transform = `translateY(${Math.max(dy, -90)}px)`; }
+      // once a clear upward drag starts, the card follows your finger all the way to the table
+      if (dragging || (dy < -14 && Math.abs(dy) > Math.abs(dx))) {
+        dragging = true;
+        e.style.transition = "none";
+        e.style.zIndex = "70";
+        e.style.transform = `translate(${dx}px, ${dy}px)`;
+      }
     });
     const end = (ev) => {
       if (sy == null) return;
       const dy = (ev.clientY ?? sy) - sy;
-      sy = null; e.style.transition = ""; e.style.transform = "";
-      if (dy < -40) swipePlay(id);       // thrown up -> play
+      sy = null; e.style.transition = ""; e.style.transform = ""; e.style.zIndex = "";
+      if (dy < -50) swipePlay(id);         // thrown up toward the middle -> play
       else if (!dragging) onCardClick(id); // tap -> select / play
-      else render();                       // small drag -> reset
+      else render();                       // small drag back down -> reset
     };
     e.addEventListener("pointerup", end);
-    e.addEventListener("pointercancel", () => { sy = null; e.style.transition = ""; e.style.transform = ""; });
+    e.addEventListener("pointercancel", () => { sy = null; e.style.transition = ""; e.style.transform = ""; e.style.zIndex = ""; });
   }
 
   // ---- render ----
@@ -578,6 +586,8 @@ export function openAnarchy() {
       const isSel = selection.includes(c.id);
       const isLegal = act && (playRanks.has(c.rank) || playIds.has(c.id));
       if (isSel) e.classList.add("sel");
+      // for a selected pair, mark the card that will land on top (last in order)
+      if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
       if (isLegal) e.classList.add("legal");
       if (!isSel && !isLegal) e.classList.add("dim");
       if (justRevealed) e.classList.add("flip-in");
@@ -652,14 +662,26 @@ export function openAnarchy() {
       return;
     }
 
+    // facing a pickup: show every option spelled out
+    if (state.demand.type === "pickup") {
+      const r = state.demand.rank;
+      const seven = hand.find((c) => c.rank === 7);
+      const ace = hand.find((c) => c.rank === 14);
+      const matches = hand.filter((c) => c.rank === r);
+      add(`Take ${state.demand.count}`, () => apply({ type: "TAKE_PICKUP" }), "primary");
+      if (matches.length >= 2) add(`Stack two ${rankLabel(r)} → four!`, () => apply({ type: "PLAY", cards: [matches[0].id, matches[1].id] }), "");
+      else if (matches.length >= 1) add(`Stack a ${rankLabel(r)}`, () => apply({ type: "PLAY", cards: [matches[0].id] }), "");
+      if (seven) add("Cancel with 7 (switch)", () => apply({ type: "SWITCH7", card: seven.id }), "");
+      if (ace) add("Cancel with Ace", () => apply({ type: "ACE_CANCEL", card: ace.id, take: true }), "");
+      return;
+    }
+
     const sa = selectionAction();
     if (sa) add(sa.label, () => apply(sa.action), "primary");
 
     const sel = selection.map((id) => hand.find((c) => c.id === id));
     if (sel.length === 1 && sel[0] && sel[0].rank === 14 && state.pile.length)
       add(aceTake ? "☑ take below" : "☐ take below", () => { aceTake = !aceTake; render(); }, "toggle");
-
-    if (state.demand.type === "pickup") add("Take " + state.demand.count, () => apply({ type: "TAKE_PICKUP" }), "");
 
     const reserved = reservedSet();
     const { active } = activeAndLegal();

@@ -220,10 +220,10 @@ function actPLAY(s, action) {
     s.turn = nextIdx(s, idx);
     s.demand = demandFromTop(s);
   } else if (ids.length === 2) {
-    // fresh pair -> forward pickup of 1
+    // fresh pair -> forward pickup equal to the number of cards played (2)
     s.lastPlacer = idx;
     s.turn = nextIdx(s, idx);
-    s.demand = { type: "pickup", rank: R, count: 1 };
+    s.demand = { type: "pickup", rank: R, count: ids.length };
   } else {
     // fresh single -> color demand
     s.lastPlacer = idx;
@@ -264,7 +264,7 @@ function actAce(s, action, cancel) {
     if (d.type !== "pickup") throw new Error("ACE_CANCEL only answers a pickup demand");
   } else {
     if (d.type === "pickup") throw new Error("use ACE_CANCEL to answer a pickup");
-    if (d.type === "color" && !satisfiesDir(14, d)) throw new Error("Ace violates the color demand");
+    // an Ace can be played in response to anything (it acts as a switch), like the 7
   }
   takeFromHand(p, action.card);
   if (action.take && s.pile.length > 0) p.hand.push(s.pile.pop()); // optional take-below
@@ -399,7 +399,7 @@ export function legalMoves(state) {
       }
     }
     for (const c of hand) if (c.rank === 7) moves.push({ type: "SWITCH7", card: c.id });
-    for (const c of hand) if (c.rank === 14 && (open || satisfiesDir(14, d)))
+    for (const c of hand) if (c.rank === 14) // an Ace is always playable (switch/high card)
       moves.push({ type: "ACE_SWITCH", card: c.id, take: false });
   }
   // straights are legal any time

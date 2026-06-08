@@ -2785,6 +2785,7 @@ body.lang-ru .login-logo {
 .anarchy-hand .acard.legal { cursor: pointer; box-shadow: 0 0 0 2px #2a7fff, 1px 1px 2px rgba(0,0,0,.35); }
 @media (hover: hover) { .anarchy-hand .acard.legal:hover { transform: translateY(-6px); } }
 .anarchy-hand .acard.sel { transform: translateY(-12px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
+.anarchy-hand .acard.sel-top { transform: translateY(-24px); z-index: 5; box-shadow: 0 0 0 2px #ffd24d, 1px 1px 4px rgba(0,0,0,.4); } /* the pair card that lands on top */
 /* unplayable cards stay opaque (no felt bleed-through) but read as muted */
 .anarchy-hand .acard.dim { filter: brightness(.62) saturate(.65); }
 
