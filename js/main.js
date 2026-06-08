@@ -1,10 +1,10 @@
 // Mekibel — boot
 
-import { initDesktop } from "./desktop.js?v=182";
-import { shouldShowLogin, showLogin } from "./login.js?v=182";
-import { apply as applyOsMode } from "./os-mode.js?v=182";
-import { applyDomTranslations, getLang } from "./i18n.js?v=182";
-import { applyScale } from "./scale.js?v=182";
+import { initDesktop } from "./desktop.js?v=183";
+import { shouldShowLogin, showLogin } from "./login.js?v=183";
+import { apply as applyOsMode } from "./os-mode.js?v=183";
+import { applyDomTranslations, getLang } from "./i18n.js?v=183";
+import { applyScale } from "./scale.js?v=183";
 
 function boot() {
   disableZoom();
@@ -43,7 +43,7 @@ function initLangGlobe() {
 
 function showLangPopup(anchor) {
   closeLangPopup();
-  Promise.all([import("./i18n.js?v=182"), import("./scale.js?v=182")]).then(([{ getLang, setLang }, { currentZoom }]) => {
+  Promise.all([import("./i18n.js?v=183"), import("./scale.js?v=183")]).then(([{ getLang, setLang }, { currentZoom }]) => {
     const cur = getLang();
     const rect = anchor.getBoundingClientRect();
     // rect is post-transform viewport coords; CSS positioning is body-internal.

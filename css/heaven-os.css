@@ -2800,9 +2800,9 @@ body.lang-ru .login-logo {
 .anarchy-hand { display: flex; gap: 4px; overflow: visible; padding: 20px 2px 8px; min-height: 92px; align-items: flex-end; justify-content: center; }
 .anarchy-hand .acard { cursor: default; transition: transform .08s; }
 .anarchy-hand .acard.legal { cursor: pointer; box-shadow: 0 0 0 2px #2a7fff, 1px 1px 2px rgba(0,0,0,.35); }
-/* a 7 you can slip in OUT OF TURN — pulses purple so you notice the window */
-.anarchy-hand .acard.interrupt { cursor: pointer; transform: translateY(-8px); animation: anarchyInterrupt .65s ease-in-out infinite; }
-@keyframes anarchyInterrupt { 0%,100% { box-shadow: 0 0 0 2px #b388ff, 0 0 8px rgba(179,136,255,.7); } 50% { box-shadow: 0 0 0 3px #d3bcff, 0 0 16px rgba(179,136,255,1); } }
+/* a 7 you CAN slip in out of turn — available but understated: a faint purple
+   edge, no lift, no pulse (you'll know it's there; it won't shout) */
+.anarchy-hand .acard.interrupt { cursor: pointer; box-shadow: 0 0 0 1px rgba(155,120,235,.65); }
 /* a selected card is already chosen — it must NOT jump on hover */
 @media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):hover { transform: translateY(-6px); } }
 .anarchy-hand .acard.sel { transform: translateY(-14px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }

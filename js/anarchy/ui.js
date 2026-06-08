@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=182";
-import { ICONS } from "../icons.js?v=182";
+import { openWindow } from "../window-manager.js?v=183";
+import { ICONS } from "../icons.js?v=183";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=182";
-import { chooseAction, botSlap } from "./bot.js?v=182";
-import { currentZoom } from "../scale.js?v=182";
+} from "./engine.js?v=183";
+import { chooseAction, botSlap } from "./bot.js?v=183";
+import { currentZoom } from "../scale.js?v=183";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -894,8 +894,8 @@ export function openAnarchy() {
       if (isSel) e.classList.add("sel");
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
-      if (isLegal || is7Int) e.classList.add("legal");
-      if (is7Int) e.classList.add("interrupt"); // distinct "you can cut in" pulse
+      if (isLegal) e.classList.add("legal");
+      if (is7Int) e.classList.add("interrupt"); // a quiet, tappable out-of-turn 7 (not loud)
       if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
       if (!isSel && !isLegal && !is7Int) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
       if (justRevealed) e.classList.add("flip-in");
@@ -1031,10 +1031,7 @@ export function openAnarchy() {
       if (card) add("SLAP!", () => apply({ type: "SLAP", by: viewer(), card: card.id }), "slap");
     }
     if (!canAct()) {
-      if (!elActions.children.length) {
-        const tip = canInterrupt() ? " — quick, tap a 7 to cut in!" : "";
-        elActions.innerHTML = `<span class="anarchy-wait">${state.players[state.turn].name} is playing…${tip}</span>`;
-      }
+      if (!elActions.children.length) elActions.innerHTML = `<span class="anarchy-wait">${state.players[state.turn].name} is playing…</span>`;
       return;
     }
 
