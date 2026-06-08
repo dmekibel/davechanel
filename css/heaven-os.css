@@ -2765,6 +2765,7 @@ body.lang-ru .login-logo {
 .anarchy-stock.pickup-ready .anarchy-sidepile-stack { filter: drop-shadow(0 0 6px #ffe14d); }
 @keyframes anarchyDeckPulse { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.12); } }
 .anarchy-pickup-hint { margin-top: 3px; font-size: 9px; font-weight: bold; color: #ffe14d; background: rgba(0,0,0,.45); border-radius: 8px; padding: 1px 6px; white-space: nowrap; animation: anarchyHintBlink 1s steps(1) infinite; }
+.anarchy-pickup-hint.quiet { color: #cfeede; font-weight: normal; animation: none; } /* the optional draw-and-pass — no blink */
 @keyframes anarchyHintBlink { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
 .anarchy-sidepile-stack { position: relative; width: 24px; height: 32px; margin: 0 auto 3px; }
 .anarchy-pile-label { font-size: 9px; letter-spacing: .5px; font-weight: bold; white-space: nowrap; }

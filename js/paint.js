@@ -2,11 +2,11 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=180";
-import { ICONS } from "./icons.js?v=180";
-import { saveImage, loadUserFS } from "./user-storage.js?v=180";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=180";
-import { FS } from "./file-system.js?v=180";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=181";
+import { ICONS } from "./icons.js?v=181";
+import { saveImage, loadUserFS } from "./user-storage.js?v=181";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=181";
+import { FS } from "./file-system.js?v=181";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).

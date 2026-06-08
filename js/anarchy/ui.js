@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=180";
-import { ICONS } from "../icons.js?v=180";
+import { openWindow } from "../window-manager.js?v=181";
+import { ICONS } from "../icons.js?v=181";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=180";
-import { chooseAction, botSlap } from "./bot.js?v=180";
-import { currentZoom } from "../scale.js?v=180";
+} from "./engine.js?v=181";
+import { chooseAction, botSlap } from "./bot.js?v=181";
+import { currentZoom } from "../scale.js?v=181";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -815,23 +815,23 @@ export function openAnarchy() {
     // visible draw (stock) and бита (discard) piles, kept separate
     renderSidePile(elStock, state.stock.length, "Draw");
     renderSidePile(elBita, state.removed.length, "Discard");
-    // the draw deck doubles as a tap target: take a forced pickup, or — when you
-    // can't follow the colour and there are still cards to draw — draw-and-pass.
-    // (no stray "Pass" button to fat-finger; a real Pass button only appears when
-    // the stock is empty, handled in renderActions.)
+    // the draw deck is the always-available action target: take a forced pickup,
+    // clear an owed draw, or — under a colour demand — draw-and-pass. The pass is
+    // ALWAYS optional (tap the deck), so it pulses only when it's your only move.
     const owed = canAct() ? (state.players[viewer()].pendingDraw || 0) : 0;
     const owesPending = owed > 0 && state.stock.length > 0; // you must tap to take cards you owe
     const facingPickup = canAct() && !owesPending && state.demand.type === "pickup";
-    const canPass = canAct() && !owesPending && state.demand.type === "color" && activeAndLegal().legal.some((m) => m.type === "PASS");
-    const deckPass = canPass && state.stock.length > 0;
-    elStock.classList.toggle("pickup-ready", owesPending || facingPickup || deckPass);
+    const deckPass = canAct() && !owesPending && state.demand.type === "color" && state.stock.length > 0;
+    const hasPlay = canAct() && activeAndLegal().legal.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH");
+    const deckUrgent = owesPending || facingPickup || (deckPass && !hasPlay); // forced → pulse; optional pass → quiet
+    elStock.classList.toggle("pickup-ready", deckUrgent);
     elStock.onclick = owesPending ? () => apply({ type: "DRAW_PENDING" })
                     : facingPickup ? () => apply({ type: "TAKE_PICKUP" })
                     : deckPass ? () => apply({ type: "PASS" })
                     : null;
     if (owesPending || facingPickup || deckPass) {
       const hint = document.createElement("div");
-      hint.className = "anarchy-pickup-hint";
+      hint.className = "anarchy-pickup-hint" + (deckPass && hasPlay ? " quiet" : ""); // optional pass reads calmer
       hint.textContent = owesPending ? `Tap to take ${owed}` : facingPickup ? `Tap to pick up ${state.demand.count}` : "Tap to draw & pass";
       elStock.appendChild(hint);
     }
@@ -1081,18 +1081,10 @@ export function openAnarchy() {
         break;
       }
     }
-    // passing happens by tapping the draw deck (see render); spell that out so the
-    // option is obvious. A real Pass button only appears once the stock is empty —
-    // nothing left to draw, so the deck can't be the target.
-    if (state.demand.type === "color" && activeAndLegal().legal.some((m) => m.type === "PASS")) {
-      if (state.stock.length === 0) add("Pass (clear table)", () => apply({ type: "PASS" }), "");
-      else {
-        const hint = document.createElement("span");
-        hint.className = "anarchy-wait";
-        hint.textContent = "Can't follow — tap the draw deck to draw & pass.";
-        elActions.appendChild(hint);
-      }
-    }
+    // draw-and-pass is always an option on the draw deck (labelled there). A real
+    // Pass button only appears once the stock is empty — nothing left to draw.
+    if (state.demand.type === "color" && state.stock.length === 0 && activeAndLegal().legal.some((m) => m.type === "PASS"))
+      add("Pass (clear table)", () => apply({ type: "PASS" }), "");
   }
 
   // ---- new game ----

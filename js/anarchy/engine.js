@@ -468,9 +468,9 @@ export function legalMoves(state) {
     moves.push({ type: "DUMP", cards: ids });
   }
   for (const [, cs] of groups) if (cs.length === 4) moves.push({ type: "DUMP", cards: cs.map((c) => c.id) });
-  // can't satisfy a color demand -> pass
-  if (d.type === "color" && !moves.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH"))
-    moves.push({ type: "PASS" });
+  // under a colour demand you may ALWAYS draw-and-pass (an optional escape — tap the
+  // deck), not only when you're stuck
+  if (d.type === "color") moves.push({ type: "PASS" });
   return moves;
 }
 
