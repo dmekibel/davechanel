@@ -2,7 +2,7 @@
 // Strategy (from the spec's suggested baseline): dump straights for free, prefer a
 // fresh pair to force a pickup, otherwise play the most restrictive legal single,
 // escape with a 7 when stuck, and just take a single-card pickup rather than burn a switch.
-import { legalMoves } from "./engine.js?v=175";
+import { legalMoves } from "./engine.js?v=176";
 
 // How much a single card constrains the next player once it's on top.
 // Low black (forces "equal or lower" from a low rank) and high red (forces
@@ -15,6 +15,8 @@ function squeeze(card) {
 export function chooseAction(state) {
   const moves = legalMoves(state);
   if (!moves.length) return { type: "PASS" };
+  const pending = moves.find((m) => m.type === "DRAW_PENDING");
+  if (pending) return pending; // owe cards? take them first (the only legal move)
   const d = state.demand;
   const hand = state.players[state.turn].hand;
   const cardOf = (id) => hand.find((c) => c.id === id);

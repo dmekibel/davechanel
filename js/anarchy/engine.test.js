@@ -24,7 +24,7 @@ function scenario({ hands, pile = [], stock = [], demand, turn = 0, lastPlacer =
   const stockCards = stock.map(mk); claim(stock);
   const removed = freshDeck().filter((c) => !used.has(c.id));
   const s = {
-    players: handCards.map((h, i) => ({ id: `p${i}`, name: i === 0 ? "P0" : `P${i}`, isHuman: i === 0, hand: h })),
+    players: handCards.map((h, i) => ({ id: `p${i}`, name: i === 0 ? "P0" : `P${i}`, isHuman: i === 0, hand: h, pendingDraw: 0 })),
     stock: stockCards, pile: pileCards, removed,
     turn, demand: demand || { type: "open" }, topRank: null, topColor: null, topRun: 0,
     lastPlacer, consecutivePasses: 0, status: "playing", winner: null, log: [],
@@ -70,7 +70,8 @@ section("T2: pair -> third (pair-player draws 2) -> slap fourth -> combo clears"
   const p0before = s.players[0].hand.length;
   s = reduce(s, { type: "PLAY", cards: ["9C"] });                 // P1 stacks the third
   eq(s.topRun, 3, "three of a kind on the table");
-  eq(s.players[0].hand.length, p0before + 2, "pair-player draws 2 (run-1)");
+  eq(s.players[0].pendingDraw, 2, "pair-player OWES 2 (run-1) — not auto-drawn");
+  eq(s.players[0].hand.length, p0before, "hand unchanged until they tap the deck");
   const opps = slapOpportunities(s);
   ok(opps.some((o) => o.by === 0), "P0 can slap the fourth 9S");
   s = reduce(s, { type: "SLAP", by: 0, card: "9S" });
@@ -82,20 +83,26 @@ section("T2: pair -> third (pair-player draws 2) -> slap fourth -> combo clears"
 // ---------------------------------------------------------------------------
 section("T3: matching punishes the previous placer backward");
 {
-  // single matched by a single -> previous draws 1
+  // single matched by a single -> previous OWES 1, cleared by tapping the deck
   let s = scenario({ hands: [["5H", "13D"], ["5C", "12S"]], stock: ["2C", "3C", "4C"], turn: 0 });
   s = reduce(s, { type: "PLAY", cards: ["5H"] });
   const p0 = s.players[0].hand.length;
   s = reduce(s, { type: "PLAY", cards: ["5C"] });
-  eq(s.players[0].hand.length, p0 + 1, "single matched by single: previous draws 1");
+  eq(s.players[0].pendingDraw, 1, "single matched by single: previous OWES 1");
+  eq(s.players[0].hand.length, p0, "no auto-draw — hand unchanged");
+  eq(legalMoves(s)[0].type, "DRAW_PENDING", "owing forces a deck-tap before anything else");
+  s = reduce(s, { type: "DRAW_PENDING" });
+  eq(s.players[0].hand.length, p0 + 1, "tapping the deck draws the owed card");
+  eq(s.players[0].pendingDraw, 0, "debt cleared");
 
-  // single matched by a pair -> previous draws 2
+  // single matched by a pair -> previous OWES 2
   let t = scenario({ hands: [["6H", "13D"], ["6C", "6S", "13H"]], stock: ["2C", "3C", "4C"], turn: 0 });
   t = reduce(t, { type: "PLAY", cards: ["6H"] });
   const tp0 = t.players[0].hand.length;
   t = reduce(t, { type: "PLAY", cards: ["6C", "6S"] });
   eq(t.topRun, 3, "pair onto a single makes a triple");
-  eq(t.players[0].hand.length, tp0 + 2, "single matched by pair: previous draws 2");
+  eq(t.players[0].pendingDraw, 2, "single matched by pair: previous OWES 2");
+  eq(t.players[0].hand.length, tp0, "no auto-draw");
 }
 
 // ---------------------------------------------------------------------------

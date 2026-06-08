@@ -49,6 +49,7 @@ export function createGame({ numPlayers = 2, names, humanIndices = [0], seed } =
       name: (names && names[i]) || (i === 0 ? "You" : `CPU ${i}`),
       isHuman: humanIndices.includes(i),
       hand: deck.splice(0, 9),
+      pendingDraw: 0, // cards owed (a matched/combo penalty) — NEVER auto-drawn; you tap the deck to take them on your turn
     });
   }
   const state = {
@@ -161,7 +162,8 @@ function stalemateEnd(s) {
 
 // four-of-a-kind combo (sections 7, 8)
 function combo(s, completer) {
-  for (let i = 1; i < s.players.length; i++) draw(s, (completer + i) % s.players.length, 1);
+  // everyone else OWES 1 (cleared by tapping the deck on their turn — never auto-drawn)
+  if (s.stock.length > 0) for (let i = 1; i < s.players.length; i++) { const q = s.players[(completer + i) % s.players.length]; q.pendingDraw = (q.pendingDraw || 0) + 1; }
   s.removed.push(...s.pile);
   s.pile = [];
   recomputeTop(s);
@@ -212,10 +214,12 @@ function actPLAY(s, action) {
 
   const matched = d.type === "pickup" || (d.type !== "open" && R === prevTopRank);
   if (matched) {
-    // backward punish: the previous placer draws (runLength - 1)
-    if (prevLastPlacer != null) {
-      const n = draw(s, prevLastPlacer, s.topRun - 1);
-      if (n) s.log.push(`${s.players[prevLastPlacer].name} draws ${n} (matched).`);
+    // backward punish: the previous placer OWES (runLength - 1). We don't draw for
+    // them — they clear the debt by tapping the deck on their turn. No stock → no debt.
+    const owed = s.topRun - 1;
+    if (prevLastPlacer != null && owed > 0 && s.stock.length > 0) {
+      s.players[prevLastPlacer].pendingDraw = (s.players[prevLastPlacer].pendingDraw || 0) + owed;
+      s.log.push(`${s.players[prevLastPlacer].name} owes ${owed} (matched).`);
     }
     s.lastPlacer = idx;
     s.turn = nextIdx(s, idx);
@@ -298,6 +302,18 @@ function actTAKE_PICKUP(s) {
   return s;
 }
 
+// the player clears the cards they OWE (matched/combo penalty) by tapping the deck
+// — this is how draws happen; nothing is ever drawn automatically. Turn unchanged.
+function actDRAW_PENDING(s) {
+  const idx = s.turn;
+  const p = s.players[idx];
+  if (!p.pendingDraw) throw new Error("nothing owed");
+  const n = draw(s, idx, p.pendingDraw);
+  p.pendingDraw = 0;
+  s.log.push(`${p.name} takes ${n} owed.`);
+  return s;
+}
+
 function actSLAP(s, action) {
   const by = action.by == null ? s.turn : action.by;
   if (s.topRun !== 3) throw new Error("SLAP requires exactly three of a kind showing");
@@ -351,6 +367,7 @@ const HANDLERS = {
   ACE_SWITCH: (s, a) => actAce(s, a, false),
   ACE_CANCEL: (s, a) => actAce(s, a, true),
   TAKE_PICKUP: actTAKE_PICKUP,
+  DRAW_PENDING: actDRAW_PENDING,
   SLAP: actSLAP,
   DUMP: actDUMP,
   PASS: actPASS,
@@ -383,6 +400,9 @@ export function legalMoves(state) {
   if (state.status !== "playing") return [];
   const s = state;
   const p = s.players[s.turn];
+  // owe cards? You must clear the debt first by tapping the deck. (If the stock is
+  // empty there's nothing to draw, so the debt is moot and play continues.)
+  if (p.pendingDraw > 0 && s.stock.length > 0) return [{ type: "DRAW_PENDING" }];
   const hand = p.hand;
   const groups = byRank(hand);
   const moves = [];

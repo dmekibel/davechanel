@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=175";
-import { ICONS } from "../icons.js?v=175";
+import { openWindow } from "../window-manager.js?v=176";
+import { ICONS } from "../icons.js?v=176";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=175";
-import { chooseAction, botSlap } from "./bot.js?v=175";
-import { currentZoom } from "../scale.js?v=175";
+} from "./engine.js?v=176";
+import { chooseAction, botSlap } from "./bot.js?v=176";
+import { currentZoom } from "../scale.js?v=176";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -356,6 +356,11 @@ export function openAnarchy() {
   // through their flying card + the log, so we don't pile up big notifications.
   function announceIntakes(action, prevDemandType, before) {
     if (!state || state.status !== "playing") return;
+    const me = viewer();
+    if (state.turn === me && (state.players[me].pendingDraw || 0) > 0 && state.stock.length > 0) {
+      announce(`YOU — TAKE ${state.players[me].pendingDraw}`, true); // giant red over the deck: tap to take
+      return;
+    }
     if (state.demand.type === "pickup" && prevDemandType !== "pickup") {
       const i = state.turn, n = state.demand.count || 1;
       if (i === viewer()) announce(`YOU — PICK UP ${n}`, true);
@@ -528,10 +533,9 @@ export function openAnarchy() {
     const taker = isSwitchTake ? (action.by == null ? prevTurn : action.by) : null;
     const hadPile = state.pile.length > 0;
     const switchCard = isSwitchTake && hadPile ? state.pile[state.pile.length - 1] : null; // the exact card the switch will scoop
-    // taking a pickup: the card(s) should appear to come off the play pile, not the stock
-    const takingPickup = action.type === "TAKE_PICKUP";
-    const pickupTaker = takingPickup ? state.turn : -1;
-    const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
+    // taking a pickup OR clearing an owed draw: cards slide from the draw deck
+    const drawing = action.type === "TAKE_PICKUP" || action.type === "DRAW_PENDING";
+    const drawTaker = drawing ? state.turn : -1;
     const prevDemandType = state.demand.type;
     const beforeCounts = state.players.map((p) => p.hand.length);
     try { state = reduce(state, action); }
@@ -542,11 +546,12 @@ export function openAnarchy() {
       handoffPending = true;
       flipHandArea();
     }
-    if (takingPickup && pickupTaker >= 0) suppressDrawIdx = pickupTaker; // skip the generic stock-fly for the taker
+    if (drawTaker >= 0) suppressDrawIdx = drawTaker; // skip the generic stock-fly for the taker
     render();
-    if (takingPickup && pickupTaker >= 0) {
-      const h = state.players[pickupTaker].hand;
-      flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // big card slides from the draw deck
+    if (drawTaker >= 0) {
+      const h = state.players[drawTaker].hand;
+      const drewN = h.length - beforeCounts[drawTaker]; // actual cards drawn (0 if the stock was empty)
+      if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // big cards slide from the draw deck
     }
     if (taker != null && hadPile) flyFromPile(taker, switchCard); // switch: the card below flies to the player
     announceIntakes(action, prevDemandType, beforeCounts);
@@ -580,18 +585,18 @@ export function openAnarchy() {
       const taker = isSwitchTake ? (action.by == null ? state.turn : action.by) : null;
       const hadPile = state.pile.length > 0;
       const switchCard = isSwitchTake && hadPile ? state.pile[state.pile.length - 1] : null; // the card the switch scoops
-      const takingPickup = action.type === "TAKE_PICKUP";
-      const pickupTaker = takingPickup ? state.turn : -1;
-      const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
+      const drawing = action.type === "TAKE_PICKUP" || action.type === "DRAW_PENDING";
+      const drawTaker = drawing ? state.turn : -1;
       const prevDemandType = state.demand.type;
       const beforeCounts = state.players.map((p) => p.hand.length);
       const passer = state.turn; // who is about to act (for a PASS banner)
       try { state = reduce(state, action); } catch (e) { /* skip a bad bot move */ }
-      if (takingPickup && pickupTaker >= 0) suppressDrawIdx = pickupTaker;
+      if (drawTaker >= 0) suppressDrawIdx = drawTaker;
       render();
-      if (takingPickup && pickupTaker >= 0) {
-        const h = state.players[pickupTaker].hand;
-        flyPickup(pickupTaker, h.slice(h.length - pickupCount)); // enemy pickup slides from deck to their seat
+      if (drawTaker >= 0) {
+        const h = state.players[drawTaker].hand;
+        const drewN = h.length - beforeCounts[drawTaker];
+        if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // enemy draw slides from deck to their seat
       }
       if (taker != null && hadPile) flyFromPile(taker, switchCard); // enemy switch: the card below flies to them
       announceIntakes(action, prevDemandType, beforeCounts);
@@ -680,6 +685,8 @@ export function openAnarchy() {
     const d = state.demand;
     const mine = state.turn === viewer();
     const me = mine ? "YOU" : state.players[state.turn].name;
+    const owed = (state.players[state.turn].pendingDraw || 0);
+    if (owed > 0 && state.stock.length > 0) return mine ? `TAP THE DECK — TAKE ${owed}` : `${me} owes ${owed}`;
     const turnTag = mine ? "YOUR TURN" : `${me}'s turn`;
     const prev = state.lastPlacer != null && state.lastPlacer !== state.turn ? state.players[state.lastPlacer].name : null;
     const top = state.pile.length ? state.pile[state.pile.length - 1] : null;
@@ -733,8 +740,9 @@ export function openAnarchy() {
 
     // badge + pile (a growing stack of past plays) + run
     elBadge.textContent = flashMsg || badgeText();
-    const myPickup = state.demand.type === "pickup" && state.turn === viewer();
-    elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (state.demand.type === "pickup" ? " pickup" : "") + (myPickup ? " you" : "");
+    const owedNow = (state.players[state.turn].pendingDraw || 0) > 0 && state.stock.length > 0;
+    const urgent = state.demand.type === "pickup" || owedNow;
+    elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (urgent ? " pickup" : "") + (urgent && state.turn === viewer() ? " you" : "");
     // the current top group (a pair/triple) sits side-by-side on the same level,
     // all highlighted; older plays stay buried behind showing a corner
     elPile.innerHTML = "";
@@ -788,17 +796,20 @@ export function openAnarchy() {
     // can't follow the colour and there are still cards to draw — draw-and-pass.
     // (no stray "Pass" button to fat-finger; a real Pass button only appears when
     // the stock is empty, handled in renderActions.)
-    const facingPickup = canAct() && state.demand.type === "pickup";
-    const canPass = canAct() && state.demand.type === "color" && activeAndLegal().legal.some((m) => m.type === "PASS");
+    const owed = canAct() ? (state.players[viewer()].pendingDraw || 0) : 0;
+    const owesPending = owed > 0 && state.stock.length > 0; // you must tap to take cards you owe
+    const facingPickup = canAct() && !owesPending && state.demand.type === "pickup";
+    const canPass = canAct() && !owesPending && state.demand.type === "color" && activeAndLegal().legal.some((m) => m.type === "PASS");
     const deckPass = canPass && state.stock.length > 0;
-    elStock.classList.toggle("pickup-ready", facingPickup || deckPass);
-    elStock.onclick = facingPickup ? () => apply({ type: "TAKE_PICKUP" })
+    elStock.classList.toggle("pickup-ready", owesPending || facingPickup || deckPass);
+    elStock.onclick = owesPending ? () => apply({ type: "DRAW_PENDING" })
+                    : facingPickup ? () => apply({ type: "TAKE_PICKUP" })
                     : deckPass ? () => apply({ type: "PASS" })
                     : null;
-    if (facingPickup || deckPass) {
+    if (owesPending || facingPickup || deckPass) {
       const hint = document.createElement("div");
       hint.className = "anarchy-pickup-hint";
-      hint.textContent = facingPickup ? `Tap to pick up ${state.demand.count}` : "Tap to draw & pass";
+      hint.textContent = owesPending ? `Tap to take ${owed}` : facingPickup ? `Tap to pick up ${state.demand.count}` : "Tap to draw & pass";
       elStock.appendChild(hint);
     }
     // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag

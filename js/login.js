@@ -2,7 +2,7 @@
 // Shown once per browser session (sessionStorage flag), then revealed only
 // when the user clicks the user tile.
 
-import { t } from "./i18n.js?v=175";
+import { t } from "./i18n.js?v=176";
 
 // Always show the welcome screen on a fresh page load.
 export function shouldShowLogin() { return true; }
@@ -26,7 +26,7 @@ export function showLogin(onComplete) {
       onComplete();
       // Auto-open the Welcome window once the desktop has booted
       setTimeout(() => {
-        import("./programs.js?v=175").then(m => m.openWelcome && m.openWelcome());
+        import("./programs.js?v=176").then(m => m.openWelcome && m.openWelcome());
       }, 250);
     }, 480);
   };
@@ -45,7 +45,7 @@ export function showLogin(onComplete) {
   // Wire Sleep — fire the bouncing-name screensaver right from the login.
   const sleepBtn = overlay.querySelector("#login-sleep");
   sleepBtn?.addEventListener("click", () => {
-    import("./screensaver.js?v=175").then(m => m.startScreensaver());
+    import("./screensaver.js?v=176").then(m => m.startScreensaver());
   });
 }
 
