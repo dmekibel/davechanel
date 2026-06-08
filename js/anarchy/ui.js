@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=173";
-import { ICONS } from "../icons.js?v=173";
+import { openWindow } from "../window-manager.js?v=174";
+import { ICONS } from "../icons.js?v=174";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=173";
-import { chooseAction, botSlap } from "./bot.js?v=173";
-import { currentZoom } from "../scale.js?v=173";
+} from "./engine.js?v=174";
+import { chooseAction, botSlap } from "./bot.js?v=174";
+import { currentZoom } from "../scale.js?v=174";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -21,7 +21,7 @@ const faceHTML = (card) => {
   return idx("tl") + idx("br");
 };
 const colorFor = (i) => PLAYER_COLORS[i % PLAYER_COLORS.length];
-const BOT_DELAY = 2000; // slow, real-game pace so each CPU play is easy to follow
+const BOT_DELAY = 2000; // base CPU pace; +600ms per extra opponent so crowded tables stay followable
 
 export function openAnarchy() {
   const root = document.createElement("div");
@@ -330,18 +330,21 @@ export function openAnarchy() {
     elFly.appendChild(tag);
     setTimeout(() => tag.remove(), 1100);
   }
-  // a big center-screen intake announcement; grander when 2+ cards are forced
-  function announce(msg, grand) {
+  // a big center-screen intake announcement. Red + grand when it's YOU who must
+  // pick up; orange and calmer when it's an opponent.
+  function announce(msg, mine) {
     if (!elFelt) return;
+    [...elFelt.querySelectorAll(".anarchy-intake")].forEach((e) => e.remove()); // never stack banners
     const el = document.createElement("div");
-    el.className = "anarchy-intake" + (grand ? " grand" : "");
+    el.className = "anarchy-intake" + (mine ? " you" : "");
     el.textContent = msg;
     elFelt.appendChild(el);
-    setTimeout(() => el.remove(), grand ? 1800 : 1300);
+    setTimeout(() => el.remove(), mine ? 1800 : 1300);
   }
   // a distinct banner so a pass reads clearly as a pass (not a pickup)
   function announcePass(idx) {
     if (!elFelt || idx == null || !state.players[idx]) return;
+    [...elFelt.querySelectorAll(".anarchy-intake")].forEach((e) => e.remove());
     const name = idx === viewer() ? "YOU" : state.players[idx].name;
     const el = document.createElement("div");
     el.className = "anarchy-intake pass";
@@ -356,13 +359,13 @@ export function openAnarchy() {
     const who = (i) => (i === viewer() ? "YOU" : state.players[i].name);
     if (state.demand.type === "pickup" && prevDemandType !== "pickup") {
       const i = state.turn, n = state.demand.count || 1;
-      announce(`${who(i)} — PICK UP ${n}`, n >= 2);
+      announce(`${who(i)} — PICK UP ${n}`, i === viewer()); // red only when it's YOU
       return;
     }
     if (action.type === "PLAY") {
       for (let i = 0; i < state.players.length; i++) {
         const grew = state.players[i].hand.length - (before[i] || 0);
-        if (grew > 0) { announce(`${who(i)} — PICK UP ${grew}`, grew >= 2); return; }
+        if (grew > 0) { announce(`${who(i)} — PICK UP ${grew}`, i === viewer()); return; }
       }
     }
   }
@@ -595,7 +598,7 @@ export function openAnarchy() {
       announceIntakes(action, prevDemandType, beforeCounts);
       if (action.type === "PASS") announcePass(passer);
       scheduleBots();
-    }, BOT_DELAY);
+    }, BOT_DELAY + Math.max(0, state.players.length - 2) * 600);
   }
 
   // ---- interaction ----
@@ -731,7 +734,8 @@ export function openAnarchy() {
 
     // badge + pile (a growing stack of past plays) + run
     elBadge.textContent = flashMsg || badgeText();
-    elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (state.demand.type === "pickup" ? " pickup" : "");
+    const myPickup = state.demand.type === "pickup" && state.turn === viewer();
+    elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (state.demand.type === "pickup" ? " pickup" : "") + (myPickup ? " you" : "");
     // the current top group (a pair/triple) sits side-by-side on the same level,
     // all highlighted; older plays stay buried behind showing a corner
     elPile.innerHTML = "";
