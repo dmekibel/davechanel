@@ -1,13 +1,13 @@
 // Heaven OS — desktop init: icons, start menu, clock
 
-import { rootDesktopItems, isDev } from "./file-system.js?v=170";
-import { openProgram, openFile } from "./programs.js?v=170";
-import { listItems } from "./user-storage.js?v=170";
-import { ICONS, iconFor } from "./icons.js?v=170";
-import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=170";
-import { showContextMenu, closeContextMenu } from "./context-menu.js?v=170";
-import { t } from "./i18n.js?v=170";
-import { currentZoom } from "./scale.js?v=170";
+import { rootDesktopItems } from "./file-system.js?v=171";
+import { openProgram, openFile } from "./programs.js?v=171";
+import { listItems } from "./user-storage.js?v=171";
+import { ICONS, iconFor } from "./icons.js?v=171";
+import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=171";
+import { showContextMenu, closeContextMenu } from "./context-menu.js?v=171";
+import { t } from "./i18n.js?v=171";
+import { currentZoom } from "./scale.js?v=171";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -24,9 +24,8 @@ const DESKTOP_SHORTCUTS = [
   { name: "My Computer", iconFn: () => ICONS.myComputer(28),  program: "explorer"    },
   { name: "Paint",       iconFn: () => ICONS.paint(28),       program: "paint"       },
   { name: "Minesweeper", iconFn: () => ICONS.minesweeper(28), program: "minesweeper" },
+  { name: "Anarchy",     iconFn: () => ICONS.anarchy(28),     program: "anarchy"     },
 ];
-// Dev-gated card game (?dev=1) until placement on the curated desktop is decided.
-if (isDev) DESKTOP_SHORTCUTS.push({ name: "Anarchy", iconFn: () => ICONS.anarchy(28), program: "anarchy" });
 
 export function initDesktop() {
   document.title = "David Mekibel";

@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=170";
-import { ICONS } from "../icons.js?v=170";
+import { openWindow } from "../window-manager.js?v=171";
+import { ICONS } from "../icons.js?v=171";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=170";
-import { chooseAction, botSlap } from "./bot.js?v=170";
-import { currentZoom } from "../scale.js?v=170";
+} from "./engine.js?v=171";
+import { chooseAction, botSlap } from "./bot.js?v=171";
+import { currentZoom } from "../scale.js?v=171";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
