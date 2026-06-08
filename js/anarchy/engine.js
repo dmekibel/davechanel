@@ -335,12 +335,20 @@ function actDUMP(s, action) {
   const ids = action.cards || [];
   const cards = ids.map((id) => player.hand.find((c) => c.id === id));
   if (cards.some((c) => !c)) throw new Error("DUMP: card not in hand");
-  if (!validateStraightRanks(cards.map((c) => c.rank))) throw new Error("DUMP: not a valid straight");
+  const ranks = cards.map((c) => c.rank);
+  const isQuad = cards.length === 4 && ranks.every((r) => r === ranks[0]);
+  if (!isQuad && !validateStraightRanks(ranks)) throw new Error("DUMP: not a valid straight or four-of-a-kind");
   for (const id of ids) s.removed.push(takeFromHand(player, id));
   s.consecutivePasses = 0;
-  s.log.push(`${player.name} dumps a straight (${cards.map(cardLabel).join(" ")}).`);
   if (player.hand.length === 0) return win(s, by);
-  return s; // top, demand, and turn are unchanged
+  if (isQuad) {
+    // four-of-a-kind thrown from hand plays like completing one: everyone else owes
+    // a card (clockwise) and you start from scratch on a cleared table.
+    s.log.push(`${player.name} dumps four ${rankLabel(ranks[0])}s — clears the table.`);
+    return combo(s, by);
+  }
+  s.log.push(`${player.name} dumps a straight (${cards.map(cardLabel).join(" ")}).`);
+  return s; // straight: a free shed — top, demand, and turn are unchanged
 }
 
 function actPASS(s) {
@@ -428,11 +436,12 @@ export function legalMoves(state) {
     for (const c of hand) if (c.rank === 14) // an Ace is always playable (switch/high card)
       moves.push({ type: "ACE_SWITCH", card: c.id, take: false });
   }
-  // straights are legal any time
+  // straights and four-of-a-kind are dumpable any time
   for (const run of findStraights(hand)) {
     const ids = run.map((r) => groups.get(r)[0].id);
     moves.push({ type: "DUMP", cards: ids });
   }
+  for (const [, cs] of groups) if (cs.length === 4) moves.push({ type: "DUMP", cards: cs.map((c) => c.id) });
   // can't satisfy a color demand -> pass
   if (d.type === "color" && !moves.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH"))
     moves.push({ type: "PASS" });

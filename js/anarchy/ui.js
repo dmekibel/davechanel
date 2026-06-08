@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=176";
-import { ICONS } from "../icons.js?v=176";
+import { openWindow } from "../window-manager.js?v=177";
+import { ICONS } from "../icons.js?v=177";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=176";
-import { chooseAction, botSlap } from "./bot.js?v=176";
-import { currentZoom } from "../scale.js?v=176";
+} from "./engine.js?v=177";
+import { chooseAction, botSlap } from "./bot.js?v=177";
+import { currentZoom } from "../scale.js?v=177";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -1034,6 +1034,16 @@ export function openAnarchy() {
         const g = new Map(); active.forEach((c) => { if (!g.has(c.rank)) g.set(c.rank, c); });
         const ids = longest.map((r) => g.get(r).id);
         add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
+      }
+    }
+    // four-of-a-kind: throw it from hand — clears the table, everyone else owes a card, you lead
+    {
+      const counts = new Map();
+      active.forEach((c) => counts.set(c.rank, (counts.get(c.rank) || 0) + 1));
+      for (const [r, n] of counts) if (n === 4) {
+        const ids = active.filter((c) => c.rank === r).map((c) => c.id);
+        add(`Dump four ${rankLabel(r)}s`, () => { selection = []; apply({ type: "DUMP", cards: ids }); }, "slap");
+        break;
       }
     }
     // passing happens by tapping the draw deck (see render); spell that out so the

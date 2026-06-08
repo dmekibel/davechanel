@@ -175,6 +175,17 @@ section("T9: an Ace on a black low card must switch (take the card below)");
   eq(s.pile[s.pile.length - 1].id, "14H", "the Ace is now on top");
 }
 
+section("T10: dumping four-of-a-kind from hand clears the table; others owe 1");
+{
+  let s = scenario({ hands: [["9H", "9D", "9S", "9C", "13H"], ["8C", "12S"]], pile: ["5D"], stock: ["2C", "3C", "4C"], turn: 0, lastPlacer: 1, demand: { type: "color", dir: "up", rank: 5 } });
+  s = reduce(s, { type: "DUMP", cards: ["9H", "9D", "9S", "9C"] });
+  eq(s.players[0].hand.length, 1, "P0 sheds the four 9s (one card left)");
+  eq(s.pile.length, 0, "table cleared");
+  eq(s.demand.type, "open", "P0 leads on an open table");
+  eq(s.turn, 0, "P0 leads");
+  eq(s.players[1].pendingDraw, 1, "P1 owes 1 (combo deal)");
+}
+
 // ---------------------------------------------------------------------------
 section("fuzz: random self-play stays conserved and terminates");
 {
