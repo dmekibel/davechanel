@@ -8,7 +8,7 @@ import {
 import { chooseAction, botSlap } from "./bot.js";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
-const BOT_DELAY = 1400; // slow enough to follow each play
+const BOT_DELAY = 2000; // slow, real-game pace so each CPU play is easy to follow
 
 export function openAnarchy() {
   const root = document.createElement("div");
@@ -40,17 +40,26 @@ export function openAnarchy() {
       <div class="anarchy-setup-box">
         <h2>ANARCHY</h2>
         <p>Shed your whole hand first. Red sends the next player up, black sends them down.</p>
-        <div class="anarchy-setup-section">vs Computer</div>
-        <div class="anarchy-setup-btns">
-          <button data-mode="cpu" data-players="2">vs 1 CPU</button>
-          <button data-mode="cpu" data-players="3">vs 2 CPUs</button>
-          <button data-mode="cpu" data-players="4">vs 3 CPUs</button>
+        <div class="anarchy-start-view">
+          <div class="anarchy-setup-btns anarchy-start-btns">
+            <button class="anarchy-start-go">Start Game</button>
+            <button class="anarchy-modes-open">Game Mode</button>
+          </div>
         </div>
-        <div class="anarchy-setup-section">Pass &amp; Play (one device)</div>
-        <div class="anarchy-setup-btns">
-          <button data-mode="local" data-players="2">2 Players</button>
-          <button data-mode="local" data-players="3">3 Players</button>
-          <button data-mode="local" data-players="4">4 Players</button>
+        <div class="anarchy-modes-view">
+          <div class="anarchy-setup-section">vs Computer</div>
+          <div class="anarchy-setup-btns">
+            <button data-mode="cpu" data-players="2">vs 1 CPU</button>
+            <button data-mode="cpu" data-players="3">vs 2 CPUs</button>
+            <button data-mode="cpu" data-players="4">vs 3 CPUs</button>
+          </div>
+          <div class="anarchy-setup-section">Pass &amp; Play (one device)</div>
+          <div class="anarchy-setup-btns">
+            <button data-mode="local" data-players="2">2 Players</button>
+            <button data-mode="local" data-players="3">3 Players</button>
+            <button data-mode="local" data-players="4">4 Players</button>
+          </div>
+          <div class="anarchy-setup-btns"><button class="anarchy-modes-back">Back</button></div>
         </div>
       </div>
     </div>
@@ -106,6 +115,8 @@ export function openAnarchy() {
   const elHandName = $(".anarchy-handname");
   const elActions = $(".anarchy-actions");
   const elSetup = $(".anarchy-setup");
+  const elStartView = $(".anarchy-start-view");
+  const elModesView = $(".anarchy-modes-view");
   const elHandoff = $(".anarchy-handoff");
   const elHelp = $(".anarchy-help");
   const elFelt = $(".anarchy-felt");
@@ -159,20 +170,24 @@ export function openAnarchy() {
     const col = colorOf(card.suit);
     d.className = `acard ${col}` + (mini ? " mini" : "");
     d.dataset.id = card.id;
-    d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span><span class="acard-pip">${SUIT[card.suit]}</span>`;
+    d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
     return d;
   }
 
-  // where a freshly played card should fly in from (your hand, or an opponent's seat)
-  function dealOrigin(idx) {
-    if (idx == null || idx === viewer()) return { x: 0, y: 150 };
-    switch (oppSeatMap[idx]) {
-      case "seat-left": return { x: -170, y: 0 };
-      case "seat-right": return { x: 170, y: 0 };
-      case "seat-tl": return { x: -150, y: -120 };
-      case "seat-tr": return { x: 150, y: -120 };
-      default: return { x: 0, y: -130 }; // seat-top
-    }
+  // a ghost of the played card glides from the player to the table (the pile stays put)
+  function flyPlay(idx, card) {
+    if (idx == null || !card) return;
+    const src = idx === viewer() ? elHand : oppBoxMap[idx];
+    if (!src || !elPile) return;
+    const from = feltPos(src), to = feltPos(elPile);
+    const ghost = cardEl(card);
+    ghost.classList.add("anarchy-fly");
+    const fromX = from.x + from.w / 2 - 22, fromY = from.y + (idx === viewer() ? -6 : from.h / 2);
+    ghost.style.left = fromX + "px"; ghost.style.top = fromY + "px"; ghost.style.opacity = "0.92";
+    elFelt.appendChild(ghost);
+    const toX = to.x + 22, toY = to.y + 18;
+    requestAnimationFrame(() => { ghost.style.transition = "transform .3s ease-out, opacity .3s ease-out"; ghost.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px)`; ghost.style.opacity = "0"; });
+    setTimeout(() => ghost.remove(), 320);
   }
   // felt-relative position of an element's top-left
   function feltPos(el) {
@@ -210,6 +225,19 @@ export function openAnarchy() {
       setTimeout(() => { fly.style.transition = "transform .5s ease-in-out, opacity .5s"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.3)`; fly.style.opacity = "0"; }, d + 10);
       setTimeout(() => fly.remove(), d + 540);
     }
+  }
+  // a switch (7/Ace) takes the card beneath it: fly that card from the table to the player
+  function flyFromPile(idx) {
+    const target = idx === viewer() ? elHand : oppBoxMap[idx];
+    if (!target || !elPile) return;
+    const from = feltPos(elPile), to = feltPos(target);
+    const fly = cardEl(null, { mini: true, faceUp: false });
+    fly.classList.add("anarchy-fly");
+    fly.style.left = (from.x + 24) + "px"; fly.style.top = (from.y + 16) + "px";
+    elFelt.appendChild(fly);
+    const toX = to.x + to.w / 2 - 11, toY = to.y + (idx === viewer() ? 0 : to.h / 2);
+    requestAnimationFrame(() => { fly.style.transition = "transform .55s ease-in-out, opacity .55s"; fly.style.transform = `translate(${toX - from.x - 24}px, ${toY - from.y - 16}px) scale(1.2)`; fly.style.opacity = "0"; });
+    setTimeout(() => fly.remove(), 600);
   }
   // sweep the table to the бита pile when it clears
   function biteFlyAway() {
@@ -285,6 +313,9 @@ export function openAnarchy() {
 
   function apply(action) {
     const prevTurn = state.turn;
+    const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
+    const taker = isSwitchTake ? (action.by == null ? prevTurn : action.by) : null;
+    const hadPile = state.pile.length > 0;
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
     selection = []; aceTake = false;
@@ -294,6 +325,7 @@ export function openAnarchy() {
       flipHandArea();
     }
     render();
+    if (taker != null && hadPile) flyFromPile(taker); // switch: card from below flies to the player
     scheduleBots();
   }
   function reveal() { handoffPending = false; justRevealed = true; render(); justRevealed = false; }
@@ -319,8 +351,12 @@ export function openAnarchy() {
         if (state.players[state.turn].isHuman) { render(); return; }
         action = chooseAction(state);
       }
+      const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
+      const taker = isSwitchTake ? (action.by == null ? state.turn : action.by) : null;
+      const hadPile = state.pile.length > 0;
       try { state = reduce(state, action); } catch (e) { /* skip a bad bot move */ }
       render();
+      if (taker != null && hadPile) flyFromPile(taker); // enemy switch: card from below flies to them
       scheduleBots();
     }, BOT_DELAY);
   }
@@ -331,23 +367,54 @@ export function openAnarchy() {
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
-    // tapping a selected card cycles it: pair -> just-this-one -> nothing
-    // (keep the card you actually tapped, so no stray twin is left raised)
+    // tapping an already-raised card commits the play (fast: tap to raise, tap to play)
     if (selection.includes(id)) {
-      selection = selection.length === 2 ? [id] : [];
-      aceTake = false; render(); return;
+      const sa = selectionAction();
+      if (sa) apply(sa.action); else { selection = []; render(); }
+      return;
     }
-    // default to the whole pair when two of a kind can be played; 7s play one at a time
-    let pick = [id];
-    if (card.rank !== 7) {
-      const pair = activeAndLegal().legal.find((m) =>
-        m.type === "PLAY" && m.cards.length === 2 &&
-        m.cards.every((cid) => ((hand.find((x) => x.id === cid) || {}).rank === card.rank)));
-      if (pair) pick = [...pair.cards];
+    const { active, legal } = activeAndLegal();
+    const selRank = selection.length ? (hand.find((c) => c.id === selection[0]) || {}).rank : null;
+    if (selRank === card.rank && selection.length === 1 && card.rank !== 7) {
+      selection = [...selection, id]; // add a 2nd of this rank — you pick exactly which two
+    } else {
+      // fresh: auto-grab the pair only when you hold exactly two of this rank; with 3-4 you choose
+      const sameRank = active.filter((c) => c.rank === card.rank);
+      const legalPair = card.rank !== 7 && legal.some((m) => m.type === "PLAY" && m.cards.length === 2 && (active.find((x) => x.id === m.cards[0]) || {}).rank === card.rank);
+      selection = legalPair && sameRank.length === 2 ? sameRank.map((c) => c.id) : [id];
     }
-    selection = pick;
     aceTake = false;
     render();
+  }
+
+  // throw a card up onto the table to play it (alternative to the Play button)
+  function swipePlay(id) {
+    if (!canAct()) return;
+    const hand = state.players[viewer()].hand;
+    if (!hand.find((c) => c.id === id)) return;
+    if (!(selection.includes(id) && selection.length === 2)) selection = [id]; // keep a raised pair, else play this one
+    const sa = selectionAction();
+    if (sa) apply(sa.action); else { selection = [id]; render(); }
+  }
+  // distinguish a tap (select/play) from an upward throw (play)
+  function bindCardGestures(e, id) {
+    let sy = null, sx = null, dragging = false;
+    e.addEventListener("pointerdown", (ev) => { sy = ev.clientY; sx = ev.clientX; dragging = false; try { e.setPointerCapture(ev.pointerId); } catch (_) {} });
+    e.addEventListener("pointermove", (ev) => {
+      if (sy == null) return;
+      const dy = ev.clientY - sy, dx = ev.clientX - sx;
+      if (dy < -6 && Math.abs(dy) > Math.abs(dx)) { dragging = true; e.style.transition = "none"; e.style.transform = `translateY(${Math.max(dy, -90)}px)`; }
+    });
+    const end = (ev) => {
+      if (sy == null) return;
+      const dy = (ev.clientY ?? sy) - sy;
+      sy = null; e.style.transition = ""; e.style.transform = "";
+      if (dy < -40) swipePlay(id);       // thrown up -> play
+      else if (!dragging) onCardClick(id); // tap -> select / play
+      else render();                       // small drag -> reset
+    };
+    e.addEventListener("pointerup", end);
+    e.addEventListener("pointercancel", () => { sy = null; e.style.transition = ""; e.style.transform = ""; });
   }
 
   // ---- render ----
@@ -355,7 +422,7 @@ export function openAnarchy() {
     const d = state.demand;
     const mine = state.turn === viewer();
     const who = mine ? "YOU" : state.players[state.turn].name;
-    if (d.type === "open") return mine ? "YOUR LEAD" : `${who} LEADS`;
+    if (d.type === "open") return mine ? "YOUR TURN" : `${who}'S TURN`;
     if (d.type === "pickup") return `${who}: PICK UP ${d.count}`;
     return `${who}: PLAY ${rankLabel(d.rank)} OR ${d.dir === "up" ? "HIGHER" : "LOWER"}`;
   }
@@ -398,29 +465,40 @@ export function openAnarchy() {
     // badge + pile (a growing stack of past plays) + run
     elBadge.textContent = flashMsg || badgeText();
     elBadge.className = "anarchy-badge" + (flashMsg ? " flash" : "") + (state.demand.type === "pickup" ? " pickup" : "");
-    // newest play sits in front, fully visible; the prior two stay buried showing only a corner
+    // the current top group (a pair/triple) sits side-by-side on the same level,
+    // all highlighted; older plays stay buried behind showing a corner
     elPile.innerHTML = "";
-    const shown = state.pile.slice(-3);
-    if (!shown.length) { const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = "28px"; e.style.top = "18px"; elPile.appendChild(e); }
-    shown.forEach((c, i) => {
-      const e = cardEl(c);
-      const depth = shown.length - 1 - i; // 0 = newest
-      e.style.left = (28 - depth * 14) + "px";
-      e.style.top = (18 - depth * 9) + "px";
-      e.style.zIndex = String(10 - depth);
-      if (depth) e.classList.add("buried");
-      elPile.appendChild(e);
-    });
+    const pile = state.pile;
+    if (!pile.length) {
+      const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = "28px"; e.style.top = "18px"; elPile.appendChild(e);
+    } else {
+      const groupN = Math.min(state.topRun || 1, 3);
+      const buried = pile.slice(Math.max(0, pile.length - groupN - 2), pile.length - groupN);
+      const group = pile.slice(pile.length - groupN);
+      buried.forEach((c, i) => {
+        const e = cardEl(c);
+        const depth = buried.length - i; // 1..2 behind
+        e.style.left = (28 - depth * 13) + "px";
+        e.style.top = (18 - depth * 8) + "px";
+        e.style.zIndex = String(2 - depth);
+        e.classList.add("buried");
+        elPile.appendChild(e);
+      });
+      const span = (group.length - 1) * 24;
+      group.forEach((c, i) => {
+        const e = cardEl(c);
+        e.style.left = (28 - span / 2 + i * 24) + "px";
+        e.style.top = "18px";
+        e.style.zIndex = String(10 + i);
+        if (group.length >= 2) e.classList.add("pile-top");
+        elPile.appendChild(e);
+      });
+    }
     elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "pair ×2" : "";
 
-    // animations: deal the newest card in from whoever played it; sweep to бита on a clear
+    // a ghost of the played card glides from the player to the table; the pile itself never moves
     const topId = state.pile.length ? state.pile[state.pile.length - 1].id : null;
-    if (topId && topId !== lastTopId && elPile.lastChild) {
-      const front = elPile.lastChild, o = dealOrigin(state.lastPlacer);
-      front.style.transition = "none";
-      front.style.transform = `translate(${o.x}px, ${o.y}px) scale(.85)`;
-      requestAnimationFrame(() => { front.style.transition = "transform .36s ease-out"; front.style.transform = ""; });
-    }
+    if (topId && topId !== lastTopId) flyPlay(state.lastPlacer, state.pile[state.pile.length - 1]);
     if (lastPileLen > 0 && state.pile.length === 0) biteFlyAway();
     lastTopId = topId;
     lastPileLen = state.pile.length;
@@ -470,7 +548,8 @@ export function openAnarchy() {
       if (isLegal) e.classList.add("legal");
       if (!isSel && !isLegal) e.classList.add("dim");
       if (justRevealed) e.classList.add("flip-in");
-      e.addEventListener("click", () => onCardClick(c.id));
+      e.style.touchAction = "none"; // let us handle the upward-throw gesture
+      bindCardGestures(e, c.id);
       elHand.appendChild(e);
     });
     fitHand();
@@ -581,19 +660,26 @@ export function openAnarchy() {
     scheduleBots();
   }
 
+  function showSetupStart() { elStartView.style.display = "block"; elModesView.style.display = "none"; }
+  function showSetupModes() { elStartView.style.display = "none"; elModesView.style.display = "block"; }
+  function toStart() { clearTimeout(botTimer); stopFireworks(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
+
   root.querySelectorAll("[data-mode]").forEach((b) =>
     b.addEventListener("click", () => newGame(b.dataset.mode, parseInt(b.dataset.players, 10))));
+  $(".anarchy-start-go").addEventListener("click", () => newGame("cpu", 2)); // quick 1-on-1 vs CPU
+  $(".anarchy-modes-open").addEventListener("click", showSetupModes);
+  $(".anarchy-modes-back").addEventListener("click", showSetupStart);
   $(".anarchy-handoff-go").addEventListener("click", () => { handoffPending = false; render(); });
   root.querySelectorAll(".anarchy-menu").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.act === "help") { elHelp.style.display = "flex"; return; }
-    clearTimeout(botTimer); state = null; selection = []; handoffPending = false; render(); // Game = new game
+    toStart(); // Game menu = back to the Start screen
   }));
   $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
   $(".anarchy-win-again").addEventListener("click", () => newGame(lastMode, lastNum));
 
-  newGame("cpu", 2); // standard 1-on-1 vs the computer; the Game menu offers more
+  showSetupStart();
+  render(); // open on the Start screen — no auto-start
   const winId = openWindow({ title: "Anarchy", icon: ICONS.anarchy(14), iconHtml: true, content: root, width: 600, height: 660, flush: true });
-  requestAnimationFrame(() => { if (document.body.contains(root)) fitHand(); }); // fit once laid out
   window.addEventListener("resize", () => { if (document.body.contains(root)) render(); }); // re-fit on rotate/resize
   return winId;
 }
