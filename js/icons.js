@@ -147,7 +147,7 @@ const POWER = `
 // edges. The little SVGs above are kept for chrome elements we couldn't
 // find a Win98 equivalent for (arrows, search, run, logout, restart,
 // power, document).
-import { getMode as getIconTheme } from "./os-mode.js?v=163";
+import { getMode as getIconTheme } from "./os-mode.js?v=166";
 
 function pngImg(folder, file, s) {
   return `<img class="ico ico-png" src="assets/icons/${folder}/${file}" width="${s}" height="${s}" alt="" draggable="false" style="image-rendering:auto;object-fit:contain">`;

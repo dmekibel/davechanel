@@ -1,15 +1,25 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=163";
-import { ICONS } from "../icons.js?v=163";
+import { openWindow } from "../window-manager.js?v=166";
+import { ICONS } from "../icons.js?v=166";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=163";
-import { chooseAction, botSlap } from "./bot.js?v=163";
-import { currentZoom } from "../scale.js?v=163";
+} from "./engine.js?v=166";
+import { chooseAction, botSlap } from "./bot.js?v=166";
+import { currentZoom } from "../scale.js?v=166";
 
-const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
+// ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
+// same size as the rank digit and inherit the card's colour — not as big,
+// off-centre colour emoji.
+const SUIT = { H: "♥︎", D: "♦︎", C: "♣︎", S: "♠︎" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
+// a card face: a small rank-over-suit index tucked into the top-left corner AND
+// mirrored (rotated) into the bottom-right, like a real playing card.
+const faceHTML = (card) => {
+  const r = rankLabel(card.rank), s = SUIT[card.suit];
+  const idx = (pos) => `<span class="acard-idx ${pos}"><b>${r}</b><b>${s}</b></span>`;
+  return idx("tl") + idx("br");
+};
 const colorFor = (i) => PLAYER_COLORS[i % PLAYER_COLORS.length];
 const BOT_DELAY = 2000; // slow, real-game pace so each CPU play is easy to follow
 
@@ -147,6 +157,8 @@ export function openAnarchy() {
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
   let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = [], suppressDrawIdx = -1; // animation state
+  let pileSnapshot = []; // last rendered pile (positions + faces) so we can fly the real cards to the discard
+  let pairFlipId = null; // when swapping which of a selected pair is on top, the card to flip forward
   let fxTimer = null, lastMode = "cpu", lastNum = 2, lastNames = null, justRevealed = false;
 
   // whose hand is shown / who may act right now
@@ -182,24 +194,29 @@ export function openAnarchy() {
     const col = colorOf(card.suit);
     d.className = `acard ${col}` + (mini ? " mini" : "");
     d.dataset.id = card.id;
-    d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+    d.innerHTML = faceHTML(card);
     return d;
   }
 
-  // a ghost of the played card glides from the player to the table (the pile stays put)
-  function flyPlay(idx, card) {
-    if (idx == null || !card) return;
+  // a ghost of the played card(s) glides from the player to the table (the pile
+  // stays put). A pair/triple flies together in unison, fanned to land side-by-side.
+  function flyPlay(idx, cards) {
+    const group = Array.isArray(cards) ? cards.filter(Boolean) : (cards ? [cards] : []);
+    if (idx == null || !group.length) return;
     const src = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!src || !elPile) return;
     const from = feltPos(src), to = feltPos(elPile);
-    const ghost = cardEl(card);
-    ghost.classList.add("anarchy-fly");
     const fromX = from.x + from.w / 2 - 22, fromY = from.y + (idx === viewer() ? -6 : from.h / 2);
-    ghost.style.left = fromX + "px"; ghost.style.top = fromY + "px"; ghost.style.opacity = "0.92";
-    elFelt.appendChild(ghost);
-    const toX = to.x + 22, toY = to.y + 18;
-    requestAnimationFrame(() => { ghost.style.transition = "transform .3s ease-out, opacity .3s ease-out"; ghost.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px)`; ghost.style.opacity = "0"; });
-    setTimeout(() => ghost.remove(), 320);
+    const span = (group.length - 1) * 24;
+    group.forEach((card, i) => {
+      const ghost = cardEl(card);
+      ghost.classList.add("anarchy-fly");
+      ghost.style.left = fromX + "px"; ghost.style.top = fromY + "px"; ghost.style.opacity = "0.92"; ghost.style.zIndex = String(40 + i);
+      elFelt.appendChild(ghost);
+      const toX = to.x + 22 - span / 2 + i * 24, toY = to.y + 18;
+      requestAnimationFrame(() => { ghost.style.transition = "transform .3s ease-out, opacity .3s ease-out"; ghost.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px)`; ghost.style.opacity = "0"; });
+      setTimeout(() => ghost.remove(), 320);
+    });
   }
   // felt-relative position of an element's top-left
   function feltPos(el) {
@@ -240,7 +257,7 @@ export function openAnarchy() {
       setTimeout(() => { fly.style.transition = "transform .6s ease-in-out"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.7)`; }, d + 10);
       if (reveal && card) setTimeout(() => { // flip face-up so you can see the card you drew
         fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
-        fly.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+        fly.innerHTML = faceHTML(card);
       }, d + 460);
       setTimeout(() => { fly.style.transition = "opacity .3s"; fly.style.opacity = "0"; }, d + 820);
       setTimeout(() => fly.remove(), d + 1120);
@@ -263,7 +280,7 @@ export function openAnarchy() {
       setTimeout(() => { fly.style.transition = "transform .85s cubic-bezier(.18,.7,.2,1)"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.15)`; }, d + 20);
       if (reveal && card) setTimeout(() => { // flip face-up so you clearly see what you took
         fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
-        fly.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+        fly.innerHTML = faceHTML(card);
       }, d + 560);
       setTimeout(() => { fly.style.transition = "opacity .35s"; fly.style.opacity = "0"; }, d + 1150);
       setTimeout(() => fly.remove(), d + 1520);
@@ -321,23 +338,42 @@ export function openAnarchy() {
       }
     }
   }
-  // sweep the table to the бита pile when it clears
-  function biteFlyAway() {
-    const from = feltPos(elPile), to = feltPos(elBita);
-    const fly = document.createElement("div");
-    fly.className = "acard back anarchy-bita-card";
-    fly.style.left = (from.x + 28) + "px"; fly.style.top = (from.y + 18) + "px";
-    elFelt.appendChild(fly);
-    requestAnimationFrame(() => {
-      fly.style.transition = "transform .55s ease-in, opacity .55s ease-in";
-      fly.style.transform = `translate(${to.x - from.x - 28}px, ${to.y - from.y - 18}px) scale(.6) rotate(16deg)`;
-      fly.style.opacity = "0";
+  // snapshot the rendered pile (felt-relative positions + faces) so that, when the
+  // table clears, we can fly the REAL cards into the discard rather than a stand-in.
+  function snapshotPile() {
+    return [...elPile.querySelectorAll(".acard:not(.empty)")].map((el) => {
+      const p = feltPos(el);
+      return { x: p.x, y: p.y, cls: el.className, html: el.innerHTML };
     });
-    setTimeout(() => fly.remove(), 580);
+  }
+  // sweep the table to the discard when it clears: every card that was on the table
+  // flips face-down and slides into the discard pile, one after another.
+  function discardSweep(cards) {
+    if (!elBita) return;
+    const list = (cards && cards.length) ? cards : snapshotPile();
+    if (!list.length) return;
+    const to = feltPos(elBita);
+    list.forEach((c, i) => {
+      const fly = document.createElement("div");
+      fly.className = (c.cls || "acard").replace(/\b(buried|pile-top)\b/g, "").trim() + " anarchy-fly anarchy-discard-fly";
+      fly.innerHTML = c.html || "";
+      fly.style.left = c.x + "px"; fly.style.top = c.y + "px"; fly.style.zIndex = String(38 + i);
+      elFelt.appendChild(fly);
+      const d = i * 95;
+      // 1) flip the face to its edge, 2) swap to the card back, 3) keep flipping while it slides into the discard
+      setTimeout(() => { fly.style.transition = "transform .2s linear"; fly.style.transform = "perspective(600px) rotateY(90deg)"; }, d);
+      setTimeout(() => { fly.className = "acard back anarchy-fly anarchy-discard-fly"; fly.innerHTML = ""; fly.style.transform = "perspective(600px) rotateY(90deg)"; }, d + 200);
+      setTimeout(() => {
+        fly.style.transition = "transform .5s ease-in, opacity .5s ease-in";
+        fly.style.transform = `translate(${to.x - c.x}px, ${to.y - c.y}px) perspective(600px) rotateY(180deg) scale(.62) rotate(12deg)`;
+        fly.style.opacity = "0";
+      }, d + 230);
+      setTimeout(() => fly.remove(), d + 770);
+    });
     const toast = document.createElement("div");
     toast.className = "anarchy-bita-toast"; toast.textContent = "Discard";
     elPile.appendChild(toast);
-    setTimeout(() => toast.remove(), 850);
+    setTimeout(() => toast.remove(), 900);
   }
   // ---- fireworks for a win ----
   function firework(x, y) {
@@ -367,6 +403,55 @@ export function openAnarchy() {
     fxTimer = setInterval(boom, 420);
   }
   function stopFireworks() { if (fxTimer) { clearInterval(fxTimer); fxTimer = null; } if (elFx) elFx.innerHTML = ""; }
+
+  // ---- win cascade: cards fling from the top and bounce down the felt, leaving
+  // trails, like the classic Windows Solitaire victory animation. ----
+  let cascadeRAF = null, cascadeCanvas = null;
+  function stopWinCascade() {
+    if (cascadeRAF) { cancelAnimationFrame(cascadeRAF); cascadeRAF = null; }
+    if (cascadeCanvas) { cascadeCanvas.remove(); cascadeCanvas = null; }
+  }
+  function startWinCascade() {
+    if (cascadeCanvas || !elFx) return;
+    const z = currentZoom() || 1, rect = elFx.getBoundingClientRect();
+    const W = Math.max(80, rect.width / z), H = Math.max(80, rect.height / z);
+    const canvas = document.createElement("canvas");
+    canvas.className = "anarchy-cascade";
+    canvas.width = W; canvas.height = H; canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    elFx.appendChild(canvas); cascadeCanvas = canvas;
+    const ctx = canvas.getContext("2d");
+    const cw = 40, ch = 56, g = 0.5, rest = 0.8;
+    const suits = [["♥", "#c40000"], ["♦", "#c40000"], ["♣", "#111"], ["♠", "#111"]];
+    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    const deck = [];
+    for (let i = 0; i < 28; i++) deck.push({ rank: ranks[(Math.random() * ranks.length) | 0], suit: suits[(Math.random() * suits.length) | 0] });
+    const spawn = () => {
+      const c = deck.pop(); if (!c) return null;
+      return { ...c, x: W / 2 - cw / 2, y: 6, vx: (Math.random() < 0.5 ? -1 : 1) * (2.5 + Math.random() * 3), vy: -(1 + Math.random() * 2) };
+    };
+    const roundRect = (x, y, w, h, r) => {
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
+      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    };
+    const draw = (c) => {
+      roundRect(c.x, c.y, cw, ch, 4);
+      ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#444"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = c.suit[1]; ctx.textBaseline = "top"; ctx.textAlign = "left";
+      ctx.font = "bold 10px Tahoma, sans-serif"; ctx.fillText(c.rank, c.x + 3, c.y + 3);
+      ctx.font = "9px Tahoma, sans-serif"; ctx.fillText(c.suit[0], c.x + 3, c.y + 13);
+      ctx.textAlign = "center"; ctx.font = "20px Tahoma, sans-serif"; ctx.fillText(c.suit[0], c.x + cw / 2, c.y + ch / 2 - 12);
+    };
+    let cur = spawn();
+    const step = () => {
+      if (!cur) { cascadeRAF = null; return; } // out of cards — leave the trails on screen
+      cur.vy += g; cur.x += cur.vx; cur.y += cur.vy;
+      if (cur.y + ch >= H) { cur.y = H - ch; cur.vy = Math.abs(cur.vy) < 2 ? -(4 + Math.random() * 3) : -cur.vy * rest; }
+      draw(cur);
+      if (cur.x < -cw - 4 || cur.x > W + 4) cur = spawn(); // flew off the side → fling the next
+      cascadeRAF = requestAnimationFrame(step);
+    };
+    cascadeRAF = requestAnimationFrame(step);
+  }
 
   // ---- the move the current selection maps to (or null) ----
   function selectionAction() {
@@ -473,11 +558,12 @@ export function openAnarchy() {
     const card = hand.find((c) => c.id === id);
     if (!card) return;
     if (selection.includes(id)) {
-      // a selected pair: the card you click becomes the one on top (its colour sets the next demand)
+      // a selected pair: the card you click becomes the one on top (its colour sets
+      // the next demand) — flip it forward in place rather than re-rendering the hand
       if (selection.length === 2) {
         const other = selection.find((x) => x !== id);
         selection = [other, id];
-        render(); return;
+        flipPairTop(id); return;
       }
       // a selected single: click/tap again to play it (or throw it up)
       const sa = selectionAction();
@@ -510,6 +596,13 @@ export function openAnarchy() {
   // distinguish a tap (select/play) from an upward throw (play)
   function bindCardGestures(e, id) {
     let sy = null, sx = null, dragging = false;
+    // the other card of a selected pair, so the two drag (and throw) together in unison
+    const partnerEl = () => {
+      if (!(selection.length === 2 && selection.includes(id))) return null;
+      const other = selection.find((x) => x !== id);
+      return [...elHand.children].find((el) => el.dataset && el.dataset.id === other) || null;
+    };
+    const clearDrag = (el) => { if (el) { el.style.transition = ""; el.style.transform = ""; el.style.zIndex = ""; } };
     e.addEventListener("pointerdown", (ev) => { sy = ev.clientY; sx = ev.clientX; dragging = false; try { e.setPointerCapture(ev.pointerId); } catch (_) {} });
     e.addEventListener("pointermove", (ev) => {
       if (sy == null) return;
@@ -522,18 +615,20 @@ export function openAnarchy() {
         e.style.transition = "none";
         e.style.zIndex = "70";
         e.style.transform = `translate(${dx / z}px, ${dy / z}px)`;
+        const p = partnerEl(); // the partner trails just behind so both cards stay visible
+        if (p) { p.style.transition = "none"; p.style.zIndex = "69"; p.style.transform = `translate(${dx / z - 13}px, ${dy / z + 2}px)`; }
       }
     });
     const end = (ev) => {
       if (sy == null) return;
       const dy = (ev.clientY ?? sy) - sy;
-      sy = null; e.style.transition = ""; e.style.transform = ""; e.style.zIndex = "";
+      sy = null; clearDrag(e); clearDrag(partnerEl());
       if (dy < -50) swipePlay(id);         // thrown up toward the middle -> play
       else if (!dragging) onCardClick(id); // tap -> select / play
       else render();                       // small drag back down -> reset
     };
     e.addEventListener("pointerup", end);
-    e.addEventListener("pointercancel", () => { sy = null; e.style.transition = ""; e.style.transform = ""; e.style.zIndex = ""; });
+    e.addEventListener("pointercancel", () => { sy = null; clearDrag(e); clearDrag(partnerEl()); });
   }
 
   // ---- render ----
@@ -558,16 +653,17 @@ export function openAnarchy() {
   }
 
   function render() {
-    if (!state) { stopFireworks(); elWin.style.display = "none"; elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
+    if (!state) { stopFireworks(); stopWinCascade(); elWin.style.display = "none"; elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
     elSetup.style.display = "none";
     elHandoff.style.display = "none"; // replaced by the in-hand face-down reveal
     const finished = state.status === "finished";
     elWin.style.display = finished ? "flex" : "none";
     if (finished) {
       const w = state.winner;
+      const youWon = mode !== "cpu" || w === 0; // beat the AI (or any human winner in pass-and-play)
       elWinTitle.textContent = (mode === "cpu" && w === 0) ? "YOU WIN!" : `${state.players[w].name} WINS!`;
-      startFireworks();
-    } else stopFireworks();
+      if (youWon) startWinCascade(); else startFireworks();
+    } else { stopFireworks(); stopWinCascade(); }
 
     // opponents seated around the table: 1 across the top, 2 in the upper corners,
     // 3 as left / top / right. Each holds a compact fan (not a spread) + a count.
@@ -627,10 +723,14 @@ export function openAnarchy() {
     }
     elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "two of a kind on top" : "";
 
-    // a ghost of the played card glides from the player to the table; the pile itself never moves
+    // a ghost of the just-played card(s) glides from the player to the table; the pile itself never moves
     const topId = state.pile.length ? state.pile[state.pile.length - 1].id : null;
-    if (topId && topId !== lastTopId) flyPlay(state.lastPlacer, state.pile[state.pile.length - 1]);
-    if (lastPileLen > 0 && state.pile.length === 0) biteFlyAway();
+    if (topId && topId !== lastTopId) {
+      const n = Math.min(state.lastPlayCount || 1, 3);
+      flyPlay(state.lastPlacer, state.pile.slice(state.pile.length - n));
+    }
+    if (lastPileLen > 0 && state.pile.length === 0) discardSweep(pileSnapshot); // the cleared table flips into the discard
+    pileSnapshot = snapshotPile(); // remember this pile so the next clear can fly the real cards
     lastTopId = topId;
     lastPileLen = state.pile.length;
 
@@ -664,6 +764,9 @@ export function openAnarchy() {
   }
 
   function renderHand() {
+    // snapshot current card positions so a changed hand can animate (FLIP) into place
+    const prevRects = new Map();
+    for (const el of elHand.children) if (el.dataset && el.dataset.id) prevRects.set(el.dataset.id, el.getBoundingClientRect());
     elHand.innerHTML = "";
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
@@ -698,6 +801,65 @@ export function openAnarchy() {
       elHand.appendChild(e);
     });
     fitHand();
+    if (selection.length === 2) layoutSelectedPair();
+    reflowHand(prevRects);
+  }
+
+  // a selected pair: lift both equally and fan them apart just enough that BOTH
+  // faces stay visible (compact), the chosen "top" card sitting in front.
+  function layoutSelectedPair() {
+    const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
+    if (els.length !== 2) return;
+    const overlap = Math.abs(parseFloat(els[1].style.marginLeft) || 0);
+    const spread = Math.min(overlap / 2 + 7, 18); // pull each out, but keep it tidy
+    els.forEach((el, i) => {
+      const front = el.classList.contains("sel-top");
+      el.style.setProperty("--px", `${(i === 0 ? -1 : 1) * spread}px`);
+      el.style.setProperty("--py", "-18px");
+      el.style.transition = "transform .15s ease, box-shadow .15s ease";
+      el.style.transform = "translate(var(--px), var(--py))";
+      el.style.zIndex = front ? "22" : "21";
+    });
+  }
+
+  // swap which of the two selected cards is on top, flipping the new one forward
+  // in place (no full re-render, so the cards don't jump)
+  function flipPairTop(frontId) {
+    const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
+    if (els.length !== 2) { render(); return; }
+    els.forEach((el) => {
+      const front = el.dataset.id === frontId;
+      el.classList.toggle("sel-top", front);
+      el.style.zIndex = front ? "22" : "21";
+      if (front) { el.classList.remove("pair-flip"); void el.offsetWidth; el.classList.add("pair-flip"); }
+    });
+    renderActions();
+  }
+
+  // FLIP: when the hand's set of cards changes (draw / pickup / play), slide the
+  // surviving cards to their new spots and flip new arrivals in — so the hand
+  // visibly opens to make room and the change is impossible to miss.
+  function reflowHand(prevRects) {
+    const els = [...elHand.children].filter((el) => el.dataset && el.dataset.id);
+    if (!els.length) return;
+    const prevIds = new Set(prevRects.keys());
+    let changed = els.length !== prevIds.size;
+    if (!changed) for (const el of els) if (!prevIds.has(el.dataset.id)) { changed = true; break; }
+    if (!changed) return; // a selection-only re-render: leave the cards alone
+    const z = currentZoom() || 1;
+    els.forEach((el) => {
+      const prev = prevRects.get(el.dataset.id);
+      if (!prev) { el.classList.add("flip-in"); return; } // a freshly arrived card flips in
+      const now = el.getBoundingClientRect();
+      const dx = (prev.left - now.left) / z, dy = (prev.top - now.top) / z;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+      el.style.transition = "none";
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.style.transition = "transform .34s ease";
+        el.style.transform = "";
+      }));
+    });
   }
 
   // overlap the hand so every card fits on screen without horizontal scrolling
@@ -764,17 +926,17 @@ export function openAnarchy() {
       return;
     }
 
-    // facing a pickup: show every option spelled out
+    // facing a pickup — card-driven, no buttons: tap the pulsing draw deck to take
+    // it, or play a highlighted card (a 7/Ace switches it away, a matching rank
+    // stacks it on). The hand already lights up exactly those cards.
     if (state.demand.type === "pickup") {
-      const r = state.demand.rank;
-      const seven = hand.find((c) => c.rank === 7);
-      const ace = hand.find((c) => c.rank === 14);
-      const matches = hand.filter((c) => c.rank === r);
-      add(`Take ${state.demand.count}`, () => apply({ type: "TAKE_PICKUP" }), "primary");
-      if (matches.length >= 2) add(`Stack two ${rankLabel(r)} → four!`, () => apply({ type: "PLAY", cards: [matches[0].id, matches[1].id] }), "");
-      else if (matches.length >= 1) add(`Stack a ${rankLabel(r)}`, () => apply({ type: "PLAY", cards: [matches[0].id] }), "");
-      if (seven) add("Cancel with 7 (switch)", () => apply({ type: "SWITCH7", card: seven.id }), "");
-      if (ace) add("Cancel with Ace", () => apply({ type: "ACE_CANCEL", card: ace.id, take: true }), "");
+      const canFight = hand.some((c) => c.rank === 7 || c.rank === 14 || c.rank === state.demand.rank);
+      const hint = document.createElement("span");
+      hint.className = "anarchy-wait";
+      hint.textContent = canFight
+        ? `Tap the deck to pick up ${state.demand.count} — or play a highlighted card to fight back.`
+        : `Tap the deck to pick up ${state.demand.count}.`;
+      elActions.appendChild(hint);
       return;
     }
 
@@ -803,7 +965,7 @@ export function openAnarchy() {
 
   // ---- new game ----
   function newGame(m, numPlayers, customNames) {
-    clearTimeout(botTimer); stopFireworks();
+    clearTimeout(botTimer); stopFireworks(); stopWinCascade();
     mode = m; lastMode = m; lastNum = numPlayers; lastNames = customNames || null;
     const names = customNames || (m === "cpu"
       ? ["You", "CPU 1", "CPU 2", "CPU 3"].slice(0, numPlayers)
@@ -830,7 +992,7 @@ export function openAnarchy() {
       row.appendChild(sw); row.appendChild(inp); fields.appendChild(row);
     }
   }
-  function toStart() { clearTimeout(botTimer); stopFireworks(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
+  function toStart() { clearTimeout(botTimer); stopFireworks(); stopWinCascade(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
 
   root.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
     const n = parseInt(b.dataset.players, 10);

@@ -2,11 +2,11 @@
 // Top-level entries can be programs or submenus; submenus open to the right
 // on hover and can themselves contain submenus.
 
-import { ICONS, iconFor } from "./icons.js?v=163";
-import { openProgram, openFile } from "./programs.js?v=163";
-import { findByPath } from "./file-system.js?v=163";
-import { t } from "./i18n.js?v=163";
-import { currentZoom } from "./scale.js?v=163";
+import { ICONS, iconFor } from "./icons.js?v=166";
+import { openProgram, openFile } from "./programs.js?v=166";
+import { findByPath } from "./file-system.js?v=166";
+import { t } from "./i18n.js?v=166";
+import { currentZoom } from "./scale.js?v=166";
 
 const ARROW = `▶`;
 

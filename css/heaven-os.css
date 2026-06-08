@@ -2752,7 +2752,6 @@ body.lang-ru .login-logo {
 .anarchy-pile .acard { position: absolute; }
 .anarchy-pile .acard.buried { filter: brightness(0.82); }
 .anarchy-pile .acard.pile-top { box-shadow: 0 0 0 2px #ffd24d, 1px 1px 4px rgba(0,0,0,.4); }
-.anarchy-bita-card { position: absolute; width: 46px; height: 64px; z-index: 30; }
 .anarchy-bita-toast { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); color: #ffe14d; font-weight: bold; font-size: 17px; letter-spacing: 3px; text-transform: uppercase; z-index: 31; pointer-events: none; text-shadow: 1px 1px 0 #000; animation: anarchyBita .75s ease-out forwards; }
 @keyframes anarchyBita { 0% { opacity: 0; transform: translateX(-50%) scale(.6); } 30% { opacity: 1; transform: translateX(-50%) scale(1.1); } 100% { opacity: 0; transform: translateX(-50%) translateY(-22px) scale(1); } }
 
@@ -2778,11 +2777,17 @@ body.lang-ru .login-logo {
 /* cards */
 .acard { width: 44px; height: 62px; background: #fff; border: 1px solid #333; border-radius: 4px; box-shadow: 1px 1px 2px rgba(0,0,0,.35); position: relative; box-sizing: border-box; user-select: none; flex: 0 0 auto; }
 .acard.red { color: #c40000; } .acard.black { color: #111; }
-/* compact corner index: rank with the suit directly beneath it (top-left) */
-.acard .acard-r { position: absolute; top: 3px; left: 5px; font-size: 16px; font-weight: bold; line-height: .9; }
-.acard .acard-s { position: absolute; top: 21px; left: 5px; font-size: 16px; line-height: .9; }
-.acard.mini .acard-r { top: 1px; left: 2px; font-size: 8px; }
-.acard.mini .acard-s { top: 10px; left: 2px; font-size: 8px; }
+/* corner index: a small rank-over-suit column tucked into the top-left, and the
+   same mirrored (rotated 180°) into the bottom-right — like a real playing card */
+.acard .acard-idx { position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1; font-weight: bold; }
+.acard .acard-idx b { font-size: 12px; }
+.acard .acard-idx b + b { font-size: 10px; margin-top: 1px; } /* the suit, sized to read the same as the digit */
+.acard .acard-idx.tl { top: 2px; left: 3px; }
+.acard .acard-idx.br { bottom: 2px; right: 3px; transform: rotate(180deg); }
+.acard.mini .acard-idx b { font-size: 7px; }
+.acard.mini .acard-idx b + b { font-size: 6px; }
+.acard.mini .acard-idx.tl { top: 1px; left: 1px; }
+.acard.mini .acard-idx.br { bottom: 1px; right: 1px; }
 .acard.back { background: repeating-linear-gradient(45deg, #2748b0 0 4px, #1f3a8a 4px 8px); border-color: #0b1c52; }
 .acard.empty { background: transparent; border: 2px dashed rgba(255,255,255,.5); box-shadow: none; }
 
@@ -2790,9 +2795,17 @@ body.lang-ru .login-logo {
 .anarchy-hand { display: flex; gap: 4px; overflow: visible; padding: 20px 2px 8px; min-height: 92px; align-items: flex-end; justify-content: center; }
 .anarchy-hand .acard { cursor: default; transition: transform .08s; }
 .anarchy-hand .acard.legal { cursor: pointer; box-shadow: 0 0 0 2px #2a7fff, 1px 1px 2px rgba(0,0,0,.35); }
-@media (hover: hover) { .anarchy-hand .acard.legal:hover { transform: translateY(-6px); } }
-.anarchy-hand .acard.sel { transform: translateY(-12px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
-.anarchy-hand .acard.sel-top { transform: translateY(-24px); z-index: 5; box-shadow: 0 0 0 2px #ffd24d, 1px 1px 4px rgba(0,0,0,.4); } /* the pair card that lands on top */
+/* a selected card is already chosen — it must NOT jump on hover */
+@media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):hover { transform: translateY(-6px); } }
+.anarchy-hand .acard.sel { transform: translateY(-14px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
+.anarchy-hand .acard.sel-top { z-index: 22; box-shadow: 0 0 0 2px #ffd24d, 1px 1px 6px rgba(0,0,0,.45); } /* the pair card that lands on top */
+/* a selected pair sits compact and fanned (offsets set in JS via --px/--py); clicking one flips it forward */
+.anarchy-hand .acard.pair-flip { animation: anarchyPairFlip .26s ease; }
+@keyframes anarchyPairFlip {
+  0%   { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(0); }
+  50%  { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(90deg); }
+  100% { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(0); }
+}
 /* unplayable cards stay opaque (no felt bleed-through) but read as muted */
 .anarchy-hand .acard.dim { filter: brightness(.62) saturate(.65); }
 
@@ -2850,6 +2863,7 @@ body.lang-ru .login-logo {
 
 /* win overlay + fireworks */
 .anarchy-fx { position: absolute; inset: 0; pointer-events: none; z-index: 42; overflow: hidden; }
+.anarchy-cascade { position: absolute; left: 0; top: 0; pointer-events: none; }
 .anarchy-fw-burst { position: absolute; }
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }
 @keyframes anarchyFw { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }

@@ -1,8 +1,8 @@
 // Mekibel — shared Win98-styled context menu.
 // Used by desktop empty-space tap and explorer empty-pane tap.
 
-import { t } from "./i18n.js?v=163";
-import { currentZoom } from "./scale.js?v=163";
+import { t } from "./i18n.js?v=166";
+import { currentZoom } from "./scale.js?v=166";
 
 export function showContextMenu(x, y, items) {
   closeContextMenu();
