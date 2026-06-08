@@ -146,6 +146,16 @@ section("T7: going out on a pair wins, despite the pickup a pair would force");
   ok(s.demand.type !== "pickup", "no pickup side effect fires after going out");
 }
 
+section("T8: 7s can never be played as a pair");
+{
+  let s = scenario({ hands: [["7H", "7D", "9S"], ["8C", "13H"]], stock: ["2C", "3C"], turn: 0, demand: { type: "open" } });
+  const pairs = legalMoves(s).filter((m) => m.type === "PLAY" && m.cards.length === 2);
+  eq(pairs.length, 0, "legalMoves offers no 7-pair even when holding two 7s");
+  let threw = false;
+  try { reduce(s, { type: "PLAY", cards: ["7H", "7D"] }); } catch (_) { threw = true; }
+  ok(threw, "reduce rejects a forced 7-pair PLAY");
+}
+
 // ---------------------------------------------------------------------------
 section("fuzz: random self-play stays conserved and terminates");
 {

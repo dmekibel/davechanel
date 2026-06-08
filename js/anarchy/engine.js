@@ -185,6 +185,7 @@ function actPLAY(s, action) {
   if (cards.some((c) => !c)) throw new Error("PLAY: card not in hand");
   const R = cards[0].rank;
   if (cards.some((c) => c.rank !== R)) throw new Error("PLAY: cards must share a rank");
+  if (R === 7 && ids.length === 2) throw new Error("PLAY: 7s go one at a time, never as a pair");
   const d = s.demand;
   const prevTopRank = s.topRank;
   const prevLastPlacer = s.lastPlacer;
@@ -395,7 +396,7 @@ export function legalMoves(state) {
       const playable = open || r === s.topRank || satisfiesDir(r, d);
       if (playable) {
         moves.push({ type: "PLAY", cards: [cs[0].id] });
-        if (cs.length >= 2) moves.push({ type: "PLAY", cards: [cs[0].id, cs[1].id] });
+        if (cs.length >= 2 && r !== 7) moves.push({ type: "PLAY", cards: [cs[0].id, cs[1].id] }); // 7s go one at a time — never a pair
       }
     }
     for (const c of hand) if (c.rank === 7) moves.push({ type: "SWITCH7", card: c.id });
