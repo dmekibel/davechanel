@@ -329,7 +329,7 @@ function actPASS(s) {
   s.lastPlacer = null;
   s.turn = nextIdx(s, idx);
   s.consecutivePasses = 0;
-  s.log.push(`${s.players[idx].name} passes${drew ? " (draws 1)" : ""} — table to бита; ${s.players[s.turn].name} leads.`);
+  s.log.push(`${s.players[idx].name} passes${drew ? " (draws 1)" : ""} — table cleared; ${s.players[s.turn].name} leads.`);
   return s;
 }
 

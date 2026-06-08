@@ -28,6 +28,7 @@ export function openAnarchy() {
         <div class="anarchy-run"></div>
       </div>
       <div class="anarchy-log"></div>
+      <div class="anarchy-fx"></div>
     </div>
     <div class="anarchy-hand-wrap">
       <div class="anarchy-aside"></div>
@@ -85,6 +86,12 @@ export function openAnarchy() {
         </div>
         <div class="anarchy-setup-btns"><button class="anarchy-help-close">Got it</button></div>
       </div>
+    </div>
+    <div class="anarchy-win">
+      <div class="anarchy-win-box">
+        <h2 class="anarchy-win-title">YOU WIN!</h2>
+        <div class="anarchy-setup-btns"><button class="anarchy-win-again">Play again</button></div>
+      </div>
     </div>`;
 
   const $ = (sel) => root.querySelector(sel);
@@ -94,6 +101,7 @@ export function openAnarchy() {
   const elRun = $(".anarchy-run");
   const elLog = $(".anarchy-log");
   const elHand = $(".anarchy-hand");
+  const elHandWrap = $(".anarchy-hand-wrap");
   const elAside = $(".anarchy-aside");
   const elHandName = $(".anarchy-handname");
   const elActions = $(".anarchy-actions");
@@ -103,6 +111,9 @@ export function openAnarchy() {
   const elFelt = $(".anarchy-felt");
   const elStock = $(".anarchy-stock");
   const elBita = $(".anarchy-bita-pile");
+  const elFx = $(".anarchy-fx");
+  const elWin = $(".anarchy-win");
+  const elWinTitle = $(".anarchy-win-title");
 
   let state = null;
   let mode = "cpu";          // "cpu" | "local"
@@ -113,6 +124,7 @@ export function openAnarchy() {
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
   let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = []; // animation state
+  let fxTimer = null, lastMode = "cpu", lastNum = 2, justRevealed = false;
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
@@ -147,7 +159,7 @@ export function openAnarchy() {
     const col = colorOf(card.suit);
     d.className = `acard ${col}` + (mini ? " mini" : "");
     d.dataset.id = card.id;
-    d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span>`;
+    d.innerHTML = `<span class="acard-r">${rankLabel(card.rank)}</span><span class="acard-s">${SUIT[card.suit]}</span><span class="acard-pip">${SUIT[card.suit]}</span>`;
     return d;
   }
 
@@ -194,9 +206,9 @@ export function openAnarchy() {
       fly.classList.add("anarchy-fly");
       fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
       elFelt.appendChild(fly);
-      const d = k * 90;
-      setTimeout(() => { fly.style.transition = "transform .42s ease-in-out, opacity .42s"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.3)`; fly.style.opacity = "0"; }, d + 10);
-      setTimeout(() => fly.remove(), d + 460);
+      const d = k * 110;
+      setTimeout(() => { fly.style.transition = "transform .5s ease-in-out, opacity .5s"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.3)`; fly.style.opacity = "0"; }, d + 10);
+      setTimeout(() => fly.remove(), d + 540);
     }
   }
   // sweep the table to the бита pile when it clears
@@ -207,16 +219,44 @@ export function openAnarchy() {
     fly.style.left = (from.x + 28) + "px"; fly.style.top = (from.y + 18) + "px";
     elFelt.appendChild(fly);
     requestAnimationFrame(() => {
-      fly.style.transition = "transform .45s ease-in, opacity .45s ease-in";
+      fly.style.transition = "transform .55s ease-in, opacity .55s ease-in";
       fly.style.transform = `translate(${to.x - from.x - 28}px, ${to.y - from.y - 18}px) scale(.6) rotate(16deg)`;
       fly.style.opacity = "0";
     });
-    setTimeout(() => fly.remove(), 480);
+    setTimeout(() => fly.remove(), 580);
     const toast = document.createElement("div");
-    toast.className = "anarchy-bita-toast"; toast.textContent = "бита";
+    toast.className = "anarchy-bita-toast"; toast.textContent = "Discard";
     elPile.appendChild(toast);
-    setTimeout(() => toast.remove(), 750);
+    setTimeout(() => toast.remove(), 850);
   }
+  // ---- fireworks for a win ----
+  function firework(x, y) {
+    const colors = ["#ff4d4d", "#ffe14d", "#4dff88", "#4db8ff", "#ff7ad9", "#ffffff"];
+    const burst = document.createElement("div");
+    burst.className = "anarchy-fw-burst";
+    burst.style.left = x + "px"; burst.style.top = y + "px";
+    for (let i = 0; i < 16; i++) {
+      const p = document.createElement("div");
+      p.className = "anarchy-fw-particle";
+      const ang = (i / 16) * Math.PI * 2, dist = 36 + Math.random() * 46;
+      p.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+      p.style.setProperty("--dy", Math.sin(ang) * dist + "px");
+      p.style.background = colors[(Math.random() * colors.length) | 0];
+      burst.appendChild(p);
+    }
+    elFx.appendChild(burst);
+    setTimeout(() => burst.remove(), 1000);
+  }
+  function startFireworks() {
+    if (fxTimer) return;
+    const boom = () => {
+      const r = elFelt.getBoundingClientRect();
+      firework(24 + Math.random() * (r.width - 48), 20 + Math.random() * r.height * 0.6);
+    };
+    boom(); boom();
+    fxTimer = setInterval(boom, 420);
+  }
+  function stopFireworks() { if (fxTimer) { clearInterval(fxTimer); fxTimer = null; } if (elFx) elFx.innerHTML = ""; }
 
   // ---- the move the current selection maps to (or null) ----
   function selectionAction() {
@@ -249,10 +289,19 @@ export function openAnarchy() {
     catch (e) { flash(e.message); return; }
     selection = []; aceTake = false;
     // local mode: hand off the device whenever the active player changes
-    if (mode === "local" && state.status === "playing" && state.turn !== prevTurn)
+    if (mode === "local" && state.status === "playing" && state.turn !== prevTurn) {
       handoffPending = true;
+      flipHandArea();
+    }
     render();
     scheduleBots();
+  }
+  function reveal() { handoffPending = false; justRevealed = true; render(); justRevealed = false; }
+  function flipHandArea() {
+    if (!elHandWrap) return;
+    elHandWrap.classList.remove("flip-area");
+    void elHandWrap.offsetWidth; // restart the flip animation
+    elHandWrap.classList.add("flip-area");
   }
 
   function flash(msg) { flashMsg = msg; render(); setTimeout(() => { flashMsg = ""; render(); }, 1400); }
@@ -312,13 +361,16 @@ export function openAnarchy() {
   }
 
   function render() {
-    if (!state) { elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
+    if (!state) { stopFireworks(); elWin.style.display = "none"; elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
     elSetup.style.display = "none";
-    const showHandoff = mode === "local" && handoffPending && state.status === "playing";
-    elHandoff.style.display = showHandoff ? "flex" : "none";
-    if (showHandoff) {
-      $(".anarchy-handoff-name").textContent = `${state.players[state.turn].name}, it's your turn.`;
-    }
+    elHandoff.style.display = "none"; // replaced by the in-hand face-down reveal
+    const finished = state.status === "finished";
+    elWin.style.display = finished ? "flex" : "none";
+    if (finished) {
+      const w = state.winner;
+      elWinTitle.textContent = (mode === "cpu" && w === 0) ? "YOU WIN!" : `${state.players[w].name} WINS!`;
+      startFireworks();
+    } else stopFireworks();
 
     // opponents seated around the table: 1 across the top, 2 in the upper corners,
     // 3 as left / top / right. Each holds a compact fan (not a spread) + a count.
@@ -367,7 +419,7 @@ export function openAnarchy() {
       const front = elPile.lastChild, o = dealOrigin(state.lastPlacer);
       front.style.transition = "none";
       front.style.transform = `translate(${o.x}px, ${o.y}px) scale(.85)`;
-      requestAnimationFrame(() => { front.style.transition = "transform .26s ease-out"; front.style.transform = ""; });
+      requestAnimationFrame(() => { front.style.transition = "transform .36s ease-out"; front.style.transform = ""; });
     }
     if (lastPileLen > 0 && state.pile.length === 0) biteFlyAway();
     lastTopId = topId;
@@ -375,7 +427,7 @@ export function openAnarchy() {
 
     // visible draw (stock) and бита (discard) piles, kept separate
     renderSidePile(elStock, state.stock.length, "Draw");
-    renderSidePile(elBita, state.removed.length, "бита");
+    renderSidePile(elBita, state.removed.length, "Discard");
     // animate any card a player just took (flies from the stock to that player)
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
@@ -395,7 +447,12 @@ export function openAnarchy() {
     elHand.innerHTML = "";
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
-    if (mode === "local" && handoffPending) return; // keep the hand hidden during a handoff
+    if (mode === "local" && handoffPending) { // show the next player's hand face-down until they reveal
+      elHandName.textContent = `${state.players[viewer()].name} — pass the phone, then tap Reveal`;
+      state.players[viewer()].hand.forEach(() => elHand.appendChild(cardEl(null, { faceUp: false })));
+      fitHand();
+      return;
+    }
     if (mode === "local") elHandName.textContent = `${state.players[viewer()].name}'s hand`;
     const { active, legal } = activeAndLegal();
     const act = canAct();
@@ -412,6 +469,7 @@ export function openAnarchy() {
       if (isSel) e.classList.add("sel");
       if (isLegal) e.classList.add("legal");
       if (!isSel && !isLegal) e.classList.add("dim");
+      if (justRevealed) e.classList.add("flip-in");
       e.addEventListener("click", () => onCardClick(c.id));
       elHand.appendChild(e);
     });
@@ -466,7 +524,10 @@ export function openAnarchy() {
       b.className = "anarchy-btn " + cls; b.textContent = label;
       b.addEventListener("click", fn); elActions.appendChild(b); return b;
     };
-    if (mode === "local" && handoffPending) return;
+    if (mode === "local" && handoffPending) {
+      add(`Reveal ${state.players[viewer()].name}'s cards`, reveal, "primary reveal");
+      return;
+    }
     const hand = state.players[viewer()].hand;
 
     // slap (in or out of turn) for the viewer
@@ -506,8 +567,8 @@ export function openAnarchy() {
 
   // ---- new game ----
   function newGame(m, numPlayers) {
-    clearTimeout(botTimer);
-    mode = m;
+    clearTimeout(botTimer); stopFireworks();
+    mode = m; lastMode = m; lastNum = numPlayers;
     const names = m === "cpu"
       ? ["You", "CPU 1", "CPU 2", "CPU 3"].slice(0, numPlayers)
       : Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
@@ -528,6 +589,7 @@ export function openAnarchy() {
     clearTimeout(botTimer); state = null; selection = []; handoffPending = false; render(); // Game = new game
   }));
   $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
+  $(".anarchy-win-again").addEventListener("click", () => newGame(lastMode, lastNum));
 
   newGame("cpu", 2); // standard 1-on-1 vs the computer; the Game menu offers more
   const winId = openWindow({ title: "Anarchy", icon: ICONS.anarchy(14), iconHtml: true, content: root, width: 600, height: 660, flush: true });
