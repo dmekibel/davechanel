@@ -245,7 +245,7 @@ function actPLAY(s, action) {
     const owed = s.topRun - 1;
     if (prevLastPlacer != null && owed > 0 && s.stock.length > 0) {
       s.players[prevLastPlacer].pendingDraw = (s.players[prevLastPlacer].pendingDraw || 0) + owed;
-      s.log.push(`${s.players[prevLastPlacer].name} owes ${owed} (matched).`);
+      s.log.push(`${s.players[prevLastPlacer].name} must pick up ${owed} (matched).`);
     }
     s.lastPlacer = idx;
     s.turn = nextIdx(s, idx);
@@ -336,7 +336,7 @@ function actDRAW_PENDING(s) {
   if (!p.pendingDraw) throw new Error("nothing owed");
   const n = draw(s, idx, p.pendingDraw);
   p.pendingDraw = 0;
-  s.log.push(`${p.name} takes ${n} owed.`);
+  s.log.push(`${p.name} picks up ${n}.`);
   return s;
 }
 

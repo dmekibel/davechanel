@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=181";
-import { ICONS } from "../icons.js?v=181";
+import { openWindow } from "../window-manager.js?v=182";
+import { ICONS } from "../icons.js?v=182";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=181";
-import { chooseAction, botSlap } from "./bot.js?v=181";
-import { currentZoom } from "../scale.js?v=181";
+} from "./engine.js?v=182";
+import { chooseAction, botSlap } from "./bot.js?v=182";
+import { currentZoom } from "../scale.js?v=182";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -702,7 +702,7 @@ export function openAnarchy() {
     const mine = state.turn === viewer();
     const me = mine ? "YOU" : state.players[state.turn].name;
     const owed = (state.players[state.turn].pendingDraw || 0);
-    if (owed > 0 && state.stock.length > 0) return mine ? `TAP THE DECK — TAKE ${owed}` : `${me} owes ${owed}`;
+    if (owed > 0 && state.stock.length > 0) return mine ? `TAP THE DECK — TAKE ${owed}` : `${me} — pick up ${owed}`;
     const turnTag = mine ? "YOUR TURN" : `${me}'s turn`;
     const prev = state.lastPlacer != null && state.lastPlacer !== state.turn ? state.players[state.lastPlacer].name : null;
     const top = state.pile.length ? state.pile[state.pile.length - 1] : null;
