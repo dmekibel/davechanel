@@ -1,11 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=158";
-import { ICONS } from "../icons.js?v=158";
+import { openWindow } from "../window-manager.js?v=159";
+import { ICONS } from "../icons.js?v=159";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=158";
-import { chooseAction, botSlap } from "./bot.js?v=158";
+} from "./engine.js?v=159";
+import { chooseAction, botSlap } from "./bot.js?v=159";
+import { currentZoom } from "../scale.js?v=159";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -429,12 +430,14 @@ export function openAnarchy() {
     e.addEventListener("pointermove", (ev) => {
       if (sy == null) return;
       const dy = ev.clientY - sy, dx = ev.clientX - sx;
-      // once a clear upward drag starts, the card follows your finger all the way to the table
+      // once a clear upward drag starts, the card follows your finger all the way to the table.
+      // the OS scales the window, so divide the screen-space delta by the zoom to track the cursor.
       if (dragging || (dy < -14 && Math.abs(dy) > Math.abs(dx))) {
         dragging = true;
+        const z = currentZoom() || 1;
         e.style.transition = "none";
         e.style.zIndex = "70";
-        e.style.transform = `translate(${dx}px, ${dy}px)`;
+        e.style.transform = `translate(${dx / z}px, ${dy / z}px)`;
       }
     });
     const end = (ev) => {
