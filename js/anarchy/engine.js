@@ -265,15 +265,20 @@ function actAce(s, action, cancel) {
     if (d.type !== "pickup") throw new Error("ACE_CANCEL only answers a pickup demand");
   } else {
     if (d.type === "pickup") throw new Error("use ACE_CANCEL to answer a pickup");
-    // an Ace can be played in response to anything (it acts as a switch), like the 7
+    // an Ace can be played in response to anything; but if it can't legally satisfy
+    // the demand (e.g. on a black low card it can't go "down"), it acts as a switch
+    // and MUST take the card below — like a 7. Only when it *does* satisfy is the
+    // take optional.
   }
+  const aceFits = d.type === "open" || card.rank === s.topRank || satisfiesDir(card.rank, d);
+  const take = cancel ? action.take : (action.take || !aceFits);
   takeFromHand(p, action.card);
-  if (action.take && s.pile.length > 0) p.hand.push(s.pile.pop()); // optional take-below
+  if (take && s.pile.length > 0) p.hand.push(s.pile.pop()); // take the card below (forced when the Ace can't satisfy the demand)
   s.pile.push(card);
   recomputeTop(s);
   s.lastPlayCount = 1;
   s.consecutivePasses = 0;
-  s.log.push(`${p.name} plays A${card.suit}${cancel ? " (cancels pickup)" : ""}${action.take ? " and takes below" : ""}.`);
+  s.log.push(`${p.name} plays A${card.suit}${cancel ? " (cancels pickup)" : ""}${take ? " and takes below" : ""}.`);
   if (p.hand.length === 0) return win(s, idx);
   s.lastPlacer = idx;
   s.demand = demandFromTop(s);

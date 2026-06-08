@@ -156,6 +156,18 @@ section("T8: 7s can never be played as a pair");
   ok(threw, "reduce rejects a forced 7-pair PLAY");
 }
 
+section("T9: an Ace on a black low card must switch (take the card below)");
+{
+  // top is a black 2 → demand is colour/down/2. An Ace can't go "down" onto a 2,
+  // so playing it is a switch: the player must scoop the 2 into their hand.
+  let s = scenario({ hands: [["14H", "9S"], ["8C", "13H"]], pile: ["2C"], stock: ["3C", "4C"], turn: 0, lastPlacer: 1, demand: { type: "color", dir: "down", rank: 2 } });
+  const before = s.players[0].hand.length;
+  s = reduce(s, { type: "ACE_SWITCH", card: "14H", take: false }); // take:false, but it must be forced
+  ok(s.players[0].hand.some((c) => c.id === "2C"), "P0 scooped the black 2 into hand");
+  eq(s.players[0].hand.length, before, "net hand size unchanged (played Ace, took the 2)");
+  eq(s.pile[s.pile.length - 1].id, "14H", "the Ace is now on top");
+}
+
 // ---------------------------------------------------------------------------
 section("fuzz: random self-play stays conserved and terminates");
 {

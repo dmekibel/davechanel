@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=172";
-import { ICONS } from "../icons.js?v=172";
+import { openWindow } from "../window-manager.js?v=173";
+import { ICONS } from "../icons.js?v=173";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=172";
-import { chooseAction, botSlap } from "./bot.js?v=172";
-import { currentZoom } from "../scale.js?v=172";
+} from "./engine.js?v=173";
+import { chooseAction, botSlap } from "./bot.js?v=173";
+import { currentZoom } from "../scale.js?v=173";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -850,8 +850,8 @@ export function openAnarchy() {
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
       if (isLegal) e.classList.add("legal");
-      if (isFresh) e.classList.add("fresh"); // glowing "NEW" badge so it's obvious what just arrived
-      if (!isSel && !isLegal && !isFresh) e.classList.add("dim"); // fresh cards never dim — you must see them
+      if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
+      if (!isSel && !isLegal) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
       if (justRevealed) e.classList.add("flip-in");
       e.style.touchAction = "none"; // let us handle the upward-throw gesture
       bindCardGestures(e, c.id);
@@ -880,16 +880,16 @@ export function openAnarchy() {
     });
   }
 
-  // swap which of the two selected cards is on top, flipping the new one forward
-  // in place (no full re-render, so the cards don't jump)
+  // swap which of the two selected cards is on top — just restack in place (no
+  // flip, no jump): they stay tight together, only the front/ring changes
   function flipPairTop(frontId) {
     const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
     if (els.length !== 2) { render(); return; }
+    // positions are already set — only the ring + z-order change (no re-layout, no flip)
     els.forEach((el) => {
       const front = el.dataset.id === frontId;
       el.classList.toggle("sel-top", front);
-      el.style.zIndex = front ? "22" : "21";
-      if (front) { el.classList.remove("pair-flip"); void el.offsetWidth; el.classList.add("pair-flip"); }
+      el.style.zIndex = front ? "23" : "22";
     });
     renderActions();
   }
@@ -1017,11 +1017,18 @@ export function openAnarchy() {
         add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
       }
     }
-    // passing happens by tapping the draw deck (see render). A real Pass button
-    // only appears once the stock is empty — there's nothing left to draw, so the
-    // deck can't be the target.
-    if (state.demand.type === "color" && state.stock.length === 0 && activeAndLegal().legal.some((m) => m.type === "PASS"))
-      add("Pass (clear table)", () => apply({ type: "PASS" }), "");
+    // passing happens by tapping the draw deck (see render); spell that out so the
+    // option is obvious. A real Pass button only appears once the stock is empty —
+    // nothing left to draw, so the deck can't be the target.
+    if (state.demand.type === "color" && activeAndLegal().legal.some((m) => m.type === "PASS")) {
+      if (state.stock.length === 0) add("Pass (clear table)", () => apply({ type: "PASS" }), "");
+      else {
+        const hint = document.createElement("span");
+        hint.className = "anarchy-wait";
+        hint.textContent = "Can't follow — tap the draw deck to draw & pass.";
+        elActions.appendChild(hint);
+      }
+    }
   }
 
   // ---- new game ----

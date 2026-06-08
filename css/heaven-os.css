@@ -2802,17 +2802,13 @@ body.lang-ru .login-logo {
 @media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):hover { transform: translateY(-6px); } }
 .anarchy-hand .acard.sel { transform: translateY(-14px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
 .anarchy-hand .acard.sel-top { z-index: 22; box-shadow: 0 0 0 2px #ffd24d, 1px 1px 6px rgba(0,0,0,.45); } /* the pair card that lands on top */
-/* a selected pair sits compact and fanned (offsets set in JS via --px/--py); clicking one flips it forward */
-.anarchy-hand .acard.pair-flip { animation: anarchyPairFlip .26s ease; }
-@keyframes anarchyPairFlip {
-  0%   { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(0); }
-  50%  { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(90deg); }
-  100% { transform: translate(var(--px,0px), var(--py,-18px)) perspective(500px) rotateY(0); }
-}
+/* a selected pair sits compact and squared up (offsets set in JS via --px/--py); tapping one just restacks which is on top */
 /* unplayable cards stay opaque (no felt bleed-through) but read as muted */
 .anarchy-hand .acard.dim { filter: brightness(.62) saturate(.65); }
-/* a card you JUST drew / picked up: green glow + a "NEW" badge until you play */
-.anarchy-hand .acard.fresh { animation: anarchyFresh 1.1s ease-in-out infinite; }
+/* a card you JUST drew / picked up: a "NEW" badge until you play. The green glow
+   only fires when the card is actually playable — an unplayable new card stays
+   dimmed (no false highlight), but still wears the badge. */
+.anarchy-hand .acard.fresh:not(.dim) { animation: anarchyFresh 1.1s ease-in-out infinite; }
 @keyframes anarchyFresh { 0%,100% { box-shadow: 0 0 0 2px #19e57a, 0 0 7px rgba(25,229,122,.6); } 50% { box-shadow: 0 0 0 3px #2bff95, 0 0 13px rgba(43,255,149,.95); } }
 .anarchy-hand .acard.fresh::after { content: "NEW"; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: #12a85a; color: #fff; font-size: 7px; font-weight: bold; letter-spacing: .5px; padding: 1px 4px; border-radius: 6px; z-index: 6; pointer-events: none; box-shadow: 1px 1px 2px rgba(0,0,0,.35); }
 
