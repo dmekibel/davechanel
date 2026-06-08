@@ -2745,7 +2745,7 @@ body.lang-ru .login-logo {
 .anarchy-opp-count { background: #002a14; padding: 0 6px; border-radius: 8px; }
 
 .anarchy-center { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1 1 auto; justify-content: center; }
-.anarchy-badge { font-size: 14px; font-weight: bold; letter-spacing: .5px; color: #222; background: #ffe14d; padding: 5px 14px; border: 2px solid; border-color: #fffae0 #b59a00 #b59a00 #fffae0; border-radius: 2px; text-align: center; }
+.anarchy-badge { font-size: 14px; font-weight: bold; letter-spacing: .5px; color: #222; background: #ffe14d; padding: 5px 14px; border: 2px solid; border-color: #fffae0 #b59a00 #b59a00 #fffae0; border-radius: 2px; text-align: center; max-width: 94%; box-sizing: border-box; }
 .anarchy-badge.pickup { background: #ff8a5b; color: #3a1400; border-color: #ffd0bd #a23c14 #a23c14 #ffd0bd; } /* an opponent's pickup: orange */
 .anarchy-badge.pickup.you { background: #e01d1d; color: #fff; border-color: #ff9a9a #7a0000 #7a0000 #ff9a9a; } /* YOUR pickup: red */
 .anarchy-badge.flash { background: #d83a3a; color: #fff; }
@@ -2827,7 +2827,7 @@ body.lang-ru .login-logo {
 .anarchy-wait { font-size: 12px; color: #555; font-style: italic; }
 
 .anarchy-setup { position: absolute; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
-.anarchy-setup-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 22px; max-width: 320px; text-align: center; }
+.anarchy-setup-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 22px; max-width: min(320px, 92%); box-sizing: border-box; text-align: center; }
 .anarchy-setup-box h2 { margin: 0 0 8px; font-size: 20px; letter-spacing: 3px; }
 .anarchy-setup-box p { margin: 0 0 14px; font-size: 12px; color: #333; }
 .anarchy-setup-btns { display: flex; gap: 8px; justify-content: center; }
@@ -2862,7 +2862,7 @@ body.lang-ru .login-logo {
 
 /* How to Play overlay */
 .anarchy-help { position: absolute; inset: 0; background: rgba(0,0,0,.62); display: none; align-items: center; justify-content: center; z-index: 60; }
-.anarchy-help-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 16px 18px; max-width: 360px; max-height: 86%; overflow-y: auto; }
+.anarchy-help-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 16px 18px; max-width: min(360px, 92%); box-sizing: border-box; max-height: 86%; overflow-y: auto; }
 .anarchy-help-box h2 { margin: 0 0 10px; font-size: 18px; letter-spacing: 2px; text-align: center; }
 .anarchy-help-body { font-size: 12px; color: #1a1a1a; line-height: 1.5; }
 .anarchy-help-body h3 { font-size: 12px; margin: 11px 0 3px; color: #000080; }
@@ -2876,7 +2876,7 @@ body.lang-ru .login-logo {
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }
 @keyframes anarchyFw { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
 .anarchy-win { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 55; pointer-events: none; }
-.anarchy-win-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 26px; text-align: center; pointer-events: auto; box-shadow: 3px 3px 8px rgba(0,0,0,.4); }
+.anarchy-win-box { background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 18px 26px; max-width: min(340px, 92%); box-sizing: border-box; text-align: center; pointer-events: auto; box-shadow: 3px 3px 8px rgba(0,0,0,.4); }
 .anarchy-win-title { margin: 0 0 14px; font-size: 24px; letter-spacing: 2px; color: #b8860b; }
 .anarchy-win-standings { margin: 0 0 14px; font-size: 13px; color: #222; line-height: 1.6; }
 .anarchy-win-standings div:first-child { font-weight: bold; color: #b8860b; }
@@ -2894,7 +2894,7 @@ body.lang-ru .login-logo {
 @keyframes anarchyPickup { 0% { opacity: 0; transform: translateY(8px) scale(.8); } 20% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-28px) scale(1); } }
 
 /* big center-screen intake announcement when a pickup is forced */
-.anarchy-intake { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 47; pointer-events: none; white-space: nowrap; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #3a1400; background: #ff8a5b; border: 3px solid; border-color: #ffd0bd #a23c14 #a23c14 #ffd0bd; border-radius: 4px; padding: 8px 20px; font-size: 18px; box-shadow: 3px 3px 0 rgba(0,0,0,.35); animation: anarchyIntake 1.3s ease-out forwards; }
+.anarchy-intake { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 47; pointer-events: none; max-width: 90%; text-align: center; white-space: normal; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; color: #3a1400; background: #ff8a5b; border: 3px solid; border-color: #ffd0bd #a23c14 #a23c14 #ffd0bd; border-radius: 4px; padding: 8px 20px; font-size: 18px; box-shadow: 3px 3px 0 rgba(0,0,0,.35); animation: anarchyIntake 1.3s ease-out forwards; }
 @keyframes anarchyIntake { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.5); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); } 32% { transform: translate(-50%, -50%) scale(1); } 78% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -52%) scale(1); } }
 /* YOU must pick up → a small red pill tucked just under the draw deck (tap it).
    No giant banner — the deck pulse + red badge already carry it. */
@@ -2911,3 +2911,18 @@ body.lang-ru .login-logo {
 .anarchy-name-color { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #555; flex: 0 0 auto; }
 /* font-size must be >= 16px or mobile Safari auto-zooms on focus and can get stuck zoomed in */
 .anarchy-name-input { flex: 1; font-family: Tahoma, sans-serif; font-size: 16px; padding: 5px 7px; border: 2px solid; border-color: #808080 #fff #fff #808080; min-width: 0; }
+
+/* keep the table playable when the window / viewport gets small: shrink the text
+   and tighten the felt + hand so panels don't pile on top of each other */
+@media (max-width: 480px) {
+  .anarchy-badge { font-size: 12px; padding: 4px 9px; }
+  .anarchy-intake { font-size: 15px; padding: 6px 13px; }
+  .anarchy-run, .anarchy-log { font-size: 10px; }
+}
+@media (max-height: 580px) {
+  .anarchy-felt { padding: 6px 6px 4px; gap: 4px; }
+  .anarchy-center { gap: 4px; }
+  .anarchy-hand { min-height: 80px; padding: 12px 2px 4px; }
+  .anarchy-opp { font-size: 10px; padding: 2px 4px; }
+  .anarchy-log { height: 40px; }
+}
