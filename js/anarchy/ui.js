@@ -1,13 +1,15 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=156";
-import { ICONS } from "../icons.js?v=156";
+import { openWindow } from "../window-manager.js?v=157";
+import { ICONS } from "../icons.js?v=157";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=156";
-import { chooseAction, botSlap } from "./bot.js?v=156";
+} from "./engine.js?v=157";
+import { chooseAction, botSlap } from "./bot.js?v=157";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
+const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
+const colorFor = (i) => PLAYER_COLORS[i % PLAYER_COLORS.length];
 const BOT_DELAY = 2000; // slow, real-game pace so each CPU play is easy to follow
 
 export function openAnarchy() {
@@ -60,6 +62,14 @@ export function openAnarchy() {
             <button data-mode="local" data-players="4">4 Players</button>
           </div>
           <div class="anarchy-setup-btns"><button class="anarchy-modes-back">Back</button></div>
+        </div>
+        <div class="anarchy-names-view">
+          <div class="anarchy-setup-section">Player names</div>
+          <div class="anarchy-names-fields"></div>
+          <div class="anarchy-setup-btns">
+            <button class="anarchy-names-start">Start game</button>
+            <button class="anarchy-names-back">Back</button>
+          </div>
         </div>
       </div>
     </div>
@@ -117,6 +127,7 @@ export function openAnarchy() {
   const elSetup = $(".anarchy-setup");
   const elStartView = $(".anarchy-start-view");
   const elModesView = $(".anarchy-modes-view");
+  const elNamesView = $(".anarchy-names-view");
   const elHandoff = $(".anarchy-handoff");
   const elHelp = $(".anarchy-help");
   const elFelt = $(".anarchy-felt");
@@ -135,7 +146,7 @@ export function openAnarchy() {
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
   let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = []; // animation state
-  let fxTimer = null, lastMode = "cpu", lastNum = 2, justRevealed = false;
+  let fxTimer = null, lastMode = "cpu", lastNum = 2, lastNames = null, justRevealed = false;
 
   // whose hand is shown / who may act right now
   const viewer = () => (mode === "cpu" ? 0 : state.turn);
@@ -238,6 +249,19 @@ export function openAnarchy() {
     const toX = to.x + to.w / 2 - 11, toY = to.y + (idx === viewer() ? 0 : to.h / 2);
     requestAnimationFrame(() => { fly.style.transition = "transform .55s ease-in-out, opacity .55s"; fly.style.transform = `translate(${toX - from.x - 24}px, ${toY - from.y - 16}px) scale(1.2)`; fly.style.opacity = "0"; });
     setTimeout(() => fly.remove(), 600);
+  }
+  // a clear "+N pick up" tag floating off whoever just drew
+  function floatPickup(idx, n) {
+    const target = idx === viewer() ? elHand : oppBoxMap[idx];
+    if (!target || !elFelt) return;
+    const to = feltPos(target);
+    const tag = document.createElement("div");
+    tag.className = "anarchy-pickup-tag";
+    tag.textContent = `+${n} pick up`;
+    tag.style.left = (to.x + to.w / 2 - 30) + "px";
+    tag.style.top = (to.y + (idx === viewer() ? -8 : to.h / 2)) + "px";
+    elFelt.appendChild(tag);
+    setTimeout(() => tag.remove(), 1100);
   }
   // sweep the table to the бита pile when it clears
   function biteFlyAway() {
@@ -418,13 +442,20 @@ export function openAnarchy() {
   }
 
   // ---- render ----
+  // the badge announces what just happened to the player whose turn it is
   function badgeText() {
     const d = state.demand;
     const mine = state.turn === viewer();
-    const who = mine ? "YOU" : state.players[state.turn].name;
-    if (d.type === "open") return mine ? "YOUR TURN" : `${who}'S TURN`;
-    if (d.type === "pickup") return `${who}: PICK UP ${d.count}`;
-    return `${who}: PLAY ${rankLabel(d.rank)} OR ${d.dir === "up" ? "HIGHER" : "LOWER"}`;
+    const me = mine ? "YOU" : state.players[state.turn].name;
+    const prev = state.lastPlacer != null && state.lastPlacer !== state.turn ? state.players[state.lastPlacer].name : null;
+    if (d.type === "open") return mine ? "YOUR TURN — lead any card" : `${me}: lead any card`;
+    if (d.type === "pickup") {
+      const what = state.lastPlayCount >= 2 ? "a pair" : "a card";
+      return prev ? `${prev} dropped ${what} — PICK UP ${d.count}` : `PICK UP ${d.count}`;
+    }
+    const dir = d.dir === "up" ? "or higher" : "or lower";
+    if (state.topRank === 7) return prev ? `${prev} switched — play 7 ${dir}` : `play 7 ${dir}`;
+    return `${me} — play ${rankLabel(d.rank)} ${dir}`;
   }
 
   function render() {
@@ -457,7 +488,7 @@ export function openAnarchy() {
       for (let j = 0; j < showN; j++) fan.appendChild(cardEl(null, { mini: true, faceUp: false }));
       const meta = document.createElement("div");
       meta.className = "anarchy-opp-meta";
-      meta.innerHTML = `<span class="anarchy-opp-name">${o.p.name}</span><span class="anarchy-opp-count">${o.p.hand.length} cards</span>`;
+      meta.innerHTML = `<span class="anarchy-opp-name" style="color:${colorFor(o.i)}">${o.p.name}</span><span class="anarchy-opp-count">${o.p.hand.length} cards</span>`;
       box.appendChild(fan); box.appendChild(meta);
       elOpp.appendChild(box);
     });
@@ -472,7 +503,8 @@ export function openAnarchy() {
     if (!pile.length) {
       const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = "28px"; e.style.top = "18px"; elPile.appendChild(e);
     } else {
-      const groupN = Math.min(state.topRun || 1, 3);
+      // only the cards played TOGETHER last sit side-by-side; matched singles stack
+      const groupN = Math.min(state.lastPlayCount || 1, 3);
       const buried = pile.slice(Math.max(0, pile.length - groupN - 2), pile.length - groupN);
       const group = pile.slice(pile.length - groupN);
       buried.forEach((c, i) => {
@@ -494,7 +526,7 @@ export function openAnarchy() {
         elPile.appendChild(e);
       });
     }
-    elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "pair ×2" : "";
+    elRun.textContent = state.topRun >= 3 ? "TRIPLE — slap the 4th!" : state.topRun === 2 ? "two of a kind on top" : "";
 
     // a ghost of the played card glides from the player to the table; the pile itself never moves
     const topId = state.pile.length ? state.pile[state.pile.length - 1].id : null;
@@ -506,10 +538,10 @@ export function openAnarchy() {
     // visible draw (stock) and бита (discard) piles, kept separate
     renderSidePile(elStock, state.stock.length, "Draw");
     renderSidePile(elBita, state.removed.length, "Discard");
-    // animate any card a player just took (flies from the stock to that player)
+    // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
-      if (grew > 0) flyDraw(i, grew);
+      if (grew > 0) { flyDraw(i, grew); floatPickup(i, grew); }
     });
     lastHandCounts = state.players.map((p) => p.hand.length);
 
@@ -525,6 +557,7 @@ export function openAnarchy() {
     elHand.innerHTML = "";
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
+    elHandName.style.color = mode === "local" ? colorFor(viewer()) : "#eafff0";
     if (mode === "local" && handoffPending) { // show the next player's hand face-down until they reveal
       elHandName.textContent = `${state.players[viewer()].name} — pass the phone, then tap Reveal`;
       state.players[viewer()].hand.forEach(() => elHand.appendChild(cardEl(null, { faceUp: false })));
@@ -645,12 +678,12 @@ export function openAnarchy() {
   }
 
   // ---- new game ----
-  function newGame(m, numPlayers) {
+  function newGame(m, numPlayers, customNames) {
     clearTimeout(botTimer); stopFireworks();
-    mode = m; lastMode = m; lastNum = numPlayers;
-    const names = m === "cpu"
+    mode = m; lastMode = m; lastNum = numPlayers; lastNames = customNames || null;
+    const names = customNames || (m === "cpu"
       ? ["You", "CPU 1", "CPU 2", "CPU 3"].slice(0, numPlayers)
-      : Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
+      : Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`));
     const humanIndices = m === "cpu" ? [0] : names.map((_, i) => i);
     state = createGame({ numPlayers, humanIndices, names });
     selection = []; aceTake = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
@@ -660,22 +693,41 @@ export function openAnarchy() {
     scheduleBots();
   }
 
-  function showSetupStart() { elStartView.style.display = "block"; elModesView.style.display = "none"; }
-  function showSetupModes() { elStartView.style.display = "none"; elModesView.style.display = "block"; }
+  function showSetupStart() { elStartView.style.display = "block"; elModesView.style.display = "none"; elNamesView.style.display = "none"; }
+  function showSetupModes() { elStartView.style.display = "none"; elModesView.style.display = "block"; elNamesView.style.display = "none"; }
+  function showNames(n) {
+    elStartView.style.display = "none"; elModesView.style.display = "none"; elNamesView.style.display = "block";
+    const fields = $(".anarchy-names-fields");
+    fields.innerHTML = "";
+    for (let i = 0; i < n; i++) {
+      const row = document.createElement("div"); row.className = "anarchy-name-row";
+      const sw = document.createElement("span"); sw.className = "anarchy-name-color"; sw.style.background = colorFor(i);
+      const inp = document.createElement("input"); inp.className = "anarchy-name-input"; inp.maxLength = 12; inp.value = `Player ${i + 1}`;
+      row.appendChild(sw); row.appendChild(inp); fields.appendChild(row);
+    }
+  }
   function toStart() { clearTimeout(botTimer); stopFireworks(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
 
-  root.querySelectorAll("[data-mode]").forEach((b) =>
-    b.addEventListener("click", () => newGame(b.dataset.mode, parseInt(b.dataset.players, 10))));
+  root.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
+    const n = parseInt(b.dataset.players, 10);
+    if (b.dataset.mode === "local") showNames(n); else newGame("cpu", n); // local: enter names first
+  }));
   $(".anarchy-start-go").addEventListener("click", () => newGame("cpu", 2)); // quick 1-on-1 vs CPU
   $(".anarchy-modes-open").addEventListener("click", showSetupModes);
   $(".anarchy-modes-back").addEventListener("click", showSetupStart);
+  $(".anarchy-names-back").addEventListener("click", showSetupModes);
+  $(".anarchy-names-start").addEventListener("click", () => {
+    const inputs = [...$(".anarchy-names-fields").querySelectorAll("input")];
+    const names = inputs.map((inp, i) => (inp.value.trim() || `Player ${i + 1}`).slice(0, 12));
+    newGame("local", names.length, names);
+  });
   $(".anarchy-handoff-go").addEventListener("click", () => { handoffPending = false; render(); });
   root.querySelectorAll(".anarchy-menu").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.act === "help") { elHelp.style.display = "flex"; return; }
     toStart(); // Game menu = back to the Start screen
   }));
   $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
-  $(".anarchy-win-again").addEventListener("click", () => newGame(lastMode, lastNum));
+  $(".anarchy-win-again").addEventListener("click", () => newGame(lastMode, lastNum, lastNames));
 
   showSetupStart();
   render(); // open on the Start screen — no auto-start

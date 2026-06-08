@@ -62,6 +62,7 @@ export function createGame({ numPlayers = 2, names, humanIndices = [0], seed } =
     topColor: null,
     topRun: 0,
     lastPlacer: null,
+    lastPlayCount: 0,
     consecutivePasses: 0,
     status: "playing",
     winner: null,
@@ -167,6 +168,7 @@ function combo(s, completer) {
   s.demand = { type: "open" };
   s.turn = completer;
   s.lastPlacer = completer;
+  s.lastPlayCount = 0;
   s.consecutivePasses = 0;
   s.log.push(`Four of a kind! ${s.players[completer].name} clears the table and leads.`);
   return s;
@@ -198,6 +200,7 @@ function actPLAY(s, action) {
 
   for (const id of ids) s.pile.push(takeFromHand(p, id));
   recomputeTop(s);
+  s.lastPlayCount = ids.length; // how many cards landed together (pair vs matched single)
   s.consecutivePasses = 0;
   s.log.push(`${p.name} plays ${cards.map(cardLabel).join(" ")}.`);
 
@@ -241,6 +244,7 @@ function actSWITCH7(s, action) {
   if (s.pile.length > 0) player.hand.push(s.pile.pop());
   s.pile.push(card);
   recomputeTop(s);
+  s.lastPlayCount = 1;
   s.consecutivePasses = 0;
   s.log.push(`${player.name} plays 7${card.suit}${inTurn ? "" : " (out of turn)"} and takes the card below.`);
   if (player.hand.length === 0) return win(s, by);
@@ -266,6 +270,7 @@ function actAce(s, action, cancel) {
   if (action.take && s.pile.length > 0) p.hand.push(s.pile.pop()); // optional take-below
   s.pile.push(card);
   recomputeTop(s);
+  s.lastPlayCount = 1;
   s.consecutivePasses = 0;
   s.log.push(`${p.name} plays A${card.suit}${cancel ? " (cancels pickup)" : ""}${action.take ? " and takes below" : ""}.`);
   if (p.hand.length === 0) return win(s, idx);
@@ -327,6 +332,7 @@ function actPASS(s) {
   recomputeTop(s);
   s.demand = { type: "open" };
   s.lastPlacer = null;
+  s.lastPlayCount = 0;
   s.turn = nextIdx(s, idx);
   s.consecutivePasses = 0;
   s.log.push(`${s.players[idx].name} passes${drew ? " (draws 1)" : ""} — table cleared; ${s.players[s.turn].name} leads.`);
