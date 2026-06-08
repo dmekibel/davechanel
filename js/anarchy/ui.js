@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=161";
-import { ICONS } from "../icons.js?v=161";
+import { openWindow } from "../window-manager.js?v=162";
+import { ICONS } from "../icons.js?v=162";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=161";
-import { chooseAction, botSlap } from "./bot.js?v=161";
-import { currentZoom } from "../scale.js?v=161";
+} from "./engine.js?v=162";
+import { chooseAction, botSlap } from "./bot.js?v=162";
+import { currentZoom } from "../scale.js?v=162";
 
 const SUIT = { H: "♥", D: "♦", C: "♣", S: "♠" };
 const PLAYER_COLORS = ["#ffd24d", "#5db0ff", "#7cf08a", "#ff7ad9"]; // per-seat identity colors
@@ -26,7 +26,7 @@ export function openAnarchy() {
       <div class="anarchy-stock"></div>
       <div class="anarchy-bita-pile"></div>
       <div class="anarchy-center">
-        <div class="anarchy-badge">YOUR LEAD</div>
+        <div class="anarchy-badge">YOUR TURN</div>
         <div class="anarchy-pile"></div>
         <div class="anarchy-run"></div>
       </div>
@@ -272,6 +272,32 @@ export function openAnarchy() {
     elFelt.appendChild(tag);
     setTimeout(() => tag.remove(), 1100);
   }
+  // a big center-screen intake announcement; grander when 2+ cards are forced
+  function announce(msg, grand) {
+    if (!elFelt) return;
+    const el = document.createElement("div");
+    el.className = "anarchy-intake" + (grand ? " grand" : "");
+    el.textContent = msg;
+    elFelt.appendChild(el);
+    setTimeout(() => el.remove(), grand ? 1800 : 1300);
+  }
+  // fire the intake banner when a play forces a pickup (demand) or punishes
+  // a player backward (they draw on the spot). count >= 2 → grand variant.
+  function announceIntakes(action, prevDemandType, before) {
+    if (!state || state.status !== "playing") return;
+    const who = (i) => (i === viewer() ? "YOU" : state.players[i].name);
+    if (state.demand.type === "pickup" && prevDemandType !== "pickup") {
+      const i = state.turn, n = state.demand.count || 1;
+      announce(`${who(i)} — PICK UP ${n}`, n >= 2);
+      return;
+    }
+    if (action.type === "PLAY") {
+      for (let i = 0; i < state.players.length; i++) {
+        const grew = state.players[i].hand.length - (before[i] || 0);
+        if (grew > 0) { announce(`${who(i)} — PICK UP ${grew}`, grew >= 2); return; }
+      }
+    }
+  }
   // sweep the table to the бита pile when it clears
   function biteFlyAway() {
     const from = feltPos(elPile), to = feltPos(elBita);
@@ -353,6 +379,8 @@ export function openAnarchy() {
     const takingPickup = action.type === "TAKE_PICKUP";
     const pickupTaker = takingPickup ? state.turn : -1;
     const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
+    const prevDemandType = state.demand.type;
+    const beforeCounts = state.players.map((p) => p.hand.length);
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
     selection = []; aceTake = false;
@@ -368,6 +396,7 @@ export function openAnarchy() {
       flyDraw(pickupTaker, h.slice(h.length - pickupCount), elPile); // card flies from the play pile
     }
     if (taker != null && hadPile) flyFromPile(taker); // switch: card from below flies to the player
+    announceIntakes(action, prevDemandType, beforeCounts);
     scheduleBots();
   }
   function reveal() { handoffPending = false; justRevealed = true; render(); justRevealed = false; }
@@ -396,9 +425,20 @@ export function openAnarchy() {
       const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
       const taker = isSwitchTake ? (action.by == null ? state.turn : action.by) : null;
       const hadPile = state.pile.length > 0;
+      const takingPickup = action.type === "TAKE_PICKUP";
+      const pickupTaker = takingPickup ? state.turn : -1;
+      const pickupCount = takingPickup ? (state.demand.count || 1) : 0;
+      const prevDemandType = state.demand.type;
+      const beforeCounts = state.players.map((p) => p.hand.length);
       try { state = reduce(state, action); } catch (e) { /* skip a bad bot move */ }
+      if (takingPickup && pickupTaker >= 0) suppressDrawIdx = pickupTaker;
       render();
+      if (takingPickup && pickupTaker >= 0) {
+        const h = state.players[pickupTaker].hand;
+        flyDraw(pickupTaker, h.slice(h.length - pickupCount), elPile); // enemy pickup flies to their seat
+      }
       if (taker != null && hadPile) flyFromPile(taker); // enemy switch: card from below flies to them
+      announceIntakes(action, prevDemandType, beforeCounts);
       scheduleBots();
     }, BOT_DELAY);
   }
@@ -479,15 +519,19 @@ export function openAnarchy() {
     const d = state.demand;
     const mine = state.turn === viewer();
     const me = mine ? "YOU" : state.players[state.turn].name;
+    const turnTag = mine ? "YOUR TURN" : `${me}'s turn`;
     const prev = state.lastPlacer != null && state.lastPlacer !== state.turn ? state.players[state.lastPlacer].name : null;
+    const top = state.pile.length ? state.pile[state.pile.length - 1] : null;
+    const played = top ? `${rankLabel(top.rank)}${SUIT[top.suit]}` : "";
     if (d.type === "open") return mine ? "YOUR TURN — lead any card" : `${me}: lead any card`;
     if (d.type === "pickup") {
       const what = state.lastPlayCount >= 2 ? "a pair" : "a card";
       return prev ? `${prev} dropped ${what} — PICK UP ${d.count}` : `PICK UP ${d.count}`;
     }
-    const dir = d.dir === "up" ? "or higher" : "or lower";
-    if (state.topRank === 7) return prev ? `${prev} switched — play 7 ${dir}` : `play 7 ${dir}`;
-    return `${me} — play ${rankLabel(d.rank)} ${dir}`;
+    // just state what the previous player put down — let the player deduce the
+    // legal response themselves (red = equal/higher, black = equal/lower); the
+    // highlighted cards in hand confirm it without spelling out the rule.
+    return prev ? `${prev} played ${played} — ${turnTag}` : turnTag;
   }
 
   function render() {
