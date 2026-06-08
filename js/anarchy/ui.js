@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=169";
-import { ICONS } from "../icons.js?v=169";
+import { openWindow } from "../window-manager.js?v=170";
+import { ICONS } from "../icons.js?v=170";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=169";
-import { chooseAction, botSlap } from "./bot.js?v=169";
-import { currentZoom } from "../scale.js?v=169";
+} from "./engine.js?v=170";
+import { chooseAction, botSlap } from "./bot.js?v=170";
+import { currentZoom } from "../scale.js?v=170";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -605,28 +605,22 @@ export function openAnarchy() {
     const card = hand.find((c) => c.id === id);
     if (!card) return;
     if (selection.includes(id)) {
-      // a selected pair: the card you click becomes the one on top (its colour sets
-      // the next demand) — flip it forward in place rather than re-rendering the hand
+      // tapping a card that's already selected:
+      // - a pair → just flip which one is on top (never deselects; deselect = tap empty)
       if (selection.length === 2) {
         const other = selection.find((x) => x !== id);
         selection = [other, id];
         flipPairTop(id); return;
       }
-      // a selected single: click/tap again to play it (or throw it up)
+      // - a lone selected card → tap again to play it
       const sa = selectionAction();
       if (sa) apply(sa.action); else { selection = []; render(); }
       return;
     }
-    const { active, legal } = activeAndLegal();
-    const selRank = selection.length ? (hand.find((c) => c.id === selection[0]) || {}).rank : null;
-    if (selRank === card.rank && selection.length === 1 && card.rank !== 7) {
-      selection = [...selection, id]; // add a 2nd of this rank — you pick exactly which two
-    } else {
-      // fresh: auto-grab the pair only when you hold exactly two of this rank; with 3-4 you choose
-      const sameRank = active.filter((c) => c.rank === card.rank);
-      const legalPair = card.rank !== 7 && legal.some((m) => m.type === "PLAY" && m.cards.length === 2 && (active.find((x) => x.id === m.cards[0]) || {}).rank === card.rank);
-      selection = legalPair && sameRank.length === 2 ? sameRank.map((c) => c.id) : [id];
-    }
+    // tapping an unselected card: select just that one, OR — if you already hold a
+    // single of the same rank — add it to make a pair. Purely manual: no auto-grab.
+    const selRank = selection.length === 1 ? (hand.find((c) => c.id === selection[0]) || {}).rank : null;
+    selection = (selRank != null && selRank === card.rank && card.rank !== 7) ? [...selection, id] : [id];
     aceTake = false;
     render();
   }
