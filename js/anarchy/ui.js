@@ -652,7 +652,8 @@ export function openAnarchy() {
     const end = (ev) => {
       if (sy == null) return;
       const dy = (ev.clientY ?? sy) - sy;
-      sy = null; clearDrag(e); clearDrag(partnerEl());
+      sy = null;
+      if (dragging) { clearDrag(e); clearDrag(partnerEl()); } // a tap leaves the selected pair's tight transform intact
       if (dy < -50) swipePlay(id);         // thrown up toward the middle -> play
       else if (!dragging) onCardClick(id); // tap -> select / play
       else render();                       // small drag back down -> reset
