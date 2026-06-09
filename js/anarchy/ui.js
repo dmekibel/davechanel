@@ -339,17 +339,6 @@ export function openAnarchy() {
     elFly.appendChild(tag);
     setTimeout(() => tag.remove(), 1100);
   }
-  // a big center-screen intake announcement. Red + grand when it's YOU who must
-  // pick up; orange and calmer when it's an opponent.
-  function announce(msg, mine) {
-    if (!elFelt) return;
-    [...elFelt.querySelectorAll(".anarchy-intake")].forEach((e) => e.remove()); // never stack banners
-    const el = document.createElement("div");
-    el.className = "anarchy-intake" + (mine ? " you" : "");
-    el.textContent = msg;
-    elFelt.appendChild(el);
-    setTimeout(() => el.remove(), mine ? 1800 : 1300);
-  }
   // a distinct banner so a pass reads clearly as a pass (not a pickup)
   function announcePass(idx) {
     if (!elFelt || idx == null || !state.players[idx]) return;
@@ -360,27 +349,6 @@ export function openAnarchy() {
     el.textContent = `${name} — PASS`;
     elFelt.appendChild(el);
     setTimeout(() => el.remove(), 1300);
-  }
-  // Only YOU pick-ups get a big banner (you must act). Opponents' pickups read
-  // through their flying card + the log, so we don't pile up big notifications.
-  function announceIntakes(action, prevDemandType, before) {
-    if (!state || state.status !== "playing") return;
-    const me = viewer();
-    if (state.turn === me && (state.players[me].pendingDraw || 0) > 0 && state.stock.length > 0) {
-      announce(`YOU — TAKE ${state.players[me].pendingDraw}`, true); // giant red over the deck: tap to take
-      return;
-    }
-    if (state.demand.type === "pickup" && prevDemandType !== "pickup") {
-      const i = state.turn, n = state.demand.count || 1;
-      if (i === viewer()) announce(`YOU — PICK UP ${n}`, true);
-      return;
-    }
-    if (action.type === "PLAY") {
-      for (let i = 0; i < state.players.length; i++) {
-        const grew = state.players[i].hand.length - (before[i] || 0);
-        if (grew > 0) { if (i === viewer()) announce(`YOU — PICK UP ${grew}`, true); return; }
-      }
-    }
   }
   // snapshot the rendered pile (felt-relative positions + faces) so that, when the
   // table clears, we can fly the REAL cards into the discard rather than a stand-in.
@@ -545,7 +513,6 @@ export function openAnarchy() {
     // taking a pickup OR clearing an owed draw: cards slide from the draw deck
     const drawing = action.type === "TAKE_PICKUP" || action.type === "DRAW_PENDING";
     const drawTaker = drawing ? state.turn : -1;
-    const prevDemandType = state.demand.type;
     const beforeCounts = state.players.map((p) => p.hand.length);
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
@@ -563,7 +530,6 @@ export function openAnarchy() {
       if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // big cards slide from the draw deck
     }
     if (taker != null && hadPile) flyFromPile(taker, switchCard); // switch: the card below flies to the player
-    announceIntakes(action, prevDemandType, beforeCounts);
     if (action.type === "PASS") announcePass(prevTurn);
     scheduleBots();
   }
@@ -596,7 +562,6 @@ export function openAnarchy() {
       const switchCard = isSwitchTake && hadPile ? state.pile[state.pile.length - 1] : null; // the card the switch scoops
       const drawing = action.type === "TAKE_PICKUP" || action.type === "DRAW_PENDING";
       const drawTaker = drawing ? state.turn : -1;
-      const prevDemandType = state.demand.type;
       const beforeCounts = state.players.map((p) => p.hand.length);
       const passer = state.turn; // who is about to act (for a PASS banner)
       try { state = reduce(state, action); } catch (e) { /* skip a bad bot move */ }
@@ -608,7 +573,6 @@ export function openAnarchy() {
         if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // enemy draw slides from deck to their seat
       }
       if (taker != null && hadPile) flyFromPile(taker, switchCard); // enemy switch: the card below flies to them
-      announceIntakes(action, prevDemandType, beforeCounts);
       if (action.type === "PASS") announcePass(passer);
       scheduleBots();
     }, BOT_DELAY + Math.max(0, state.players.length - 2) * 600);
