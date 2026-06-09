@@ -2762,6 +2762,7 @@ body.lang-ru .login-logo {
 .anarchy-bita-pile { right: 3%; }
 /* when you owe a pickup, the draw deck lights up and accepts a tap */
 .anarchy-stock.pickup-ready { pointer-events: auto; cursor: pointer; animation: anarchyDeckPulse 1s ease-in-out infinite; }
+.anarchy-stock.tappable { pointer-events: auto; cursor: pointer; } /* the optional draw-and-pass is clickable without the urgent pulse */
 .anarchy-stock.pickup-ready .anarchy-sidepile-stack { filter: drop-shadow(0 0 6px #ffe14d); }
 @keyframes anarchyDeckPulse { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.12); } }
 .anarchy-pickup-hint { margin-top: 3px; font-size: 9px; font-weight: bold; color: #ffe14d; background: rgba(0,0,0,.45); border-radius: 8px; padding: 1px 6px; white-space: nowrap; animation: anarchyHintBlink 1s steps(1) infinite; }

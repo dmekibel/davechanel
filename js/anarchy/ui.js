@@ -506,6 +506,7 @@ export function openAnarchy() {
 
   function apply(action) {
     const prevTurn = state.turn;
+    const me = viewer();
     const isSwitchTake = action.type === "SWITCH7" || ((action.type === "ACE_SWITCH" || action.type === "ACE_CANCEL") && action.take);
     const taker = isSwitchTake ? (action.by == null ? prevTurn : action.by) : null;
     const hadPile = state.pile.length > 0;
@@ -523,6 +524,7 @@ export function openAnarchy() {
       flipHandArea();
     }
     if (drawTaker >= 0) suppressDrawIdx = drawTaker; // skip the generic stock-fly for the taker
+    if (taker === me && switchCard) newCardIds.add(switchCard.id); // a switch scoops a card (hand count unchanged) — flag it NEW too
     render();
     if (drawTaker >= 0) {
       const h = state.players[drawTaker].hand;
@@ -789,6 +791,7 @@ export function openAnarchy() {
     const hasPlay = canAct() && activeAndLegal().legal.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH");
     const deckUrgent = owesPending || facingPickup || (deckPass && !hasPlay); // forced → pulse; optional pass → quiet
     elStock.classList.toggle("pickup-ready", deckUrgent);
+    elStock.classList.toggle("tappable", owesPending || facingPickup || deckPass); // clickable even when it isn't pulsing (the optional draw-and-pass)
     elStock.onclick = owesPending ? () => apply({ type: "DRAW_PENDING" })
                     : facingPickup ? () => apply({ type: "TAKE_PICKUP" })
                     : deckPass ? () => apply({ type: "PASS" })
@@ -895,11 +898,8 @@ export function openAnarchy() {
   function flipPairTop(frontId) {
     const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
     if (els.length !== 2) { render(); return; }
-    // the two cards switch spots (slide past each other) but stay tight — no flip,
-    // no splitting apart: just swap their horizontal offset and the z-order
-    const [a, b] = els;
-    const pa = a.style.getPropertyValue("--px"), pb = b.style.getPropertyValue("--px");
-    a.style.setProperty("--px", pb); b.style.setProperty("--px", pa);
+    // keep both cards exactly where layoutSelectedPair put them — only the front
+    // card changes (z-order + ring), so the tight pair never splits apart
     els.forEach((el) => {
       const front = el.dataset.id === frontId;
       el.classList.toggle("sel-top", front);
