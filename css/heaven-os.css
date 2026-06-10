@@ -2823,8 +2823,16 @@ body.lang-ru .login-logo {
    edge, no lift, no pulse (you'll know it's there; it won't shout) */
 .anarchy-hand .acard.interrupt { cursor: pointer; box-shadow: 0 0 0 1px rgba(155,120,235,.65); }
 /* you hold the SAME rank as the play before you — answering in kind punishes the
-   previous player or completes the four. Red and propped up: the teaching cue. */
-.anarchy-hand .acard.counter:not(.sel):not(.sel-top) { cursor: pointer; transform: translateY(-7px); box-shadow: 0 0 0 2px #e23a3a, 0 0 9px rgba(226,58,58,.6), 1px 1px 2px rgba(0,0,0,.35); }
+   previous player or completes the four. A red ring and a restless little wiggle
+   (rocking on the `transform` channel composes with the hand-fan `rotate`). With
+   TWO of the rank in hand the four is in reach: the cards catch fire. */
+.anarchy-hand .acard.counter:not(.sel):not(.sel-top) { cursor: pointer; box-shadow: 0 0 0 2px #e23a3a, 0 0 9px rgba(226,58,58,.6), 1px 1px 2px rgba(0,0,0,.35); animation: anarchyWiggle 1.5s ease-in-out infinite; }
+.anarchy-hand .acard.counter.fire:not(.sel):not(.sel-top) { animation: anarchyWiggle .75s ease-in-out infinite, anarchyBurn .4s linear infinite alternate; }
+@keyframes anarchyWiggle { 0%, 100% { transform: rotate(-1.7deg); } 50% { transform: rotate(1.7deg); } }
+@keyframes anarchyBurn {
+  from { box-shadow: 0 0 0 2px #ff5a2a, 0 -4px 10px rgba(255,120,30,.85), 0 -9px 18px rgba(255,60,0,.5), 1px 1px 2px rgba(0,0,0,.35); }
+  to   { box-shadow: 0 0 0 2px #ffb02a, 0 -6px 14px rgba(255,170,40,.95), 0 -13px 24px rgba(255,90,0,.65), 1px 1px 2px rgba(0,0,0,.35); }
+}
 /* a selected card is already chosen — it must NOT jump on hover */
 @media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):not(.counter):hover { transform: translateY(-6px); } }
 .anarchy-hand .acard.sel { transform: translateY(-14px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
@@ -2899,6 +2907,9 @@ body.lang-ru .login-logo {
 .anarchy-pulse.reward { animation: anarchyReward .85s ease-out; background: radial-gradient(ellipse at center, transparent 46%, rgba(46,196,100,.30) 100%); }
 @keyframes anarchyPain { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes anarchyReward { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
+/* the table thuds when your punishing play lands */
+.anarchy-felt.shake { animation: anarchyShake .34s ease-out; }
+@keyframes anarchyShake { 0% { transform: translate(0, 0); } 18% { transform: translate(0, -3px); } 42% { transform: translate(-2px, 2px); } 68% { transform: translate(2px, -1px); } 100% { transform: translate(0, 0); } }
 .anarchy-cascade { position: absolute; left: 0; top: 0; pointer-events: none; }
 .anarchy-fw-burst { position: absolute; }
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }

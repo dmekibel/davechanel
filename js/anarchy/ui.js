@@ -159,6 +159,7 @@ export function openAnarchy() {
   // live card/pile dimensions — the CSS container queries shrink --cw/--ch/--pilew
   // when the window squeezes, and ALL layout math below derives from these
   let CW = 44, CH = 62, PW = 96, STEP = 13;
+  let throwOrigin = null; // where a flicked card left your finger — the ghost continues from THERE
   function readDims() {
     // read from the felt (a child of the container) — container queries may not
     // restyle the container itself, so the tier vars land on the children
@@ -240,7 +241,14 @@ export function openAnarchy() {
     const mine = idx === viewer();
     const from = feltPos(src), to = feltPos(elPile);
     const span = (group.length - 1) * STEP; // tight: a pair flies and lands close together
-    const fromX = from.x + from.w / 2 - (CW + span) / 2, fromY = from.y + (mine ? -6 : from.h / 2);
+    let fromX = from.x + from.w / 2 - (CW + span) / 2, fromY = from.y + (mine ? -6 : from.h / 2);
+    if (mine && throwOrigin && group.some((c) => throwOrigin.ids.has(c.id))) {
+      // a flicked card keeps flying from the exact spot it left your finger
+      const f = elFly.getBoundingClientRect(), z = currentZoom() || 1;
+      fromX = (throwOrigin.rect.left - f.left) / z;
+      fromY = (throwOrigin.rect.top - f.top) / z;
+    }
+    throwOrigin = null;
     const gLeft = (PW - (CW + span)) / 2; // mirror the pile's own layout math
     const toX = to.x + gLeft + jitter(group[0].id, 3, 2), toY = to.y + Math.round(CH * 0.32) + jitter(group[0].id, 2, 3);
     const wrap = document.createElement("div");
@@ -335,18 +343,21 @@ export function openAnarchy() {
       fly.appendChild(inner);
       elFly.appendChild(fly);
       const d = k * 240;
+      const slotRot = slotEl ? parseFloat(slotEl.style.rotate) || 0 : 0; // land at the slot's fan tilt
       if (slotEl) { slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, d + T); }
       if (fanEl) setTimeout(() => { fanEl.classList.remove("absorb"); void fanEl.offsetWidth; fanEl.classList.add("absorb"); }, d + T); // the fan swallows it
       setTimeout(() => {
         fly.style.transition = `transform ${T}ms cubic-bezier(.22,.7,.25,1)`;
-        fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(${endScale})`;
+        fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(${endScale}) rotate(${slotRot}deg)`;
         if (reveal && card) { // the flip starts a third of the way home
           inner.style.transition = `transform ${Math.round(T * 0.5)}ms ease ${Math.round(T * 0.3)}ms`;
           inner.style.transform = "rotateY(180deg)";
         }
       }, d + 20);
-      setTimeout(() => { fly.style.transition = "opacity .22s"; fly.style.opacity = "0"; }, d + T + 30);
-      setTimeout(() => fly.remove(), d + T + 300);
+      // the real card reappears exactly under the still-opaque ghost, then the ghost
+      // whips away in 120ms — a tight crossfade, no double-image shimmer, no gap
+      setTimeout(() => { fly.style.transition = "opacity .12s"; fly.style.opacity = "0"; }, d + T + 10);
+      setTimeout(() => fly.remove(), d + T + 180);
     });
   }
   // the forced-pickup variant: the same flight with a bigger, golden presence
@@ -366,6 +377,7 @@ export function openAnarchy() {
     const slotEl = idx === viewer() && card ? [...elHand.children].find((el) => el.dataset && el.dataset.id === card.id) || null : null;
     const fanEl = idx !== viewer() && target.querySelector ? target.querySelector(".anarchy-opp-fan") : null;
     let toX, toY, endScale;
+    const slotRot = slotEl ? parseFloat(slotEl.style.rotate) || 0 : 0; // settle at the slot's fan tilt
     if (slotEl) {
       const p = feltPos(slotEl); toX = p.x; toY = p.y; endScale = 1;
       slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, T);
@@ -375,10 +387,10 @@ export function openAnarchy() {
     } else { toX = to.x + to.w / 2 - CW / 2; toY = to.y + (idx === viewer() ? -8 : to.h / 2); endScale = idx === viewer() ? 1.05 : 0.7; }
     requestAnimationFrame(() => {
       fly.style.transition = `transform ${T}ms cubic-bezier(.2,.7,.2,1)`;
-      fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${endScale})`;
+      fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${endScale}) rotate(${slotRot}deg)`;
     });
-    setTimeout(() => { fly.style.transition = "opacity .25s"; fly.style.opacity = "0"; }, T + 20);
-    setTimeout(() => fly.remove(), T + 300);
+    setTimeout(() => { fly.style.transition = "opacity .12s"; fly.style.opacity = "0"; }, T + 10);
+    setTimeout(() => fly.remove(), T + 180);
   }
   // the table breathes with the takes: a brief red sting around the edges when
   // YOU pick up, a soft green wash when an opponent does — quiet scorekeeping
@@ -387,6 +399,13 @@ export function openAnarchy() {
     elPulse.classList.remove("pain", "reward");
     void elPulse.offsetWidth; // restart the animation even on back-to-back takes
     elPulse.classList.add(kind);
+  }
+  // your punishing play THUDS: a subtle table shake as the cards land
+  function feltShake() {
+    if (!elFelt) return;
+    elFelt.classList.remove("shake");
+    void elFelt.offsetWidth;
+    elFelt.classList.add("shake");
   }
   // a clear "+N pick up" tag floating off whoever just drew
   function floatPickup(idx, n) {
@@ -577,6 +596,8 @@ export function openAnarchy() {
     const drawing = action.type === "TAKE_PICKUP" || action.type === "DRAW_PENDING";
     const drawTaker = drawing ? state.turn : -1;
     const beforeCounts = state.players.map((p) => p.hand.length);
+    const beforePending = state.players.map((p) => p.pendingDraw || 0);
+    const demandBefore = state.demand.type;
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
     selection = []; aceTake = false;
@@ -595,6 +616,12 @@ export function openAnarchy() {
     }
     if (taker != null && hadPile) flyFromPile(taker, switchCard); // switch: the card below flies to the player
     if (action.type === "PASS") announcePass(prevTurn);
+    // your play just stuck somebody: a small table THUD as the cards land
+    if (state.status === "playing" && (action.type === "PLAY" || action.type === "DUMP" || action.type === "SLAP")) {
+      const punished = state.players.some((p, i) => i !== me && ((p.pendingDraw || 0) > beforePending[i] || p.hand.length > beforeCounts[i]))
+        || (state.demand.type === "pickup" && demandBefore !== "pickup" && state.turn !== me);
+      if (punished) setTimeout(feltShake, 430); // synced to the throw's landing
+    }
     scheduleBots();
   }
   function reveal() { handoffPending = false; justRevealed = true; render(); justRevealed = false; }
@@ -643,9 +670,9 @@ export function openAnarchy() {
   }
 
   // ---- interaction ----
-  // off-turn, two cards still fire straight from the hand: a 7 slips in as a
-  // switch, and the 4th of a showing triple SLAPS in to complete the four —
-  // both possible at any moment, card-first (no button hunting)
+  // off-turn, two cards still fire straight from the hand — but only by a real
+  // THROW (flick up): a 7 slips in as a switch, and the 4th of a showing triple
+  // SLAPS in to complete the four. A mere tap never triggers them.
   function offTurnCardPlay(id) {
     const c = state.players[viewer()].hand.find((x) => x.id === id);
     if (!c) return false;
@@ -657,7 +684,7 @@ export function openAnarchy() {
     // a combo card: tapping it breaks it out of the combo, back into your fan
     // (a hand-sorting move, so it works any time — even off-turn)
     if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; }
-    if (!canAct()) { offTurnCardPlay(id); return; }
+    if (!canAct()) return; // off-turn moves (7 switch, slap) need a real THROW, not a tap
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
@@ -687,9 +714,9 @@ export function openAnarchy() {
   // throw a card up onto the table to play it (alternative to the Play button)
   function swipePlay(id) {
     if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; } // a flicked combo card just returns to the fan
-    if (!canAct()) { offTurnCardPlay(id); return; } // a flick can still slap the 4th / slip a 7 in
+    if (!canAct()) { if (!offTurnCardPlay(id)) render(); return; } // a flick can still slap the 4th / slip a 7 in; refused → the card glides home
     const hand = state.players[viewer()].hand;
-    if (!hand.find((c) => c.id === id)) return;
+    if (!hand.find((c) => c.id === id)) { render(); return; }
     if (!(selection.includes(id) && selection.length === 2)) selection = [id]; // keep a raised pair, else play this one
     const sa = selectionAction();
     if (sa) apply(sa.action); else { selection = [id]; render(); }
@@ -731,10 +758,17 @@ export function openAnarchy() {
       if (sy == null) return;
       const dy = (ev.clientY ?? sy) - sy;
       sy = null;
-      if (dragging) { clearDrag(e); clearDrag(partnerEl()); } // a tap leaves the selected pair's tight transform intact
-      if (dy < -50) swipePlay(id);         // thrown up toward the middle -> play
-      else if (!dragging) onCardClick(id); // tap -> select / play
-      else render();                       // small drag back down -> reset
+      if (dy < -50) {
+        // a throw: remember exactly where the card left your finger — the ghost
+        // continues the SAME flight from there (no snap-back, no teleport). The
+        // re-render removes the dragged card, so its transform needs no cleanup.
+        throwOrigin = { ids: new Set(selection.length === 2 && selection.includes(id) ? selection : [id]), rect: e.getBoundingClientRect() };
+        swipePlay(id);    // synchronous: a successful play's ghost has already launched
+        throwOrigin = null; // a refused throw must not leave a stale origin behind
+        return;
+      }
+      if (dragging) { clearDrag(e); clearDrag(partnerEl()); render(); } // small drag back down -> reset
+      else onCardClick(id);                                             // tap -> select / play
     };
     e.addEventListener("pointerup", end);
     e.addEventListener("pointercancel", () => { sy = null; clearDrag(e); clearDrag(partnerEl()); });
@@ -822,21 +856,21 @@ export function openAnarchy() {
       // the current play sits tight and centred; older cards step out to the
       // upper-left so they keep peeking and are never fully covered
       const groupN = Math.min(state.lastPlayCount || 1, 3);
-      const buried = pile.slice(Math.max(0, pile.length - groupN - 2), pile.length - groupN);
+      const buried = pile.slice(Math.max(0, pile.length - groupN - 5), pile.length - groupN);
       const group = pile.slice(pile.length - groupN);
       const span = (group.length - 1) * STEP; // a pair barely overlaps — close together
       const gLeft = (PW - (CW + span)) / 2;   // centre the current play in the pile box
       const gTop = Math.round(CH * 0.32);
-      // every card keeps a tiny seeded wobble (rotation + offset) so the table reads
-      // like real stacking — controlled: the current play stays near-straight and
-      // readable, history underneath gets messier
+      // the history TRAILS behind the current play like a fan spread onto the felt:
+      // each older card steps back along the arc and rotates further open, with its
+      // own seeded wobble — organic, but the newest cards stay flat and readable
       buried.forEach((c, i) => {
         const e = cardEl(c);
-        const depth = buried.length - i;       // 1..2 older
-        e.style.left = (gLeft - depth * Math.round(CW * 0.25) + jitter(c.id, 3, 2)) + "px"; // step up-left so each one keeps peeking
-        e.style.top = (gTop - depth * Math.round(CH * 0.13) + jitter(c.id, 2, 3)) + "px";
-        e.style.transform = `rotate(${jitter(c.id, 9, 1)}deg)`;
-        e.style.zIndex = String(2 - depth);
+        const depth = buried.length - i;       // 1..5 older, 1 = right under the play
+        e.style.left = (gLeft - depth * Math.round(CW * 0.30) + jitter(c.id, 3, 2)) + "px";
+        e.style.top = (gTop - depth * Math.round(CH * 0.10) + jitter(c.id, 3, 3)) + "px";
+        e.style.transform = `rotate(${-depth * 7 + jitter(c.id, 5, 1)}deg)`; // the fan opens backwards
+        e.style.zIndex = String(8 - depth);
         e.classList.add("buried");
         elPile.appendChild(e);
       });
@@ -946,6 +980,7 @@ export function openAnarchy() {
       : state.demand.type === "pickup" ? state.demand.rank
       : (state.pile.length && state.lastPlacer != null && state.lastPlacer !== viewer()) ? state.topRank
       : null;
+    const counterMine = counterRank != null ? active.filter((x) => x.rank === counterRank).length : 0; // 2+ = you can stack a pair / finish the four: fire
     const playRanks = new Set(); // ranks with a legal PLAY — every copy of that rank is playable
     const playIds = new Set();   // specific cards: 7 switch, Ace
     if (act) for (const m of legal) {
@@ -963,7 +998,7 @@ export function openAnarchy() {
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
       if (isLegal) e.classList.add("legal");
-      if (isCounter) e.classList.add("counter");
+      if (isCounter) { e.classList.add("counter"); if (counterMine >= 2) e.classList.add("fire"); }
       if (is7Int) e.classList.add("interrupt"); // a quiet, tappable out-of-turn 7 (not loud)
       if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
       if (!isSel && !isLegal && !is7Int && !isCounter) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
@@ -1055,10 +1090,20 @@ export function openAnarchy() {
 
   // overlap the hand so every card fits on screen without horizontal scrolling.
   // The combo group keeps a visible split before it (SPLIT px) even when squeezed.
+  // Cards sit in a gentle held-fan arc — tilted around the middle, edges dipping —
+  // via the separate `rotate`/`top` channels so lifts and drags compose freely.
   function fitHand() {
     const SPLIT = 18;
     const cards = [...elHand.children];
     cards.forEach((el) => (el.style.marginLeft = ""));
+    if (!cards.length) return;
+    const mid = (cards.length - 1) / 2;
+    cards.forEach((el, i) => {
+      const t = mid ? (i - mid) / mid : 0; // -1..1 across the spread
+      el.style.position = "relative";
+      el.style.rotate = (t * 5).toFixed(2) + "deg";
+      el.style.top = (t * t * 7).toFixed(1) + "px";
+    });
     if (cards.length < 2) return;
     const splitIdx = cards.findIndex((el) => el.classList.contains("combo-start"));
     const splitW = splitIdx > 0 ? SPLIT : 0; // no split when the combo IS the whole hand
