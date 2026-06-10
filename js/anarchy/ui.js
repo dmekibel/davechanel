@@ -208,25 +208,43 @@ export function openAnarchy() {
     return d;
   }
 
-  // a ghost of the played card(s) glides from the player to the table (the pile
-  // stays put). A pair/triple flies together in unison, fanned to land side-by-side.
+  // a tiny per-card "how it landed" wobble, seeded by the card id so every render
+  // agrees where it sits — controlled mess: reads like real stacking, never moves
+  function jitter(id, range, salt) {
+    let h = salt | 0;
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+    return (((h >>> 0) % 1000) / 1000 - 0.5) * 2 * range;
+  }
+  // the played card(s) are THROWN from the hand to the table: the group flies as
+  // one unit, spinning a full turn like a real toss, and settles at the exact
+  // angle/spot the pile shows it resting (the pile itself never moves).
   function flyPlay(idx, cards) {
     const group = Array.isArray(cards) ? cards.filter(Boolean) : (cards ? [cards] : []);
     if (idx == null || !group.length) return;
     const src = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!src || !elPile) return;
     const from = feltPos(src), to = feltPos(elPile);
-    const fromX = from.x + from.w / 2 - 22, fromY = from.y + (idx === viewer() ? -6 : from.h / 2);
-    const span = (group.length - 1) * 13; // tight: a pair lands close together
+    const span = (group.length - 1) * 13; // tight: a pair flies and lands close together
+    const fromX = from.x + from.w / 2 - (44 + span) / 2, fromY = from.y + (idx === viewer() ? -6 : from.h / 2);
+    const gLeft = (96 - (44 + span)) / 2; // mirror the pile's own layout math
+    const toX = to.x + gLeft + jitter(group[0].id, 3, 2), toY = to.y + 20 + jitter(group[0].id, 2, 3);
+    const wrap = document.createElement("div");
+    wrap.className = "anarchy-fly anarchy-throw";
+    wrap.style.left = fromX + "px"; wrap.style.top = fromY + "px";
     group.forEach((card, i) => {
-      const ghost = cardEl(card);
-      ghost.classList.add("anarchy-fly");
-      ghost.style.left = fromX + "px"; ghost.style.top = fromY + "px"; ghost.style.opacity = "0.92"; ghost.style.zIndex = String(40 + i);
-      elFly.appendChild(ghost);
-      const toX = to.x + 26 - span / 2 + i * 13, toY = to.y + 20;
-      requestAnimationFrame(() => { ghost.style.transition = "transform .3s ease-out, opacity .3s ease-out"; ghost.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px)`; ghost.style.opacity = "0"; });
-      setTimeout(() => ghost.remove(), 320);
+      const g = cardEl(card);
+      if (i) { g.style.position = "absolute"; g.style.left = (i * 13) + "px"; g.style.top = "0"; }
+      wrap.appendChild(g);
     });
+    elFly.appendChild(wrap);
+    const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, direction varies by card
+    const endRot = jitter(group[group.length - 1].id, 5, 1);    // settle at the pile's resting angle
+    requestAnimationFrame(() => {
+      wrap.style.transition = "transform .6s cubic-bezier(.18,.72,.3,1), opacity .25s ease-in .38s";
+      wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn + endRot}deg)`;
+      wrap.style.opacity = "0";
+    });
+    setTimeout(() => wrap.remove(), 680);
   }
   // position of an element's top-left within the fly layer (which spans the whole
   // game), so flies can travel between the felt and the hand without being clipped
@@ -251,54 +269,50 @@ export function openAnarchy() {
     lbl.className = "anarchy-pile-label"; lbl.textContent = `${label} ${count}`;
     el.appendChild(stack); el.appendChild(lbl);
   }
-  // fly drawn cards from the stock to whoever drew; the viewer's flip face-up on arrival
-  function flyDraw(idx, cards, fromEl) {
+  // a drawn card flies from the deck like a real take: it launches deck-sized and
+  // face-down, grows as it travels toward you, FLIPS face-up mid-flight, and lands
+  // on the EXACT spot in your hand where it ends up (the real card hides until the
+  // ghost arrives, so flight path and destination always agree).
+  function flyDraw(idx, cards, fromEl, opts = {}) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
     const src = fromEl || elStock;
     if (!target || !src) return;
-    const from = feltPos(src), to = feltPos(target);
-    const toX = to.x + to.w / 2 - 16, toY = to.y + (idx === viewer() ? -4 : to.h / 2);
+    const from = feltPos(src);
     const reveal = idx === viewer();
+    const T = opts.big ? 1050 : 900; // unhurried — the eye should be able to follow
     cards.slice(0, 3).forEach((card, k) => {
-      const fly = cardEl(null, { mini: true, faceUp: false });
-      fly.classList.add("anarchy-fly");
+      let toX, toY, endScale = 1, slotEl = null;
+      if (reveal && card) slotEl = [...elHand.children].find((el) => el.dataset && el.dataset.id === card.id) || null;
+      if (slotEl) { const p = feltPos(slotEl); toX = p.x; toY = p.y; }
+      else { const to = feltPos(target); toX = to.x + to.w / 2 - 22; toY = to.y + (reveal ? -8 : to.h / 2); if (!reveal) endScale = 0.6; }
+      const fly = document.createElement("div");
+      fly.className = "anarchy-fly anarchy-fly3d" + (opts.big ? " anarchy-fly-pickup" : "");
       fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
+      fly.style.transform = "scale(.55)"; // deck-sized at launch, full-sized on arrival
+      const inner = document.createElement("div");
+      inner.className = "anarchy-flip-inner";
+      inner.appendChild(cardEl(null, { faceUp: false }));
+      if (reveal && card) { const face = cardEl(card); face.classList.add("anarchy-flip-front"); inner.appendChild(face); }
+      fly.appendChild(inner);
       elFly.appendChild(fly);
-      const d = k * 150;
-      setTimeout(() => { fly.style.transition = "transform .6s ease-in-out"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.7)`; }, d + 10);
-      if (reveal && card) setTimeout(() => { // flip face-up so you can see the card you drew
-        fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
-        fly.innerHTML = faceHTML(card);
-      }, d + 460);
-      setTimeout(() => { fly.style.transition = "opacity .3s"; fly.style.opacity = "0"; }, d + 820);
-      setTimeout(() => fly.remove(), d + 1120);
+      const d = k * 240;
+      if (slotEl) { slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, d + T); }
+      setTimeout(() => {
+        fly.style.transition = `transform ${T}ms cubic-bezier(.22,.7,.25,1)`;
+        fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(${endScale})`;
+        if (reveal && card) { // the flip starts a third of the way home
+          inner.style.transition = `transform ${Math.round(T * 0.5)}ms ease ${Math.round(T * 0.3)}ms`;
+          inner.style.transform = "rotateY(180deg)";
+        }
+      }, d + 20);
+      setTimeout(() => { fly.style.transition = "opacity .22s"; fly.style.opacity = "0"; }, d + T + 30);
+      setTimeout(() => fly.remove(), d + T + 300);
     });
   }
-  // a deliberately BIG, slow pickup: a full-size card glides from the draw deck into
-  // the taker's hand and flips face-up, so the forced draw is impossible to miss.
-  function flyPickup(idx, cards) {
-    const target = idx === viewer() ? elHand : oppBoxMap[idx];
-    if (!target || !elStock) return;
-    const from = feltPos(elStock), to = feltPos(target);
-    const reveal = idx === viewer();
-    const toX = to.x + to.w / 2 - 18, toY = to.y + (idx === viewer() ? -12 : to.h / 2);
-    cards.slice(0, 3).forEach((card, k) => {
-      const fly = cardEl(null, { faceUp: false });
-      fly.classList.add("anarchy-fly", "anarchy-fly-pickup");
-      fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
-      elFly.appendChild(fly);
-      const d = k * 220;
-      setTimeout(() => { fly.style.transition = "transform .85s cubic-bezier(.18,.7,.2,1)"; fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(1.15)`; }, d + 20);
-      if (reveal && card) setTimeout(() => { // flip face-up so you clearly see what you took
-        fly.classList.remove("back"); fly.classList.add(colorOf(card.suit), "flip-in");
-        fly.innerHTML = faceHTML(card);
-      }, d + 560);
-      setTimeout(() => { fly.style.transition = "opacity .35s"; fly.style.opacity = "0"; }, d + 1150);
-      setTimeout(() => fly.remove(), d + 1520);
-    });
-  }
+  // the forced-pickup variant: the same flight with a bigger, golden presence
+  function flyPickup(idx, cards) { flyDraw(idx, cards, null, { big: true }); }
   // a switch (7/Ace) scoops the card beneath it into the player's hand — show that
-  // EXACT card, face-up, sliding big and slow from the table to them so it's clear.
+  // EXACT card, face-up, gliding from the table to the very slot it lands in.
   function flyFromPile(idx, card) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!target || !elPile) return;
@@ -308,13 +322,19 @@ export function openAnarchy() {
     const fromX = from.x + 26, fromY = from.y + 20;
     fly.style.left = fromX + "px"; fly.style.top = fromY + "px";
     elFly.appendChild(fly);
-    const toX = to.x + to.w / 2 - 22, toY = to.y + (idx === viewer() ? -8 : to.h / 2);
+    const T = 950;
+    const slotEl = idx === viewer() && card ? [...elHand.children].find((el) => el.dataset && el.dataset.id === card.id) || null : null;
+    let toX, toY, endScale;
+    if (slotEl) {
+      const p = feltPos(slotEl); toX = p.x; toY = p.y; endScale = 1;
+      slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, T);
+    } else { toX = to.x + to.w / 2 - 22; toY = to.y + (idx === viewer() ? -8 : to.h / 2); endScale = idx === viewer() ? 1.05 : 0.7; }
     requestAnimationFrame(() => {
-      fly.style.transition = "transform .8s cubic-bezier(.2,.7,.2,1), opacity .8s ease-in";
-      fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${idx === viewer() ? 1.1 : 0.85})`;
-      fly.style.opacity = "0";
+      fly.style.transition = `transform ${T}ms cubic-bezier(.2,.7,.2,1)`;
+      fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${endScale})`;
     });
-    setTimeout(() => fly.remove(), 820);
+    setTimeout(() => { fly.style.transition = "opacity .25s"; fly.style.opacity = "0"; }, T + 20);
+    setTimeout(() => fly.remove(), T + 300);
   }
   // a clear "+N pick up" tag floating off whoever just drew
   function floatPickup(idx, n) {
@@ -588,11 +608,12 @@ export function openAnarchy() {
     if (!card) return;
     if (selection.includes(id)) {
       // tapping a card that's already selected:
-      // - a pair → just flip which one is on top (never deselects; deselect = tap empty)
+      // - a pair → tap ANYWHERE on it to toggle which card is on top (never
+      //   deselects; deselect = tap empty felt)
       if (selection.length === 2) {
-        const other = selection.find((x) => x !== id);
-        selection = [other, id];
-        flipPairTop(id); return;
+        const newTop = selection[0]; // whoever is underneath comes forward
+        selection = [selection[1], newTop];
+        flipPairTop(newTop); return;
       }
       // - a lone selected card → tap again to play it
       const sa = selectionAction();
@@ -749,19 +770,24 @@ export function openAnarchy() {
       const span = (group.length - 1) * 13;   // a pair barely overlaps — close together
       const gLeft = (96 - (44 + span)) / 2;    // centre the current play in the 96px pile box
       const gTop = 20;
+      // every card keeps a tiny seeded wobble (rotation + offset) so the table reads
+      // like real stacking — controlled: the current play stays near-straight and
+      // readable, history underneath gets messier
       buried.forEach((c, i) => {
         const e = cardEl(c);
         const depth = buried.length - i;       // 1..2 older
-        e.style.left = (gLeft - depth * 11) + "px"; // step up-left so each one keeps peeking
-        e.style.top = (gTop - depth * 8) + "px";
+        e.style.left = (gLeft - depth * 11 + jitter(c.id, 3, 2)) + "px"; // step up-left so each one keeps peeking
+        e.style.top = (gTop - depth * 8 + jitter(c.id, 2, 3)) + "px";
+        e.style.transform = `rotate(${jitter(c.id, 9, 1)}deg)`;
         e.style.zIndex = String(2 - depth);
         e.classList.add("buried");
         elPile.appendChild(e);
       });
       group.forEach((c, i) => {
         const e = cardEl(c);
-        e.style.left = (gLeft + i * 13) + "px";
-        e.style.top = gTop + "px";
+        e.style.left = (gLeft + i * 13 + jitter(c.id, 3, 2)) + "px";
+        e.style.top = (gTop + jitter(c.id, 2, 3)) + "px";
+        e.style.transform = `rotate(${jitter(c.id, 5, 1)}deg)`;
         e.style.zIndex = String(10 + i);
         if (group.length >= 2) e.classList.add("pile-top");
         elPile.appendChild(e);
@@ -804,10 +830,12 @@ export function openAnarchy() {
       hint.textContent = owesPending ? `Tap to take ${owed}` : facingPickup ? `Tap to pick up ${state.demand.count}` : "Tap to draw & pass";
       elStock.appendChild(hint);
     }
-    // animate any card a player just took (flies from the stock) + a clear "+N" pickup tag
+    // who just took cards (flies from the stock) — flights launch AFTER renderHand
+    // so the ghost can target the exact slot the new card occupies
+    const drawFlights = [];
     state.players.forEach((p, i) => {
       const grew = p.hand.length - (lastHandCounts[i] ?? p.hand.length);
-      if (grew > 0 && i !== suppressDrawIdx) { flyDraw(i, p.hand.slice(p.hand.length - grew)); floatPickup(i, grew); } // drawn cards are appended
+      if (grew > 0 && i !== suppressDrawIdx) drawFlights.push([i, p.hand.slice(p.hand.length - grew), grew]);
       if (i === viewer()) {
         if (grew > 0) p.hand.slice(p.hand.length - grew).forEach((c) => newCardIds.add(c.id)); // flag what just landed in YOUR hand
         else if (grew < 0) newCardIds.clear(); // you played — the "new" markers have served their purpose
@@ -821,6 +849,7 @@ export function openAnarchy() {
 
     renderHand();
     renderActions();
+    drawFlights.forEach(([i, cs, n]) => { flyDraw(i, cs); floatPickup(i, n); }); // drawn cards are appended
   }
 
   function renderHand() {
@@ -851,6 +880,15 @@ export function openAnarchy() {
     const { active, legal } = activeAndLegal();
     const act = canAct();
     const interrupt = !act && canInterrupt(); // a bot's turn, but you could slip a 7 in
+    // answer-in-kind cue: you hold the SAME rank as the play in front of you.
+    // Playing it punishes the previous player (2nd → they draw 1, 3rd → draw 2)
+    // or completes the four — red and propped up so new players spot the move.
+    const slapRank = slapOpportunities(state).some((o) => o.by === viewer()) ? state.topRank : null;
+    const counterRank = slapRank != null ? slapRank
+      : !act ? null
+      : state.demand.type === "pickup" ? state.demand.rank
+      : (state.pile.length && state.lastPlacer != null && state.lastPlacer !== viewer()) ? state.topRank
+      : null;
     const playRanks = new Set(); // ranks with a legal PLAY — every copy of that rank is playable
     const playIds = new Set();   // specific cards: 7 switch, Ace
     if (act) for (const m of legal) {
@@ -863,13 +901,15 @@ export function openAnarchy() {
       const isLegal = act && (playRanks.has(c.rank) || playIds.has(c.id));
       const is7Int = interrupt && c.rank === 7; // tap to switch in, out of turn
       const isFresh = newCardIds.has(c.id); // just drawn / picked up
+      const isCounter = counterRank != null && c.rank === counterRank; // same rank as their play: punish back / complete the 4
       if (isSel) e.classList.add("sel");
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
       if (isLegal) e.classList.add("legal");
+      if (isCounter) e.classList.add("counter");
       if (is7Int) e.classList.add("interrupt"); // a quiet, tappable out-of-turn 7 (not loud)
       if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
-      if (!isSel && !isLegal && !is7Int) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
+      if (!isSel && !isLegal && !is7Int && !isCounter) e.classList.add("dim"); // unplayable cards dim even if new — the NEW badge still shows, but no false highlight
       if (justRevealed) e.classList.add("flip-in");
       e.style.touchAction = "none"; // let us handle the upward-throw gesture
       bindCardGestures(e, c.id);
@@ -950,7 +990,7 @@ export function openAnarchy() {
       el.style.transition = "none";
       el.style.transform = `translate(${dx}px, ${dy}px)`;
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        el.style.transition = "transform .34s ease";
+        el.style.transition = "transform .46s ease";
         el.style.transform = "";
       }));
     });

@@ -2775,6 +2775,15 @@ body.lang-ru .login-logo {
 .anarchy-fly-layer { position: absolute; inset: 0; pointer-events: none; z-index: 45; overflow: visible; }
 .anarchy-fly { position: absolute; z-index: 40; pointer-events: none; }
 .anarchy-fly-pickup { z-index: 48; box-shadow: 0 0 14px rgba(255,225,77,.8); }
+/* a thrown play spins to the table as one unit (pairs stay tight and spin together) */
+.anarchy-throw { z-index: 44; }
+/* a drawn card's mid-flight flip: back + front faces on a 3D-rotating inner */
+.anarchy-fly3d { perspective: 420px; z-index: 41; }
+.anarchy-fly3d.anarchy-fly-pickup { box-shadow: none; }
+.anarchy-fly3d.anarchy-fly-pickup .acard { box-shadow: 0 0 14px rgba(255,225,77,.8); }
+.anarchy-flip-inner { position: relative; transform-style: preserve-3d; }
+.anarchy-flip-inner .acard { backface-visibility: hidden; }
+.anarchy-flip-inner .anarchy-flip-front { position: absolute; left: 0; top: 0; transform: rotateY(180deg); }
 .acard.mini.empty { background: transparent; border: 1px dashed rgba(255,255,255,.45); box-shadow: none; }
 .anarchy-run { color: #d6ffe6; font-size: 11px; min-height: 14px; font-weight: bold; }
 .anarchy-log { width: 100%; max-width: 520px; height: 58px; overflow-y: auto; background: rgba(0,0,0,.28); color: #d9ffe7; font-size: 11px; line-height: 1.45; padding: 4px 8px; border-radius: 3px; }
@@ -2804,8 +2813,11 @@ body.lang-ru .login-logo {
 /* a 7 you CAN slip in out of turn — available but understated: a faint purple
    edge, no lift, no pulse (you'll know it's there; it won't shout) */
 .anarchy-hand .acard.interrupt { cursor: pointer; box-shadow: 0 0 0 1px rgba(155,120,235,.65); }
+/* you hold the SAME rank as the play before you — answering in kind punishes the
+   previous player or completes the four. Red and propped up: the teaching cue. */
+.anarchy-hand .acard.counter:not(.sel):not(.sel-top) { cursor: pointer; transform: translateY(-7px); box-shadow: 0 0 0 2px #e23a3a, 0 0 9px rgba(226,58,58,.6), 1px 1px 2px rgba(0,0,0,.35); }
 /* a selected card is already chosen — it must NOT jump on hover */
-@media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):hover { transform: translateY(-6px); } }
+@media (hover: hover) { .anarchy-hand .acard.legal:not(.sel):not(.sel-top):not(.counter):hover { transform: translateY(-6px); } }
 .anarchy-hand .acard.sel { transform: translateY(-14px); box-shadow: 0 0 0 2px #ffb300, 1px 1px 2px rgba(0,0,0,.35); }
 .anarchy-hand .acard.sel-top { z-index: 22; box-shadow: 0 0 0 2px #ffd24d, 1px 1px 6px rgba(0,0,0,.45); } /* the pair card that lands on top */
 /* a selected pair sits compact and squared up (offsets set in JS via --px/--py); tapping one just restacks which is on top */
@@ -2886,7 +2898,7 @@ body.lang-ru .login-logo {
 /* pass-and-play: flip the hand area on handoff, flip each card in on reveal */
 .anarchy-hand-wrap.flip-area { animation: anarchyFlipArea .5s ease; }
 @keyframes anarchyFlipArea { 0% { transform: perspective(600px) rotateY(0); } 50% { transform: perspective(600px) rotateY(86deg); } 100% { transform: perspective(600px) rotateY(0); } }
-.anarchy-hand .acard.flip-in { animation: anarchyFlipIn .4s ease-out; }
+.anarchy-hand .acard.flip-in { animation: anarchyFlipIn .55s ease-out; }
 @keyframes anarchyFlipIn { 0% { transform: perspective(500px) rotateY(90deg); } 100% { transform: perspective(500px) rotateY(0); } }
 
 /* "+N pick up" tag floating off a player who drew */
