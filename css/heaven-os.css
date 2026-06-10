@@ -2929,6 +2929,13 @@ body.lang-ru .login-logo {
 .stickman-hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s ease; }
 .stickman-hint.fade { opacity: 0; }
 .stickman-hint b { color: #111; }
+/* touch pads — thumb-sized, Win98-beveled, semi-transparent; only on coarse pointers */
+.stickman-pads { position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; }
+.sm-pads-group { display: flex; gap: 10px; pointer-events: none; }
+.sm-pad { pointer-events: auto; width: 54px; height: 54px; border-radius: 10px; background: rgba(192,192,192,.72); border: 2px solid; border-color: rgba(255,255,255,.9) rgba(96,96,96,.9) rgba(96,96,96,.9) rgba(255,255,255,.9); font: bold 20px Tahoma, sans-serif; color: #222; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 1px 2px 4px rgba(0,0,0,.3); }
+.sm-pad.on { border-color: rgba(96,96,96,.9) rgba(255,255,255,.9) rgba(255,255,255,.9) rgba(96,96,96,.9); background: rgba(170,170,170,.8); }
+.sm-pad-jump { width: 64px; height: 64px; font-size: 24px; }
+.sm-pad-bye { position: absolute; top: 10px; right: 10px; width: 38px; height: 38px; font-size: 14px; opacity: .75; }
 
 /* ⚡ Bring to Life — Paint's door into the Stickman game */
 .pt-life { color: #b8860b; font-size: 13px; font-weight: bold; }

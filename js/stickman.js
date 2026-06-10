@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=190";
+import { currentZoom } from "./scale.js?v=191";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -35,8 +35,10 @@ const FOOTY = HIPY + THIGH + SHIN;    // ≈ 62, where straight legs reach
 const NECK_TO_FOOT = FOOTY;           // svg-y of the feet (for positioning)
 
 // ---- tuning (px per 60fps frame) ----
-const GRAV = 0.82, JUMP = 13.6, RUN = 4.6, WALK = 2.6;
+const GRAV = 0.82, JUMP = 13.6, WALK = 2.6;
+const BASE = 3.2, SPRINT = 5.8, CRAWL = 1.35; // jog / shift-sprint / crawl speed caps
 const ACCEL = 0.7, FRICTION = 0.62, AIR_ACCEL = 0.4;
+const WALLJUMP_VX = 5.6, WALLJUMP_VY = 12.8, WALL_SLIDE_VY = 2.0;
 
 const D2R = Math.PI / 180;
 // a limb endpoint: angle 0 = straight DOWN, +angle swings toward +x
@@ -98,7 +100,10 @@ function createStickman(opts = {}) {
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => hint.classList.add("fade"), ms);
   }
-  say("<b>It's alive.</b> ← → move · Space jump · Esc to put away");
+  const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
+  say(isTouch
+    ? "<b>It's alive.</b> Use the pads — ▲ jumps (twice = double), ▼ slides"
+    : "<b>It's alive.</b> ← → move · Shift run · ↓ slide · Space jump · Esc puts away");
 
   // ---- state ----
   const ritual = opts.x != null; // born from the Paint ritual: leap out alive, no pause
@@ -117,10 +122,16 @@ function createStickman(opts = {}) {
     facing: (opts.vx || 1) >= 0 ? 1 : -1,
     grounded: false, coyote: 0, jumpBuf: 0,
     airJumps: 1, landTimer: 0, spinTimer: 0, // double jump + landing squash + air-flip
+    walled: 0,        // -1 = wall on the left, +1 = wall on the right (cling/wall-jump)
+    sliding: false,   // knee slide (momentum, low friction)
+    dirHold: 0,       // frames a direction has been held — mobile auto-sprint
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
   if (ritual) (img || svg).classList.add("alive");
   if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Slam into a wall — jump against it!"); }, 6000);
+  // windows that already exist never "open onto" the figure — only NEW ones do
+  const knownWins = new WeakSet();
+  document.querySelectorAll(".window").forEach((w) => knownWins.add(w));
 
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
@@ -175,6 +186,22 @@ function createStickman(opts = {}) {
       thighL: 12, shinL: 20, thighR: -12, shinR: -2,
       uarmL: 120, farmL: 110, uarmR: -120, farmR: -110 };  // arms out
   }
+  function poseSlide() { // knee slide: leaning way back, legs thrown forward
+    return { lean: -34, head: 14,
+      thighL: 72, shinL: 64, thighR: 58, shinR: 84,
+      uarmL: -130, farmL: -120, uarmR: 40, farmR: 70 };
+  }
+  function poseCrawl(phase) { // hands-and-knees scuttle
+    const s = Math.sin(phase) * 14;
+    return { lean: 62, head: -34,
+      thighL: 38 + s, shinL: -30 + s, thighR: 38 - s, shinR: -30 - s,
+      uarmL: 150 - s, farmL: 165, uarmR: 150 + s, farmR: 165 };
+  }
+  function poseWallCling() { // hugging the wall, sliding
+    return { lean: 8, head: -4,
+      thighL: 34, shinL: -26, thighR: 10, shinR: -8,
+      uarmL: 165, farmL: 175, uarmR: 30, farmR: 50 };
+  }
 
   // ---- platforms (recomputed each frame from the live DOM) ----
   function platforms() {
@@ -203,24 +230,70 @@ function createStickman(opts = {}) {
   }
 
   // ---- input ----
-  const keys = { left: false, right: false };
+  const keys = { left: false, right: false, down: false, shift: false };
+  // pressing Down at speed kicks off a knee slide; held while slow = crawl
+  function tryStartSlide() {
+    if (S.grounded && Math.abs(S.vx) > 3.0 && !S.sliding) { S.sliding = true; S.vx *= 1.12; }
+  }
   function onKey(e, down) {
     const ae = document.activeElement;
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return; // let people type
     const k = e.key.toLowerCase();
     if (k === "escape") { if (down) destroy(); return; }
+    if (k === "shift") { keys.shift = down; return; }
     let m = null;
     if (k === "arrowleft" || k === "a") m = "left";
     else if (k === "arrowright" || k === "d") m = "right";
+    else if (k === "arrowdown" || k === "s") m = "down";
     else if (k === "arrowup" || k === "w" || k === " " || k === "spacebar") m = "jump";
     if (!m) return;
     e.preventDefault();
     if (m === "jump") { if (down) S.jumpBuf = 8; }
-    else keys[m] = down;
+    else {
+      if (m === "down" && down && !keys.down) tryStartSlide();
+      keys[m] = down;
+    }
   }
   const kd = (e) => onKey(e, true), ku = (e) => onKey(e, false);
   window.addEventListener("keydown", kd);
   window.addEventListener("keyup", ku);
+
+  // ---- touch pads (coarse pointers): ◀ ▶ on the left, ▼ ▲ on the right, ✕ away ----
+  if (isTouch) {
+    const pads = document.createElement("div");
+    pads.className = "stickman-pads";
+    pads.innerHTML = `
+      <div class="sm-pads-group">
+        <button class="sm-pad" data-pad="left" aria-label="Left">◀</button>
+        <button class="sm-pad" data-pad="right" aria-label="Right">▶</button>
+      </div>
+      <div class="sm-pads-group">
+        <button class="sm-pad" data-pad="down" aria-label="Slide">▼</button>
+        <button class="sm-pad sm-pad-jump" data-pad="jump" aria-label="Jump">▲</button>
+      </div>`;
+    layer.appendChild(pads);
+    const bye = document.createElement("button");
+    bye.className = "sm-pad sm-pad-bye";
+    bye.dataset.pad = "bye";
+    bye.setAttribute("aria-label", "Put away");
+    bye.textContent = "✕";
+    layer.appendChild(bye); // anchored to the layer's top-right, not the pad row
+    layer.querySelectorAll(".sm-pad").forEach((b) => {
+      const code = b.dataset.pad;
+      const press = (on) => (e) => {
+        e.preventDefault();
+        b.classList.toggle("on", on);
+        if (code === "bye") { if (on) destroy(); return; }
+        if (code === "jump") { if (on) S.jumpBuf = 8; return; }
+        if (code === "down" && on && !keys.down) tryStartSlide();
+        keys[code] = on;
+      };
+      b.addEventListener("pointerdown", press(true));
+      b.addEventListener("pointerup", press(false));
+      b.addEventListener("pointercancel", press(false));
+      b.addEventListener("pointerleave", press(false));
+    });
+  }
 
   // ---- main loop ----
   let raf = null, last = 0, born = 0;
@@ -241,19 +314,35 @@ function createStickman(opts = {}) {
 
     // ---- horizontal ----
     const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-    const top = S.grounded ? RUN : RUN;          // (air speed cap = run)
-    const acc = (S.grounded ? ACCEL : AIR_ACCEL) * dt;
-    if (dir !== 0) { S.vx += dir * acc; S.facing = dir; }
-    else if (S.grounded) S.vx *= Math.pow(FRICTION, dt);
-    S.vx = clamp(S.vx, -top, top);
+    S.dirHold = dir !== 0 ? S.dirHold + dt : 0;
+    const sprinting = keys.shift || S.dirHold > 32; // Shift, or just keep holding (mobile auto-sprint)
+    const crouching = keys.down && S.grounded && !S.sliding;
+    if (S.sliding && (!keys.down || !S.grounded || Math.abs(S.vx) < 1.5)) S.sliding = false;
+    if (S.sliding) {
+      S.vx *= Math.pow(0.985, dt); // a knee slide rides its momentum
+    } else {
+      const top = crouching ? CRAWL : sprinting ? SPRINT : BASE;
+      const acc = (S.grounded ? ACCEL : AIR_ACCEL) * dt;
+      if (dir !== 0) { S.vx += dir * acc; S.facing = dir; }
+      else if (S.grounded) S.vx *= Math.pow(FRICTION, dt);
+      S.vx = clamp(S.vx, -top, top);
+    }
 
     // ---- vertical ----
     S.vy += GRAV * dt;
+    if (keys.down && !S.grounded) S.vy += 0.5 * dt; // fast-fall
     if (S.jumpBuf > 0) S.jumpBuf -= dt;
-    if (S.jumpBuf > 0 && (S.grounded || S.coyote > 0)) { S.vy = -JUMP; S.grounded = false; S.coyote = 0; S.jumpBuf = 0; }
-    else if (S.jumpBuf > 0 && !S.grounded && S.airJumps > 0) {
-      // double jump — a mid-air flip that makes windows scalable
-      S.vy = -JUMP * 0.92; S.airJumps -= 1; S.jumpBuf = 0; S.spinTimer = 16;
+    if (S.jumpBuf > 0) {
+      if (S.grounded || S.coyote > 0) { S.vy = -JUMP; S.grounded = false; S.coyote = 0; S.jumpBuf = 0; S.sliding = false; }
+      else if (S.walled !== 0) {
+        // wall jump (Fancy Pants style): kick away from the wall, reset the air jump
+        S.vy = -WALLJUMP_VY; S.vx = -S.walled * WALLJUMP_VX; S.facing = -S.walled;
+        S.airJumps = 1; S.jumpBuf = 0; S.walled = 0;
+      }
+      else if (S.airJumps > 0) {
+        // double jump — a mid-air flip that makes windows scalable
+        S.vy = -JUMP * 0.92; S.airJumps -= 1; S.jumpBuf = 0; S.spinTimer = 16;
+      }
     }
     if (S.coyote > 0) S.coyote -= dt;
     if (S.landTimer > 0) S.landTimer -= dt;
@@ -287,8 +376,9 @@ function createStickman(opts = {}) {
             say("<b>IT'S OPEN!</b> Through the hole — go!");
           }
         };
-        if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); }
-        if (nx >= rb.r - 8 && !broken.right) { slam("right"); nx = rb.r - 8;  S.vx = Math.min(0, S.vx * -0.3); }
+        S.walled = 0;
+        if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); if (!S.grounded && dir < 0) { S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
+        if (nx >= rb.r - 8 && !broken.right) { slam("right"); nx = rb.r - 8;  S.vx = Math.min(0, S.vx * -0.3); if (!S.grounded && dir > 0) { S.walled = 1;  S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
         // out through a broken wall → the desktop world takes over
         if (nx < rb.l - 12 || nx > rb.r + 12) {
           stage = "free";
@@ -313,6 +403,37 @@ function createStickman(opts = {}) {
         for (const p of plats) { if (nx >= p.l - 2 && nx <= p.r + 2 && Math.abs(ny - p.top) < 2.5) { support = true; ny = p.top; break; } }
         if (S.grounded && !support) { S.grounded = false; S.coyote = 6; }
       }
+      // ---- walls (Fancy Pants): airborne, pressing into a window's side edge or
+      // the screen edge → cling (slow slide) and wall-jump away. Grounded walking
+      // is never blocked — the figure strolls in front of windows freely.
+      S.walled = 0;
+      if (!S.grounded) {
+        const half = FW / 2;
+        const cling = (wx, sideDir, topY, botY) => { // sideDir: -1 wall on left, +1 wall on right
+          if (ny < topY + 8 || ny - FH * 0.5 > botY) return;
+          if (sideDir === 1 && dir > 0 && Math.abs((nx + half) - wx) < 9) { nx = wx - half; S.walled = 1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); }
+          else if (sideDir === -1 && dir < 0 && Math.abs((nx - half) - wx) < 9) { nx = wx + half; S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); }
+        };
+        document.querySelectorAll(".window:not(.minimized)").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.width < 4) return;
+          cling(r.left / z0, 1, r.top / z0, r.bottom / z0);   // approach from the left → wall on your right
+          cling(r.right / z0, -1, r.top / z0, r.bottom / z0); // approach from the right → wall on your left
+        });
+        cling(6, -1, 0, H);     // screen edges are walls too
+        cling(W - 6, 1, 0, H);
+      }
+      // ---- a window opened ON the figure → it pops on top (run along the lid) ----
+      document.querySelectorAll(".window:not(.minimized)").forEach((el) => {
+        if (knownWins.has(el)) return;
+        knownWins.add(el);
+        const r = el.getBoundingClientRect();
+        if (nx > r.left / z0 && nx < r.right / z0 && ny > r.top / z0 && ny < r.bottom / z0 + 20) {
+          const tbEl = el.querySelector(".window-titlebar");
+          ny = ((tbEl || el).getBoundingClientRect().top) / z0;
+          S.vy = 0; S.grounded = true; S.landTimer = 8; S.airJumps = 1;
+        }
+      });
     }
 
     S.x = nx; S.y = ny;
@@ -322,7 +443,10 @@ function createStickman(opts = {}) {
     if (spriteMode) applySpriteVisual();
     else {
       let P;
-      if (!S.grounded) P = S.vy < 0 ? poseJump() : poseFall();
+      if (S.sliding) P = poseSlide();
+      else if (keys.down && S.grounded) P = poseCrawl(S.phase);
+      else if (!S.grounded && S.walled !== 0) { S.facing = S.walled; P = poseWallCling(); }
+      else if (!S.grounded) P = S.vy < 0 ? poseJump() : poseFall();
       else if (Math.abs(S.vx) > 0.4) P = poseWalkRun(S.phase, Math.abs(S.vx) > WALK + 0.5);
       else P = poseIdle(S.t);
       drawPose(P);
@@ -342,11 +466,17 @@ function createStickman(opts = {}) {
   // (transform-origin is the feet: bottom-center)
   function applySpriteVisual() {
     let sx = 1, sy = 1, rot = 0, dy = 0;
-    if (S.landTimer > 0) {                       // landing squash, recovering
+    if (S.sliding) {                             // knee slide: lean back, low, fast
+      rot = -22; sy = 0.62; sx = 1.18;
+    } else if (keys.down && S.grounded) {        // crawl: low and waddling
+      sy = 0.55; sx = 1.15;
+      if (Math.abs(S.vx) > 0.3) dy = -Math.abs(Math.sin(S.phase * 0.7)) * 1.5;
+    } else if (S.landTimer > 0) {                // landing squash, recovering
       const k = S.landTimer / 8;
       sy = 1 - 0.22 * k; sx = 1 + 0.22 * k;
     } else if (!S.grounded) {
-      if (S.spinTimer > 0) rot = (1 - S.spinTimer / 16) * 360 * S.facing; // the double-jump flip
+      if (S.walled !== 0) { rot = 8; sy = 1.04; sx = 0.97; } // clinging to a wall, sliding down
+      else if (S.spinTimer > 0) rot = (1 - S.spinTimer / 16) * 360 * S.facing; // the double-jump flip
       else { sy = S.vy < 0 ? 1.1 : 0.97; sx = 2 - sy; rot = clamp(S.vx * 1.8, -14, 14); }
     } else if (Math.abs(S.vx) > 0.4) {           // running: lean + step-bob
       rot = clamp(S.vx * 2.4, -13, 13);
@@ -356,6 +486,7 @@ function createStickman(opts = {}) {
       sy = 1 + Math.sin(S.t * 0.05) * 0.02;
       rot = Math.sin(S.t * 0.031) * 1.6;
     }
+    if (S.walled !== 0 && !S.grounded) S.facing = S.walled; // face the wall while clinging
     img.style.transform = `translate(${(S.x - FW / 2).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
