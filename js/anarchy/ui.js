@@ -163,6 +163,7 @@ export function openAnarchy() {
   let CW = 44, CH = 62, PW = 96, STEP = 13;
   let throwOrigin = null; // where a flicked card left your finger — the ghost continues from THERE
   let setupOpen = false;  // the File > New Game screen shown OVER a live (paused) game — dismissable
+  let deckPassReadyAt = 0; // after you tap the deck to TAKE cards, draw-and-pass is locked briefly so a stray double-tap can't pass
   function readDims() {
     // read from the felt (a child of the container) — container queries may not
     // restyle the container itself, so the tier vars land on the children
@@ -252,8 +253,8 @@ export function openAnarchy() {
       fromY = (throwOrigin.rect.top - f.top) / z;
     }
     throwOrigin = null;
-    const gLeft = (PW - (CW + span)) / 2; // mirror the pile's own layout math
-    const toX = to.x + gLeft + jitter(group[0].id, 3, 2), toY = to.y + Math.round(CH * 0.32) + jitter(group[0].id, 2, 3);
+    const gLeft = (PW - (CW + span)) / 2; // mirror the pile's own (flat) layout math
+    const toX = to.x + gLeft, toY = to.y + Math.round(CH * 0.32); // land exactly on the current-play slot
     const wrap = document.createElement("div");
     wrap.className = "anarchy-fly anarchy-throw";
     wrap.style.left = fromX + "px"; wrap.style.top = fromY + "px";
@@ -276,19 +277,23 @@ export function openAnarchy() {
       wrap.appendChild(g);
     });
     elFly.appendChild(wrap);
-    const T = mine ? 600 : 700; // the CPU flick is a touch slower so the reveal reads
-    const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, direction varies by card
-    const endRot = jitter(group[group.length - 1].id, 5, 1);    // settle at the pile's resting angle
+    // the pile cards for THIS play stay hidden while the ghost is airborne — the
+    // ghost IS the card in flight, and the real cards appear only when it lands,
+    // so the play flies into place instead of teleporting into the pile
+    const pileCards = group.map((c) => elPile.querySelector(`.acard[data-id="${c.id}"]`)).filter(Boolean);
+    pileCards.forEach((el) => { el.style.visibility = "hidden"; });
+    const T = mine ? 560 : 680; // the CPU flick is a touch slower so its reveal reads
+    const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, landing flat (360 ≡ 0)
     requestAnimationFrame(() => {
-      wrap.style.transition = `transform ${T}ms cubic-bezier(.18,.72,.3,1), opacity .25s ease-in ${T - 220}ms`;
-      wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn + endRot}deg)`;
-      wrap.style.opacity = "0";
+      wrap.style.transition = `transform ${T}ms cubic-bezier(.21,.74,.28,1)`; // eases in and settles into the slot
+      wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn}deg)`;
       wrap.querySelectorAll(".anarchy-flip-inner").forEach((inner) => {
         inner.style.transition = `transform ${Math.round(T * 0.45)}ms ease ${Math.round(T * 0.18)}ms`;
         inner.style.transform = "rotateY(180deg)";
       });
     });
-    setTimeout(() => wrap.remove(), T + 90);
+    setTimeout(() => { pileCards.forEach((el) => { el.style.visibility = ""; }); }, T); // real cards appear exactly as it lands
+    setTimeout(() => wrap.remove(), T + 50); // the opaque ghost lingers a beat over them, then goes — no flicker
   }
   // position of an element's top-left within the fly layer (which spans the whole
   // game), so flies can travel between the felt and the hand without being clipped
@@ -879,9 +884,10 @@ export function openAnarchy() {
       });
       group.forEach((c, i) => {
         const e = cardEl(c);
-        e.style.left = (gLeft + i * STEP + jitter(c.id, 3, 2)) + "px";
-        e.style.top = (gTop + jitter(c.id, 2, 3)) + "px";
-        e.style.transform = `rotate(${jitter(c.id, 5, 1)}deg)`;
+        // the current play lands FLAT and jitter-free: it's the readable card, and
+        // a flat target lets a thrown ghost settle onto it seamlessly (no pop)
+        e.style.left = (gLeft + i * STEP) + "px";
+        e.style.top = gTop + "px";
         e.style.zIndex = String(10 + i);
         if (group.length >= 2) e.classList.add("pile-top");
         elPile.appendChild(e);
@@ -909,13 +915,18 @@ export function openAnarchy() {
     const owed = canAct() ? (state.players[viewer()].pendingDraw || 0) : 0;
     const owesPending = owed > 0 && state.stock.length > 0; // you must tap to take cards you owe
     const facingPickup = canAct() && !owesPending && state.demand.type === "pickup";
-    const deckPass = canAct() && !owesPending && state.demand.type === "color" && state.stock.length > 0;
+    const deckPassRaw = canAct() && !owesPending && state.demand.type === "color" && state.stock.length > 0;
+    // just took cards off the deck? hold the draw-and-pass for a beat so the
+    // momentum of a second tap can't accidentally pass your turn away
+    const passLocked = deckPassRaw && performance.now() < deckPassReadyAt;
+    const deckPass = deckPassRaw && !passLocked;
     const hasPlay = canAct() && activeAndLegal().legal.some((m) => m.type === "PLAY" || m.type === "SWITCH7" || m.type === "ACE_SWITCH");
     const deckUrgent = owesPending || facingPickup || (deckPass && !hasPlay); // forced → pulse; optional pass → quiet
     elStock.classList.toggle("pickup-ready", deckUrgent);
     elStock.classList.toggle("tappable", owesPending || facingPickup || deckPass); // clickable even when it isn't pulsing (the optional draw-and-pass)
-    elStock.onclick = owesPending ? () => apply({ type: "DRAW_PENDING" })
-                    : facingPickup ? () => apply({ type: "TAKE_PICKUP" })
+    const armPass = () => { deckPassReadyAt = performance.now() + 700; }; // start the cooldown the instant you take
+    elStock.onclick = owesPending ? () => { armPass(); apply({ type: "DRAW_PENDING" }); }
+                    : facingPickup ? () => { armPass(); apply({ type: "TAKE_PICKUP" }); }
                     : deckPass ? () => apply({ type: "PASS" })
                     : null;
     if (owesPending || facingPickup || deckPass) {
@@ -924,6 +935,7 @@ export function openAnarchy() {
       hint.textContent = owesPending ? `Tap to take ${owed}` : facingPickup ? `Tap to pick up ${state.demand.count}` : "Tap to draw & pass";
       elStock.appendChild(hint);
     }
+    if (passLocked) setTimeout(() => { if (document.body.contains(root)) render(); }, Math.max(60, deckPassReadyAt - performance.now() + 30)); // re-enable draw-and-pass once the cooldown ends
     // who just took cards (flies from the stock) — flights launch AFTER renderHand
     // so the ghost can target the exact slot the new card occupies
     const drawFlights = [];
