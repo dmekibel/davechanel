@@ -1,5 +1,5 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow } from "../window-manager.js?v=185";
+import { openWindow, closeWindow } from "../window-manager.js?v=185";
 import { ICONS } from "../icons.js?v=185";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
@@ -28,8 +28,8 @@ export function openAnarchy() {
   root.className = "anarchy";
   root.innerHTML = `
     <div class="anarchy-menubar">
-      <button class="anarchy-menu" data-act="new">Game</button>
-      <button class="anarchy-menu" data-act="help">How to Play</button>
+      <button class="anarchy-menu" data-menu="file">File</button>
+      <button class="anarchy-menu" data-menu="help">Help</button>
     </div>
     <div class="anarchy-felt">
       <div class="anarchy-opponents"></div>
@@ -66,6 +66,7 @@ export function openAnarchy() {
             <button data-mode="local" data-players="3">3 Players</button>
             <button data-mode="local" data-players="4">4 Players</button>
           </div>
+          <div class="anarchy-setup-btns"><button class="anarchy-setup-back">Back to game</button></div>
         </div>
         <div class="anarchy-names-view">
           <div class="anarchy-setup-section">Player names</div>
@@ -129,6 +130,7 @@ export function openAnarchy() {
   const elHandName = $(".anarchy-handname");
   const elActions = $(".anarchy-actions");
   const elSetup = $(".anarchy-setup");
+  const elSetupBack = $(".anarchy-setup-back");
   const elStartView = $(".anarchy-start-view");
   const elNamesView = $(".anarchy-names-view");
   const elHandoff = $(".anarchy-handoff");
@@ -160,6 +162,7 @@ export function openAnarchy() {
   // when the window squeezes, and ALL layout math below derives from these
   let CW = 44, CH = 62, PW = 96, STEP = 13;
   let throwOrigin = null; // where a flicked card left your finger — the ghost continues from THERE
+  let setupOpen = false;  // the File > New Game screen shown OVER a live (paused) game — dismissable
   function readDims() {
     // read from the felt (a child of the container) — container queries may not
     // restyle the container itself, so the tier vars land on the children
@@ -799,11 +802,11 @@ export function openAnarchy() {
 
   function render() {
     readDims(); // pick up the container-query card size for all layout math
-    if (!state) { stopFireworks(); stopWinCascade(); elWin.style.display = "none"; elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
-    elSetup.style.display = "none";
+    if (!state) { stopFireworks(); stopWinCascade(); elWin.style.display = "none"; elSetup.style.display = "flex"; elSetupBack.style.display = "none"; elHandoff.style.display = "none"; return; }
+    elSetup.style.display = setupOpen ? "flex" : "none"; // the New Game screen can sit over a paused game
     elHandoff.style.display = "none"; // replaced by the in-hand face-down reveal
     const finished = state.status === "finished";
-    elWin.style.display = finished ? "flex" : "none";
+    elWin.style.display = finished && !setupOpen ? "flex" : "none";
     if (finished) {
       const places = state.places && state.places.length ? state.places : [state.winner];
       const ord = (n) => ["", "1st", "2nd", "3rd", "4th"][n] || `${n}th`;
@@ -1203,7 +1206,7 @@ export function openAnarchy() {
 
   // ---- new game ----
   function newGame(m, numPlayers, customNames) {
-    clearTimeout(botTimer); stopFireworks(); stopWinCascade(); newCardIds.clear();
+    clearTimeout(botTimer); stopFireworks(); stopWinCascade(); newCardIds.clear(); setupOpen = false;
     mode = m; lastMode = m; lastNum = numPlayers; lastNames = customNames || null;
     const names = customNames || (m === "cpu"
       ? ["You", "CPU 1", "CPU 2", "CPU 3"].slice(0, numPlayers)
@@ -1229,7 +1232,21 @@ export function openAnarchy() {
       row.appendChild(sw); row.appendChild(inp); fields.appendChild(row);
     }
   }
-  function toStart() { clearTimeout(botTimer); stopFireworks(); stopWinCascade(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
+  // File > New Game… opens the mode screen OVER the running game — the game
+  // pauses (bots frozen) and "Back to game" resumes it untouched
+  function openSetup() {
+    setupOpen = true;
+    clearTimeout(botTimer);
+    showSetupStart();
+    elSetupBack.style.display = state ? "" : "none";
+    render();
+  }
+  function closeSetup() {
+    if (!state) return; // nothing to go back to
+    setupOpen = false;
+    render();
+    scheduleBots();
+  }
 
   // the start screen IS the mode choice: tap a mode and you're playing (local
   // multiplayer detours through name entry first)
@@ -1244,10 +1261,41 @@ export function openAnarchy() {
     newGame("local", names.length, names);
   });
   $(".anarchy-handoff-go").addEventListener("click", () => { handoffPending = false; render(); });
-  root.querySelectorAll(".anarchy-menu").forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.act === "help") { elHelp.style.display = "flex"; return; }
-    toStart(); // Game menu = back to the Start screen
-  }));
+  $(".anarchy-setup-back").addEventListener("click", closeSetup);
+  // classic Win98 menubar: File / Help drop real menus (same chrome as the OS)
+  function bindMenu(btn, items) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const existing = document.querySelector(".menu-dropdown");
+      document.querySelectorAll(".menu-dropdown").forEach((n) => n.remove());
+      if (existing && existing.dataset.owner === btn.dataset.menu) return; // second click closes
+      const rect = btn.getBoundingClientRect();
+      const dd = document.createElement("div");
+      dd.className = "menu-dropdown";
+      dd.dataset.owner = btn.dataset.menu;
+      dd.style.left = rect.left + "px";
+      dd.style.top = rect.bottom + "px";
+      for (const it of items) {
+        if (it === "sep") { const s = document.createElement("div"); s.className = "sep"; dd.appendChild(s); continue; }
+        const row = document.createElement("div");
+        row.className = "item";
+        row.textContent = it.label;
+        row.addEventListener("click", (ev) => { ev.stopPropagation(); dd.remove(); it.action(); });
+        dd.appendChild(row);
+      }
+      document.body.appendChild(dd);
+      const closer = (ev) => { if (!dd.contains(ev.target)) { dd.remove(); document.removeEventListener("mousedown", closer); } };
+      setTimeout(() => document.addEventListener("mousedown", closer), 0);
+    });
+  }
+  bindMenu($('[data-menu="file"]'), [
+    { label: "New Game…", action: openSetup },
+    "sep",
+    { label: "Exit", action: () => closeWindow(winId) },
+  ]);
+  bindMenu($('[data-menu="help"]'), [
+    { label: "How to Play", action: () => { elHelp.style.display = "flex"; } },
+  ]);
   $(".anarchy-help-close").addEventListener("click", () => { elHelp.style.display = "none"; });
   $(".anarchy-win-again").addEventListener("click", () => newGame(lastMode, lastNum, lastNames));
 
