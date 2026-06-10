@@ -2892,6 +2892,13 @@ body.lang-ru .login-logo {
 
 /* win overlay + fireworks */
 .anarchy-fx { position: absolute; inset: 0; pointer-events: none; z-index: 42; overflow: hidden; }
+/* quiet scorekeeping: the table's edges sting red when YOU take cards and wash
+   green when an opponent does — felt, not announced */
+.anarchy-pulse { position: absolute; inset: 0; pointer-events: none; z-index: 7; opacity: 0; }
+.anarchy-pulse.pain { animation: anarchyPain .7s ease-out; background: radial-gradient(ellipse at center, transparent 42%, rgba(216,42,42,.42) 100%); }
+.anarchy-pulse.reward { animation: anarchyReward .85s ease-out; background: radial-gradient(ellipse at center, transparent 46%, rgba(46,196,100,.30) 100%); }
+@keyframes anarchyPain { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes anarchyReward { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
 .anarchy-cascade { position: absolute; left: 0; top: 0; pointer-events: none; }
 .anarchy-fw-burst { position: absolute; }
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }

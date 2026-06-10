@@ -42,6 +42,7 @@ export function openAnarchy() {
       </div>
       <div class="anarchy-log"></div>
       <div class="anarchy-fx"></div>
+      <div class="anarchy-pulse"></div>
     </div>
     <div class="anarchy-hand-wrap">
       <div class="anarchy-handname"></div>
@@ -133,6 +134,7 @@ export function openAnarchy() {
   const elHandoff = $(".anarchy-handoff");
   const elHelp = $(".anarchy-help");
   const elFelt = $(".anarchy-felt");
+  const elPulse = $(".anarchy-pulse");
   const elStock = $(".anarchy-stock");
   const elBita = $(".anarchy-bita-pile");
   const elFx = $(".anarchy-fx");
@@ -378,6 +380,14 @@ export function openAnarchy() {
     setTimeout(() => { fly.style.transition = "opacity .25s"; fly.style.opacity = "0"; }, T + 20);
     setTimeout(() => fly.remove(), T + 300);
   }
+  // the table breathes with the takes: a brief red sting around the edges when
+  // YOU pick up, a soft green wash when an opponent does — quiet scorekeeping
+  function feltPulse(kind) {
+    if (!elPulse) return;
+    elPulse.classList.remove("pain", "reward");
+    void elPulse.offsetWidth; // restart the animation even on back-to-back takes
+    elPulse.classList.add(kind);
+  }
   // a clear "+N pick up" tag floating off whoever just drew
   function floatPickup(idx, n) {
     const target = idx === viewer() ? elHand : oppBoxMap[idx];
@@ -581,7 +591,7 @@ export function openAnarchy() {
     if (drawTaker >= 0) {
       const h = state.players[drawTaker].hand;
       const drewN = h.length - beforeCounts[drawTaker]; // actual cards drawn (0 if the stock was empty)
-      if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // big cards slide from the draw deck
+      if (drewN > 0) { flyPickup(drawTaker, h.slice(h.length - drewN)); feltPulse(drawTaker === viewer() ? "pain" : "reward"); } // big cards slide from the draw deck
     }
     if (taker != null && hadPile) flyFromPile(taker, switchCard); // switch: the card below flies to the player
     if (action.type === "PASS") announcePass(prevTurn);
@@ -624,7 +634,7 @@ export function openAnarchy() {
       if (drawTaker >= 0) {
         const h = state.players[drawTaker].hand;
         const drewN = h.length - beforeCounts[drawTaker];
-        if (drewN > 0) flyPickup(drawTaker, h.slice(h.length - drewN)); // enemy draw slides from deck to their seat
+        if (drewN > 0) { flyPickup(drawTaker, h.slice(h.length - drewN)); feltPulse(drawTaker === viewer() ? "pain" : "reward"); } // enemy draw slides from deck to their seat
       }
       if (taker != null && hadPile) flyFromPile(taker, switchCard); // enemy switch: the card below flies to them
       if (action.type === "PASS") announcePass(passer);
@@ -633,18 +643,21 @@ export function openAnarchy() {
   }
 
   // ---- interaction ----
+  // off-turn, two cards still fire straight from the hand: a 7 slips in as a
+  // switch, and the 4th of a showing triple SLAPS in to complete the four —
+  // both possible at any moment, card-first (no button hunting)
+  function offTurnCardPlay(id) {
+    const c = state.players[viewer()].hand.find((x) => x.id === id);
+    if (!c) return false;
+    if (c.rank === 7 && canInterrupt()) { apply({ type: "SWITCH7", card: id, by: viewer() }); return true; }
+    if (c.rank === state.topRank && slapOpportunities(state).some((o) => o.by === viewer())) { apply({ type: "SLAP", by: viewer(), card: id }); return true; }
+    return false;
+  }
   function onCardClick(id) {
     // a combo card: tapping it breaks it out of the combo, back into your fan
     // (a hand-sorting move, so it works any time — even off-turn)
     if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; }
-    if (!canAct()) {
-      // out of turn: a 7 can still be slipped in as a switch (race the bot)
-      if (canInterrupt()) {
-        const c = state.players[viewer()].hand.find((x) => x.id === id);
-        if (c && c.rank === 7) apply({ type: "SWITCH7", card: id, by: viewer() });
-      }
-      return;
-    }
+    if (!canAct()) { offTurnCardPlay(id); return; }
     const hand = state.players[viewer()].hand;
     const card = hand.find((c) => c.id === id);
     if (!card) return;
@@ -666,6 +679,7 @@ export function openAnarchy() {
     // single of the same rank — add it to make a pair. Purely manual: no auto-grab.
     const selRank = selection.length === 1 ? (hand.find((c) => c.id === selection[0]) || {}).rank : null;
     selection = (selRank != null && selRank === card.rank && card.rank !== 7) ? [...selection, id] : [id];
+    newCardIds.delete(id); // you've picked the card up — the NEW tag has done its job
     aceTake = false;
     render();
   }
@@ -673,7 +687,7 @@ export function openAnarchy() {
   // throw a card up onto the table to play it (alternative to the Play button)
   function swipePlay(id) {
     if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; } // a flicked combo card just returns to the fan
-    if (!canAct()) return;
+    if (!canAct()) { offTurnCardPlay(id); return; } // a flick can still slap the 4th / slip a 7 in
     const hand = state.players[viewer()].hand;
     if (!hand.find((c) => c.id === id)) return;
     if (!(selection.includes(id) && selection.length === 2)) selection = [id]; // keep a raised pair, else play this one
@@ -892,7 +906,7 @@ export function openAnarchy() {
 
     renderHand();
     renderActions();
-    drawFlights.forEach(([i, cs, n]) => { flyDraw(i, cs); floatPickup(i, n); }); // drawn cards are appended
+    drawFlights.forEach(([i, cs, n]) => { flyDraw(i, cs); floatPickup(i, n); feltPulse(i === viewer() ? "pain" : "reward"); }); // drawn cards are appended
   }
 
   function renderHand() {
