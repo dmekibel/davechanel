@@ -44,7 +44,6 @@ export function openAnarchy() {
       <div class="anarchy-fx"></div>
     </div>
     <div class="anarchy-hand-wrap">
-      <div class="anarchy-aside"></div>
       <div class="anarchy-handname"></div>
       <div class="anarchy-hand"></div>
       <div class="anarchy-actions"></div>
@@ -126,7 +125,6 @@ export function openAnarchy() {
   const elLog = $(".anarchy-log");
   const elHand = $(".anarchy-hand");
   const elHandWrap = $(".anarchy-hand-wrap");
-  const elAside = $(".anarchy-aside");
   const elHandName = $(".anarchy-handname");
   const elActions = $(".anarchy-actions");
   const elSetup = $(".anarchy-setup");
@@ -574,6 +572,9 @@ export function openAnarchy() {
 
   // ---- interaction ----
   function onCardClick(id) {
+    // a combo card: tapping it breaks it out of the combo, back into your fan
+    // (a hand-sorting move, so it works any time — even off-turn)
+    if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; }
     if (!canAct()) {
       // out of turn: a 7 can still be slipped in as a switch (race the bot)
       if (canInterrupt()) {
@@ -608,6 +609,7 @@ export function openAnarchy() {
 
   // throw a card up onto the table to play it (alternative to the Play button)
   function swipePlay(id) {
+    if (reservedSet().has(id)) { reservedSet().delete(id); render(); return; } // a flicked combo card just returns to the fan
     if (!canAct()) return;
     const hand = state.players[viewer()].hand;
     if (!hand.find((c) => c.id === id)) return;
@@ -818,14 +820,17 @@ export function openAnarchy() {
     elLog.scrollTop = elLog.scrollHeight;
 
     renderHand();
-    renderAside();
     renderActions();
   }
 
   function renderHand() {
     // snapshot current card positions so a changed hand can animate (FLIP) into place
     const prevRects = new Map();
-    for (const el of elHand.children) if (el.dataset && el.dataset.id) prevRects.set(el.dataset.id, el.getBoundingClientRect());
+    const prevReserved = new Set(); // who was in the combo split before this render
+    for (const el of elHand.children) if (el.dataset && el.dataset.id) {
+      prevRects.set(el.dataset.id, el.getBoundingClientRect());
+      if (el.classList.contains("reserved")) prevReserved.add(el.dataset.id);
+    }
     elHand.innerHTML = "";
     elHandName.textContent = "";
     if (!state || state.status !== "playing") return;
@@ -870,9 +875,22 @@ export function openAnarchy() {
       bindCardGestures(e, c.id);
       elHand.appendChild(e);
     });
+    // the combo you're building rides in the SAME spread, split off to the right —
+    // like splitting cards in your grip. Tap one to take it back into the fan.
+    const reserved = reservedSet();
+    state.players[viewer()].hand.filter((c) => reserved.has(c.id))
+      .sort((a, b) => a.rank - b.rank).forEach((c, k) => {
+        const e = cardEl(c);
+        e.classList.add("reserved");
+        if (k === 0) e.classList.add("combo-start");
+        if (justRevealed) e.classList.add("flip-in");
+        e.style.touchAction = "none";
+        bindCardGestures(e, c.id);
+        elHand.appendChild(e);
+      });
     fitHand();
     if (selection.length === 2) layoutSelectedPair();
-    reflowHand(prevRects);
+    reflowHand(prevRects, prevReserved);
   }
 
   // a selected pair: lift both and square them up into a tight stack — one card
@@ -912,15 +930,18 @@ export function openAnarchy() {
   // FLIP: when the hand's set of cards changes (draw / pickup / play), slide the
   // surviving cards to their new spots and flip new arrivals in — so the hand
   // visibly opens to make room and the change is impossible to miss.
-  function reflowHand(prevRects) {
+  function reflowHand(prevRects, prevReserved) {
     const els = [...elHand.children].filter((el) => el.dataset && el.dataset.id);
     if (!els.length) return;
     const prevIds = new Set(prevRects.keys());
     let changed = els.length !== prevIds.size;
     if (!changed) for (const el of els) if (!prevIds.has(el.dataset.id)) { changed = true; break; }
+    // a card moving into / out of the combo split also reflows (same ids, new spots)
+    if (!changed && prevReserved) for (const el of els) if (prevReserved.has(el.dataset.id) !== el.classList.contains("reserved")) { changed = true; break; }
     if (!changed) return; // a selection-only re-render: leave the cards alone
     const z = currentZoom() || 1;
     els.forEach((el) => {
+      if (el.classList.contains("sel") || el.classList.contains("sel-top")) return; // a lifted pair is transform-managed; don't fight it
       const prev = prevRects.get(el.dataset.id);
       if (!prev) { el.classList.add("flip-in"); return; } // a freshly arrived card flips in
       const now = el.getBoundingClientRect();
@@ -935,44 +956,23 @@ export function openAnarchy() {
     });
   }
 
-  // overlap the hand so every card fits on screen without horizontal scrolling
+  // overlap the hand so every card fits on screen without horizontal scrolling.
+  // The combo group keeps a visible split before it (SPLIT px) even when squeezed.
   function fitHand() {
+    const SPLIT = 18;
     const cards = [...elHand.children];
     cards.forEach((el) => (el.style.marginLeft = ""));
     if (cards.length < 2) return;
+    const splitIdx = cards.findIndex((el) => el.classList.contains("combo-start"));
+    const splitW = splitIdx > 0 ? SPLIT : 0; // no split when the combo IS the whole hand
     const cw = cards[0].offsetWidth || 46;
     const containerW = elHand.clientWidth;
     if (!containerW) return;
     const gap = 4;
-    const natural = cards.length * cw + (cards.length - 1) * gap;
-    if (natural <= containerW) return;
+    const natural = cards.length * cw + (cards.length - 1) * gap + splitW;
+    if (natural <= containerW) { if (splitW) cards[splitIdx].style.marginLeft = SPLIT + "px"; return; }
     const overlap = (natural - containerW) / (cards.length - 1) + 0.5;
-    cards.forEach((el, i) => { if (i) el.style.marginLeft = `-${overlap}px`; });
-  }
-
-  // the set-aside tray: a saved straight kept off to the side until you choose to dump it
-  function renderAside() {
-    elAside.innerHTML = "";
-    const hide = !state || state.status !== "playing" || (mode === "local" && handoffPending);
-    const reserved = hide ? null : reservedSet();
-    if (hide || !reserved.size) { elAside.style.display = "none"; return; }
-    elAside.style.display = "flex";
-    const label = document.createElement("div");
-    label.className = "anarchy-aside-label";
-    label.textContent = "Set aside (still counts as your cards) — dump it to shed in one shot:";
-    elAside.appendChild(label);
-    const row = document.createElement("div");
-    row.className = "anarchy-aside-cards";
-    state.players[viewer()].hand.filter((c) => reserved.has(c.id))
-      .sort((a, b) => a.rank - b.rank).forEach((c) => row.appendChild(cardEl(c, { mini: true })));
-    const dump = document.createElement("button");
-    dump.className = "anarchy-btn slap"; dump.textContent = "Dump it";
-    dump.addEventListener("click", () => apply({ type: "DUMP", by: viewer(), cards: [...reserved] }));
-    const ret = document.createElement("button");
-    ret.className = "anarchy-btn"; ret.textContent = "Return to hand";
-    ret.addEventListener("click", () => { reserved.clear(); render(); });
-    row.appendChild(dump); row.appendChild(ret);
-    elAside.appendChild(row);
+    cards.forEach((el, i) => { if (i) el.style.marginLeft = (splitW && i === splitIdx ? SPLIT - overlap : -overlap) + "px"; });
   }
 
   function renderActions() {
@@ -993,6 +993,28 @@ export function openAnarchy() {
     if (slapOpportunities(state).some((o) => o.by === viewer())) {
       const card = hand.find((c) => c.rank === state.topRank);
       if (card) add("SLAP!", () => apply({ type: "SLAP", by: viewer(), card: card.id }), "slap");
+    }
+    // combo building + completing works in or out of turn: setting cards aside is
+    // just sorting your grip, a straight dump is a free shed, a quad clears the
+    // table — the engine validates the dump either way.
+    {
+      const reserved = reservedSet();
+      if (reserved.size) {
+        const combo = hand.filter((c) => reserved.has(c.id));
+        const ranks = combo.map((c) => c.rank);
+        const isQuad = combo.length === 4 && ranks.every((r) => r === ranks[0]);
+        const isRun = combo.length >= 5 && findStraights(combo).some((run) => run.length === combo.length);
+        if (isQuad || isRun)
+          add(`Dump combo (${combo.length})`, () => apply({ type: "DUMP", by: viewer(), cards: combo.map((c) => c.id) }), "slap combo-dump");
+      } else {
+        const straights = findStraights(activeAndLegal().active);
+        if (straights.length) {
+          const longest = straights.reduce((a, b) => (b.length > a.length ? b : a));
+          const g = new Map(); activeAndLegal().active.forEach((c) => { if (!g.has(c.rank)) g.set(c.rank, c); });
+          const ids = longest.map((r) => g.get(r).id);
+          add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
+        }
+      }
     }
     if (!canAct()) {
       if (!elActions.children.length) elActions.innerHTML = `<span class="anarchy-wait">${state.players[state.turn].name} is playing…</span>`;
@@ -1020,18 +1042,7 @@ export function openAnarchy() {
     if (sel.length === 1 && sel[0] && sel[0].rank === 14 && state.pile.length)
       add(aceTake ? "☑ take below" : "☐ take below", () => { aceTake = !aceTake; render(); }, "toggle");
 
-    const reserved = reservedSet();
     const { active } = activeAndLegal();
-    // hold a straight off to the side (bluff a bigger hand; dump it later, ideally to go out)
-    if (!reserved.size) {
-      const straights = findStraights(active);
-      if (straights.length) {
-        const longest = straights.reduce((a, b) => (b.length > a.length ? b : a));
-        const g = new Map(); active.forEach((c) => { if (!g.has(c.rank)) g.set(c.rank, c); });
-        const ids = longest.map((r) => g.get(r).id);
-        add("Set aside straight", () => { ids.forEach((id) => reservedSet().add(id)); selection = []; render(); }, "");
-      }
-    }
     // four-of-a-kind: throw it from hand — clears the table, everyone else owes a card, you lead
     {
       const counts = new Map();
