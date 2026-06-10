@@ -2924,6 +2924,8 @@ body.lang-ru .login-logo {
 .stickman { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 25px 33px; will-change: transform; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.28)); }
 .stickman .sm-seg { stroke: #111; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 .stickman .sm-head { fill: #111; stroke: none; }
+/* the player's own drawing as the character — squash/stretch pivots at the feet */
+.stickman-sprite { transform-origin: 50% 100%; image-rendering: auto; }
 .stickman-hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s ease; }
 .stickman-hint.fade { opacity: 0; }
 .stickman-hint b { color: #111; }

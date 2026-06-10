@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=189";
+import { currentZoom } from "./scale.js?v=190";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -51,22 +51,40 @@ function createStickman(opts = {}) {
   const layer = document.createElement("div");
   layer.className = "stickman-layer";
 
-  // the figure: a single SVG of strokes we re-point every frame
-  const NS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", `0 0 ${VB} ${VBH}`);
-  svg.setAttribute("width", VB); svg.setAttribute("height", VBH);
-  svg.classList.add("stickman");
-  const g = document.createElementNS(NS, "g");
-  g.setAttribute("class", "stickman-body");
-  svg.appendChild(g);
-
-  const mkLine = () => { const l = document.createElementNS(NS, "line"); l.setAttribute("class", "sm-seg"); g.appendChild(l); return l; };
-  const seg = { torso: mkLine(), thighL: mkLine(), shinL: mkLine(), thighR: mkLine(), shinR: mkLine(), uarmL: mkLine(), farmL: mkLine(), uarmR: mkLine(), farmR: mkLine() };
-  const head = document.createElementNS(NS, "circle");
-  head.setAttribute("class", "sm-seg sm-head"); head.setAttribute("r", HEADR);
-  g.appendChild(head);
-  layer.appendChild(svg);
+  // THE PLAYER IS THE DRAWING: when the ritual hands us the cut-out bitmap, the
+  // exact pixels the player drew become the character (squash & stretch carries
+  // the life). The procedural SVG skeleton remains as the no-drawing fallback.
+  const spriteMode = !!(opts.sprite && opts.sprite.url);
+  let FW = VB, FH = NECK_TO_FOOT; // the figure's physical width/height (feet at bottom-center)
+  let svg = null, seg = null, head = null, img = null;
+  if (spriteMode) {
+    // clamp the play size so giant / tiny doodles still control well
+    const sf = opts.sprite.h > 96 ? 96 / opts.sprite.h : opts.sprite.h < 40 ? 40 / opts.sprite.h : 1;
+    FW = Math.max(14, opts.sprite.w * sf);
+    FH = Math.max(24, opts.sprite.h * sf);
+    img = document.createElement("img");
+    img.src = opts.sprite.url;
+    img.className = "stickman stickman-sprite";
+    img.style.width = FW + "px";
+    img.style.height = FH + "px";
+    layer.appendChild(img);
+  } else {
+    // the figure: a single SVG of strokes we re-point every frame
+    const NS = "http://www.w3.org/2000/svg";
+    svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${VB} ${VBH}`);
+    svg.setAttribute("width", VB); svg.setAttribute("height", VBH);
+    svg.classList.add("stickman");
+    const g = document.createElementNS(NS, "g");
+    g.setAttribute("class", "stickman-body");
+    svg.appendChild(g);
+    const mkLine = () => { const l = document.createElementNS(NS, "line"); l.setAttribute("class", "sm-seg"); g.appendChild(l); return l; };
+    seg = { torso: mkLine(), thighL: mkLine(), shinL: mkLine(), thighR: mkLine(), shinR: mkLine(), uarmL: mkLine(), farmL: mkLine(), uarmR: mkLine(), farmR: mkLine() };
+    head = document.createElementNS(NS, "circle");
+    head.setAttribute("class", "sm-seg sm-head"); head.setAttribute("r", HEADR);
+    g.appendChild(head);
+    layer.appendChild(svg);
+  }
 
   // hint toast — re-used as the tiny narrator through the escape arc
   const hint = document.createElement("div");
@@ -98,15 +116,17 @@ function createStickman(opts = {}) {
     vy: ritual ? (opts.vy || 0) : 0,
     facing: (opts.vx || 1) >= 0 ? 1 : -1,
     grounded: false, coyote: 0, jumpBuf: 0,
+    airJumps: 1, landTimer: 0, spinTimer: 0, // double jump + landing squash + air-flip
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
-  if (ritual) svg.classList.add("alive");
+  if (ritual) (img || svg).classList.add("alive");
   if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Slam into a wall — jump against it!"); }, 6000);
 
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
   // build a pose from a set of joint angles (degrees) and write it to the SVG
   function drawPose(P) {
+    if (!seg) return; // sprite mode: the bitmap animates via applySpriteVisual instead
     const neck = pt(HIPX, HIPY, 180 + P.lean, TORSO);           // torso goes UP from the hip
     setLine(seg.torso, [HIPX, HIPY], neck);
     const hc = pt(neck[0], neck[1], 180 + P.lean + P.head, HEADR + 1.5);
@@ -171,6 +191,12 @@ function createStickman(opts = {}) {
     if (tb) { const r = tb.getBoundingClientRect(); out.push({ l: 0, r: W, top: r.top / z, ground: true }); }
     document.querySelectorAll("#desktop-icons .desktop-icon").forEach((el) => add(el));
     document.querySelectorAll(".window:not(.minimized) .window-titlebar").forEach((el) => add(el));
+    // window bottom edges are sills — hop floor → sill → titlebar to scale a window
+    document.querySelectorAll(".window:not(.minimized)").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 4) return;
+      out.push({ l: r.left / z, r: r.right / z, top: r.bottom / z });
+    });
     // a hard floor at the very bottom in case the taskbar is missing
     out.push({ l: 0, r: W, top: H - 1, ground: true });
     return out;
@@ -209,7 +235,7 @@ function createStickman(opts = {}) {
     if (S.mode === "spawn") {
       drawPose(poseIdle(S.t));
       place();
-      if (age > 650) { S.mode = "fall"; svg.classList.add("alive"); }
+      if (age > 650) { S.mode = "fall"; (img || svg).classList.add("alive"); }
       raf = requestAnimationFrame(frame); return;
     }
 
@@ -225,7 +251,13 @@ function createStickman(opts = {}) {
     S.vy += GRAV * dt;
     if (S.jumpBuf > 0) S.jumpBuf -= dt;
     if (S.jumpBuf > 0 && (S.grounded || S.coyote > 0)) { S.vy = -JUMP; S.grounded = false; S.coyote = 0; S.jumpBuf = 0; }
+    else if (S.jumpBuf > 0 && !S.grounded && S.airJumps > 0) {
+      // double jump — a mid-air flip that makes windows scalable
+      S.vy = -JUMP * 0.92; S.airJumps -= 1; S.jumpBuf = 0; S.spinTimer = 16;
+    }
     if (S.coyote > 0) S.coyote -= dt;
+    if (S.landTimer > 0) S.landTimer -= dt;
+    if (S.spinTimer > 0) S.spinTimer -= dt;
 
     const prevY = S.y;
     let nx = clamp(S.x + S.vx * dt, 6, W - 6);
@@ -237,8 +269,8 @@ function createStickman(opts = {}) {
       if (!rb) { stage = "free"; } // the page is gone — it's already out
       else {
         if (hitCooldown > 0) hitCooldown -= dt;
-        const BODY = 54; // head clearance above the feet
-        if (ny >= rb.b - 1) { ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; }
+        const BODY = FH - 6; // head clearance above the feet
+        if (ny >= rb.b - 1) { if (!S.grounded) S.landTimer = 8; ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
         else if (S.grounded && ny < rb.b - 3) S.grounded = false;
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
         // side walls — SLAM them (airborne, or running hard) to crack them
@@ -274,7 +306,7 @@ function createStickman(opts = {}) {
           if (prevY <= p.top + 1 && ny >= p.top && p.top < bestTop) { bestTop = p.top; landed = true; }
         }
       }
-      if (landed) { ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; }
+      if (landed) { if (!S.grounded) S.landTimer = 8; ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
       else {
         // still grounded? only if a platform is right under the feet (else walk off the edge)
         let support = false;
@@ -286,12 +318,16 @@ function createStickman(opts = {}) {
     S.x = nx; S.y = ny;
 
     // ---- pick the animation + advance the walk cycle ----
-    let P;
-    if (!S.grounded) P = S.vy < 0 ? poseJump() : poseFall();
-    else if (Math.abs(S.vx) > 0.4) { const run = Math.abs(S.vx) > WALK + 0.5; S.phase += (Math.abs(S.vx) / (run ? 2.0 : 1.7)) * 0.18 * dt; P = poseWalkRun(S.phase, run); }
-    else P = poseIdle(S.t);
-    drawPose(P);
-    place();
+    if (Math.abs(S.vx) > 0.4 && S.grounded) S.phase += (Math.abs(S.vx) / 1.85) * 0.18 * dt;
+    if (spriteMode) applySpriteVisual();
+    else {
+      let P;
+      if (!S.grounded) P = S.vy < 0 ? poseJump() : poseFall();
+      else if (Math.abs(S.vx) > 0.4) P = poseWalkRun(S.phase, Math.abs(S.vx) > WALK + 0.5);
+      else P = poseIdle(S.t);
+      drawPose(P);
+      place();
+    }
     void prevY;
     raf = requestAnimationFrame(frame);
   }
@@ -300,6 +336,27 @@ function createStickman(opts = {}) {
   function place() {
     const tx = S.x - HIPX, ty = S.y - NECK_TO_FOOT;
     svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scaleX(${S.facing})`;
+  }
+  // the DRAWING as the character: body-level life — lean into the run, bob with
+  // the steps, stretch on the rise, squash on landing, flip on the double jump.
+  // (transform-origin is the feet: bottom-center)
+  function applySpriteVisual() {
+    let sx = 1, sy = 1, rot = 0, dy = 0;
+    if (S.landTimer > 0) {                       // landing squash, recovering
+      const k = S.landTimer / 8;
+      sy = 1 - 0.22 * k; sx = 1 + 0.22 * k;
+    } else if (!S.grounded) {
+      if (S.spinTimer > 0) rot = (1 - S.spinTimer / 16) * 360 * S.facing; // the double-jump flip
+      else { sy = S.vy < 0 ? 1.1 : 0.97; sx = 2 - sy; rot = clamp(S.vx * 1.8, -14, 14); }
+    } else if (Math.abs(S.vx) > 0.4) {           // running: lean + step-bob
+      rot = clamp(S.vx * 2.4, -13, 13);
+      dy = -Math.abs(Math.sin(S.phase)) * 3;
+      sy = 1 - Math.abs(Math.cos(S.phase)) * 0.045; sx = 2 - sy;
+    } else {                                     // idle: breathing
+      sy = 1 + Math.sin(S.t * 0.05) * 0.02;
+      rot = Math.sin(S.t * 0.031) * 1.6;
+    }
+    img.style.transform = `translate(${(S.x - FW / 2).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
   raf = requestAnimationFrame(frame);

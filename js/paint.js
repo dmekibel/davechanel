@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=189";
-import { ICONS } from "./icons.js?v=189";
-import { saveImage, loadUserFS } from "./user-storage.js?v=189";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=189";
-import { FS } from "./file-system.js?v=189";
-import { spawnStickmanAt } from "./stickman.js?v=189";
-import { currentZoom } from "./scale.js?v=189";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=190";
+import { ICONS } from "./icons.js?v=190";
+import { saveImage, loadUserFS } from "./user-storage.js?v=190";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=190";
+import { FS } from "./file-system.js?v=190";
+import { spawnStickmanAt } from "./stickman.js?v=190";
+import { currentZoom } from "./scale.js?v=190";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -713,17 +713,19 @@ export function openPaint(opts = {}) {
     sprite.classList.add("wake");                                                  // …did it just move?
     setTimeout(() => { sprite.classList.remove("wake"); sprite.classList.add("hop"); }, 640); // it's ALIVE — two excited hops
     setTimeout(() => {
-      // hand off to the engine IN PLACE — Level 1 is the canvas itself: the
-      // figure lives on the page now, and must crack a wall to get out
+      // hand off to the engine IN PLACE — and the character IS the drawing:
+      // the exact cut-out bitmap becomes the playable figure, no swap, no poof.
+      // Level 1 is the canvas itself: it must crack a wall to get out.
       const sr = sprite.getBoundingClientRect();
       const worldX = (sr.left + sr.width / 2) / z;
       const worldY = sr.bottom / z;
-      sprite.classList.remove("hop"); sprite.classList.add("poof");
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
+        sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
         confine: { rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole },
       });
-      setTimeout(() => { sprite.remove(); waking = false; }, 260);
+      sprite.remove(); // the engine renders the SAME bitmap from this exact spot
+      waking = false;
     }, 640 + 800);
   }
   lifeBtn.addEventListener("click", bringToLife);

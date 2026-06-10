@@ -10,7 +10,7 @@ import {
   getWallpaper as osGetWallpaper,
   setWallpaper as osSetWallpaper,
   MODES,
-} from "./os-mode.js?v=189";
+} from "./os-mode.js?v=190";
 
 // Legacy flat list — union of all modes' wallpapers, keeps id+label shape.
 export const WALLPAPERS = [
