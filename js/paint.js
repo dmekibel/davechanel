@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=199";
-import { ICONS } from "./icons.js?v=199";
-import { saveImage, loadUserFS } from "./user-storage.js?v=199";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=199";
-import { FS } from "./file-system.js?v=199";
-import { spawnStickmanAt } from "./stickman.js?v=199";
-import { currentZoom } from "./scale.js?v=199";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=200";
+import { ICONS } from "./icons.js?v=200";
+import { saveImage, loadUserFS } from "./user-storage.js?v=200";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=200";
+import { FS } from "./file-system.js?v=200";
+import { spawnStickmanAt } from "./stickman.js?v=200";
+import { currentZoom } from "./scale.js?v=200";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).

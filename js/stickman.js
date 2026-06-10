@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=199";
+import { currentZoom } from "./scale.js?v=200";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -349,105 +349,93 @@ function createStickman(opts = {}) {
   window.addEventListener("keydown", kd);
   window.addEventListener("keyup", ku);
 
-  // ---- circular thumb controls (coarse pointers): a drag JOYSTICK for the left
-  // thumb (move + crouch/slide), round JUMP + ATTACK buttons for the right thumb,
-  // a small round ✕ up top to put it away. ----
-  let detachTouch = null; // window-level pointer cleanup, called from destroy()
+  // ---- TWO floating thumb-sticks (coarse pointers), iPhone-style ----
+  // Each side of the lower screen is an invisible zone; touch it and a small stick
+  // appears UNDER your thumb and follows it (dynamic), vanishing on lift. Because it
+  // centres on the touch point, there's no accidental crouch from where you press.
+  //   LEFT  → move (push down = crouch / knee-slide)
+  //   RIGHT → jump (push up; flick up again mid-air = double-jump) + attack
+  //           (flick sideways / down, or a quick tap)
+  let detachTouch = null; // teardown, called from destroy()
   if (isTouch) {
-    const pads = document.createElement("div");
-    pads.className = "stickman-pads";
+    const zoneL = document.createElement("div"); zoneL.className = "sm-zone sm-zone-left";
+    const zoneR = document.createElement("div"); zoneR.className = "sm-zone sm-zone-right";
+    layer.appendChild(zoneL); layer.appendChild(zoneR);
 
-    // left: analog joystick (a base ring + a draggable nub)
-    const stick = document.createElement("div");
-    stick.className = "sm-stick";
-    const nub = document.createElement("div");
-    nub.className = "sm-nub";
-    stick.appendChild(nub);
-
-    // right: round action buttons
-    const acts = document.createElement("div");
-    acts.className = "sm-acts";
-    acts.innerHTML = `
-      <button class="sm-round sm-attack" data-act="hit" aria-label="Attack">👊</button>
-      <button class="sm-round sm-jump" data-act="jump" aria-label="Jump">▲</button>`;
-
-    pads.appendChild(stick);
-    pads.appendChild(acts);
-    layer.appendChild(pads);
-
-    // dismiss ✕ — round, top-centre, clear of Paint's own min/max/close
     const bye = document.createElement("button");
-    bye.className = "sm-round sm-bye";
+    bye.className = "sm-bye";
     bye.setAttribute("aria-label", "Put away");
     bye.textContent = "✕";
     layer.appendChild(bye);
     bye.addEventListener("pointerdown", (e) => { e.preventDefault(); destroy(); });
 
-    // --- joystick: drag the nub; its offset drives left / right / crouch ---
-    let R = 33, stickId = null; // max nub travel (body-internal px), recomputed from real sizes
-    const recomputeR = () => {
-      const z = currentZoom() || 1;
-      const sR = stick.getBoundingClientRect().width / z / 2;
-      const nR = nub.getBoundingClientRect().width / z / 2;
-      R = Math.max(16, sR - nR); // keep the nub inside the ring at any screen size
-    };
-    const setNub = (dx, dy) => { nub.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`; };
-    const clearMove = () => { keys.left = keys.right = keys.down = false; };
-    const track = (e) => {
-      if (stickId === null) return;
-      const z = currentZoom() || 1;
-      const r = stick.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      let dx = (e.clientX - cx) / z, dy = (e.clientY - cy) / z; // body-internal px
-      const d = Math.hypot(dx, dy) || 1;
-      if (d > R) { dx = dx / d * R; dy = dy / d * R; }
-      setNub(dx, dy);
-      const nx = dx / R, ny = dy / R; // -1..1
+    const R = 30; // throw radius (body-internal px) — small + snappy
+    // A floating stick bound to a zone. Tracking is on WINDOW (filtered by pointerId)
+    // so it keeps working even if the thumb slides off the zone, and a stray release
+    // can never leave it stuck. onVec(nx, ny, kind): kind = "start" | "move" | "end".
+    function floatingStick(zone, onVec) {
+      let id = null, bx = 0, by = 0, ring = null, nub = null;
+      const place = () => { ring.style.left = bx.toFixed(1) + "px"; ring.style.top = by.toFixed(1) + "px"; };
+      const move = (e) => {
+        if (e.pointerId !== id) return;
+        const z = currentZoom() || 1;
+        let dx = e.clientX / z - bx, dy = e.clientY / z - by;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d > R) { bx += dx * (1 - R / d); by += dy * (1 - R / d); place(); dx = dx / d * R; dy = dy / d * R; }
+        nub.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
+        onVec(dx / R, dy / R, "move");
+      };
+      const end = (e) => {
+        if (id === null || (e && e.pointerId !== id)) return;
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", end);
+        window.removeEventListener("pointercancel", end);
+        id = null;
+        if (ring) { ring.remove(); ring = null; nub = null; }
+        onVec(0, 0, "end");
+      };
+      zone.addEventListener("pointerdown", (e) => {
+        if (id !== null) return;
+        e.preventDefault();
+        id = e.pointerId;
+        const z = currentZoom() || 1;
+        bx = e.clientX / z; by = e.clientY / z;
+        ring = document.createElement("div"); ring.className = "sm-fstick";
+        nub = document.createElement("div"); nub.className = "sm-fnub";
+        ring.appendChild(nub); place(); layer.appendChild(ring);
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", end);
+        window.addEventListener("pointercancel", end);
+        onVec(0, 0, "start");
+      });
+      return end; // teardown handle
+    }
+
+    // LEFT — movement
+    const endL = floatingStick(zoneL, (nx, ny, kind) => {
+      if (kind === "end") { keys.left = keys.right = keys.down = false; return; }
       keys.right = nx > 0.34;
       keys.left  = nx < -0.34;
       const wasDown = keys.down;
       keys.down  = ny > 0.5 && Math.abs(nx) < 0.6; // push down to crouch / knee-slide
       if (keys.down && !wasDown) tryStartSlide();
-    };
-    stick.addEventListener("pointerdown", (e) => {
-      e.preventDefault(); stickId = e.pointerId; recomputeR();
-      try { stick.setPointerCapture(e.pointerId); } catch (_) {}
-      track(e);
     });
-    stick.addEventListener("pointermove", track);
-    const endStick = (e) => {
-      if (stickId === null) return;
-      try { stick.releasePointerCapture(stickId); } catch (_) {}
-      stickId = null; setNub(0, 0); clearMove(); // snap back to centre, stop moving
-    };
-    stick.addEventListener("pointerup", endStick);
-    stick.addEventListener("pointercancel", endStick);
-    // safety net: if a pointerup ever slips past the stick (touch can drop it),
-    // releasing anywhere still re-centres the nub so the figure never "runs away".
-    window.addEventListener("pointerup", endStick);
-    window.addEventListener("pointercancel", endStick);
-    window.addEventListener("blur", endStick);
-    detachTouch = () => {
-      window.removeEventListener("pointerup", endStick);
-      window.removeEventListener("pointercancel", endStick);
-      window.removeEventListener("blur", endStick);
-    };
 
-    // --- round action buttons: jump (tap twice in the air = double) + attack ---
-    layer.querySelectorAll(".sm-acts .sm-round").forEach((b) => {
-      const act = b.dataset.act;
-      const press = (on) => (e) => {
-        e.preventDefault();
-        b.classList.toggle("on", on);
-        if (!on) return;
-        if (act === "jump") S.jumpBuf = 8;
-        else if (act === "hit") doAttack();
-      };
-      b.addEventListener("pointerdown", press(true));
-      b.addEventListener("pointerup", press(false));
-      b.addEventListener("pointercancel", press(false));
-      b.addEventListener("pointerleave", press(false));
+    // RIGHT — jump (up) + attack (flick sideways/down, or a tap)
+    let rUp = false, rActed = false, rMoved = false;
+    const endR = floatingStick(zoneR, (nx, ny, kind) => {
+      if (kind === "start") { rUp = false; rActed = false; rMoved = false; return; }
+      if (kind === "end") { if (!rMoved) doAttack(); rUp = false; rActed = false; rMoved = false; return; }
+      if (Math.hypot(nx, ny) > 0.3) rMoved = true;
+      const up = ny < -0.45;
+      if (up && !rUp) S.jumpBuf = 8;                 // each fresh up-flick jumps (double in air)
+      rUp = up;
+      if (!rActed && (Math.abs(nx) > 0.55 || ny > 0.55)) { rActed = true; doAttack(); } // flick to punch
     });
+
+    const allUp = () => { endL(); endR(); };
+    window.addEventListener("blur", allUp);
+    detachTouch = () => { window.removeEventListener("blur", allUp); endL(); endR(); };
   }
 
   // ---- main loop ----
