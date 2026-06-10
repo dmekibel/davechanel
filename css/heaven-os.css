@@ -2726,7 +2726,10 @@ body.lang-ru .login-logo {
 }
 
 /* ===== Anarchy (card game) ===================================== */
-.anarchy { display: flex; flex-direction: column; height: 100%; font-family: Tahoma, "MS Sans Serif", sans-serif; background: #c0c0c0; position: relative; }
+/* The game is its own size container: card size and chrome scale to the WINDOW
+   (not the viewport), so shrinking the OS window re-fits everything via --cw/--ch
+   (card), --pilew (pile box) and the @container tiers below. */
+.anarchy { display: flex; flex-direction: column; height: 100%; font-family: Tahoma, "MS Sans Serif", sans-serif; background: #c0c0c0; position: relative; container-type: size; --cw: 44px; --ch: 62px; --pilew: 96px; }
 .anarchy-menubar { background: #c0c0c0; border-bottom: 1px solid #808080; padding: 1px 2px; flex: 0 0 auto; }
 .anarchy-menu { font-family: inherit; font-size: 12px; background: transparent; border: 1px solid transparent; padding: 2px 8px; cursor: pointer; }
 .anarchy-menu:hover { border-color: #fff #808080 #808080 #fff; }
@@ -2749,7 +2752,7 @@ body.lang-ru .login-logo {
 .anarchy-badge.pickup { background: #ff8a5b; color: #3a1400; border-color: #ffd0bd #a23c14 #a23c14 #ffd0bd; } /* an opponent's pickup: orange */
 .anarchy-badge.pickup.you { background: #e01d1d; color: #fff; border-color: #ff9a9a #7a0000 #7a0000 #ff9a9a; } /* YOUR pickup: red */
 .anarchy-badge.flash { background: #d83a3a; color: #fff; }
-.anarchy-pile { position: relative; width: 96px; height: 96px; margin: 0 auto; }
+.anarchy-pile { position: relative; width: var(--pilew, 96px); height: var(--pilew, 96px); margin: 0 auto; }
 .anarchy-pile .acard { position: absolute; }
 .anarchy-pile .acard.buried { filter: brightness(0.82); }
 .anarchy-pile .acard.pile-top { box-shadow: 0 0 0 2px #ffd24d, 1px 1px 4px rgba(0,0,0,.4); }
@@ -2784,13 +2787,19 @@ body.lang-ru .login-logo {
 .anarchy-flip-inner { position: relative; transform-style: preserve-3d; }
 .anarchy-flip-inner .acard { backface-visibility: hidden; }
 .anarchy-flip-inner .anarchy-flip-front { position: absolute; left: 0; top: 0; transform: rotateY(180deg); }
+/* a CPU throw: each card is its own flipper inside the spinning group, so the
+   card turns face-up mid-air exactly like a person flicking it onto the table */
+.anarchy-flipcard { perspective: 420px; width: var(--cw, 44px); height: var(--ch, 62px); position: relative; flex: 0 0 auto; }
+/* an opponent's fan swallows a drawn card: a quick absorb pulse on arrival */
+.anarchy-opp-fan.absorb { animation: anarchyAbsorb .3s ease; }
+@keyframes anarchyAbsorb { 40% { transform: scale(1.12); } }
 .acard.mini.empty { background: transparent; border: 1px dashed rgba(255,255,255,.45); box-shadow: none; }
 .anarchy-run { color: #d6ffe6; font-size: 11px; min-height: 14px; font-weight: bold; }
 .anarchy-log { width: 100%; max-width: 520px; height: 58px; overflow-y: auto; background: rgba(0,0,0,.28); color: #d9ffe7; font-size: 11px; line-height: 1.45; padding: 4px 8px; border-radius: 3px; }
 .anarchy-log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* cards */
-.acard { width: 44px; height: 62px; background: #fff; border: 1px solid #333; border-radius: 4px; box-shadow: 1px 1px 2px rgba(0,0,0,.35); position: relative; box-sizing: border-box; user-select: none; flex: 0 0 auto; }
+.acard { width: var(--cw, 44px); height: var(--ch, 62px); background: #fff; border: 1px solid #333; border-radius: 4px; box-shadow: 1px 1px 2px rgba(0,0,0,.35); position: relative; box-sizing: border-box; user-select: none; flex: 0 0 auto; }
 .acard.red { color: #c40000; } .acard.black { color: #111; }
 /* corner index: a small rank-over-suit column tucked into the top-left, and the
    same mirrored (rotated 180°) into the bottom-right — like a real playing card */
@@ -2921,8 +2930,42 @@ body.lang-ru .login-logo {
 /* font-size must be >= 16px or mobile Safari auto-zooms on focus and can get stuck zoomed in */
 .anarchy-name-input { flex: 1; font-family: Tahoma, sans-serif; font-size: 16px; padding: 5px 7px; border: 2px solid; border-color: #808080 #fff #fff #808080; min-width: 0; }
 
-/* keep the table playable when the window / viewport gets small: shrink the text
-   and tighten the felt + hand so panels don't pile on top of each other */
+/* keep the table playable when the GAME WINDOW gets small: cards shrink via the
+   --cw/--ch/--pilew vars (all JS layout math derives from them), side piles pull
+   in from the percent gutters, opponent fans clip, and the chrome tightens. The
+   tiers key on the window itself (container queries), so resizing the OS window
+   re-fits live — not just on small phones. */
+@container (max-width: 470px) {
+  /* vars go on the container's CHILDREN — a size query may not style the container itself */
+  .anarchy > * { --cw: 38px; --ch: 54px; --pilew: 84px; }
+  .anarchy-badge { font-size: 12px; padding: 4px 9px; }
+  .anarchy-intake { font-size: 15px; padding: 6px 13px; }
+  .anarchy-run, .anarchy-log { font-size: 10px; }
+  .anarchy-log { height: 44px; }
+  .anarchy-stock { left: 4px; }
+  .anarchy-bita-pile { right: 4px; }
+  .anarchy-opp-fan { max-width: 72px; overflow: hidden; justify-content: flex-start; }
+  .acard .acard-idx b { font-size: 10px; }
+  .acard .acard-idx b + b { font-size: 9px; }
+}
+@container (max-width: 360px) {
+  .anarchy > * { --cw: 33px; --ch: 47px; --pilew: 72px; }
+  .anarchy-opp { font-size: 10px; padding: 2px 3px; }
+  .anarchy-opp-fan { max-width: 54px; min-height: 24px; }
+  .anarchy-opp.seat-left, .anarchy-opp.seat-right { top: 16%; } /* clear of the pile row */
+  .anarchy-hand { min-height: 70px; padding: 14px 2px 4px; }
+  .acard .acard-idx b { font-size: 9px; }
+  .acard .acard-idx b + b { font-size: 8px; }
+}
+@container (max-height: 600px) {
+  .anarchy-felt { padding: 6px 6px 4px; gap: 4px; }
+  .anarchy-center { gap: 4px; }
+  .anarchy-hand { min-height: 72px; padding: 12px 2px 4px; }
+  .anarchy-opp { font-size: 10px; padding: 2px 4px; }
+  .anarchy-opp-fan { min-height: 24px; }
+  .anarchy-log { height: 36px; }
+}
+/* viewport fallbacks for browsers without container queries */
 @media (max-width: 480px) {
   .anarchy-badge { font-size: 12px; padding: 4px 9px; }
   .anarchy-intake { font-size: 15px; padding: 6px 13px; }

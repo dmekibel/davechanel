@@ -154,6 +154,18 @@ export function openAnarchy() {
   let flashMsg = "";
   const reservedByPlayer = new Map(); // per-player: card ids held off to the side (a saved straight)
   let lastTopId = null, lastPileLen = 0, oppSeatMap = {}, oppBoxMap = {}, lastHandCounts = [], suppressDrawIdx = -1; // animation state
+  // live card/pile dimensions — the CSS container queries shrink --cw/--ch/--pilew
+  // when the window squeezes, and ALL layout math below derives from these
+  let CW = 44, CH = 62, PW = 96, STEP = 13;
+  function readDims() {
+    // read from the felt (a child of the container) — container queries may not
+    // restyle the container itself, so the tier vars land on the children
+    const cs = getComputedStyle(elFelt || root);
+    CW = parseFloat(cs.getPropertyValue("--cw")) || 44;
+    CH = parseFloat(cs.getPropertyValue("--ch")) || 62;
+    PW = parseFloat(cs.getPropertyValue("--pilew")) || 96;
+    STEP = Math.max(9, Math.round(CW * 0.3)); // how far a pair/triple fans apart
+  }
   let pileSnapshot = []; // last rendered pile (positions + faces) so we can fly the real cards to the discard
   let pairFlipId = null; // when swapping which of a selected pair is on top, the card to flip forward
   let newCardIds = new Set(); // cards just added to YOUR hand (draw/pickup) — flagged "new" until you play
@@ -223,28 +235,47 @@ export function openAnarchy() {
     if (idx == null || !group.length) return;
     const src = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!src || !elPile) return;
+    const mine = idx === viewer();
     const from = feltPos(src), to = feltPos(elPile);
-    const span = (group.length - 1) * 13; // tight: a pair flies and lands close together
-    const fromX = from.x + from.w / 2 - (44 + span) / 2, fromY = from.y + (idx === viewer() ? -6 : from.h / 2);
-    const gLeft = (96 - (44 + span)) / 2; // mirror the pile's own layout math
-    const toX = to.x + gLeft + jitter(group[0].id, 3, 2), toY = to.y + 20 + jitter(group[0].id, 2, 3);
+    const span = (group.length - 1) * STEP; // tight: a pair flies and lands close together
+    const fromX = from.x + from.w / 2 - (CW + span) / 2, fromY = from.y + (mine ? -6 : from.h / 2);
+    const gLeft = (PW - (CW + span)) / 2; // mirror the pile's own layout math
+    const toX = to.x + gLeft + jitter(group[0].id, 3, 2), toY = to.y + Math.round(CH * 0.32) + jitter(group[0].id, 2, 3);
     const wrap = document.createElement("div");
     wrap.className = "anarchy-fly anarchy-throw";
     wrap.style.left = fromX + "px"; wrap.style.top = fromY + "px";
     group.forEach((card, i) => {
-      const g = cardEl(card);
-      if (i) { g.style.position = "absolute"; g.style.left = (i * 13) + "px"; g.style.top = "0"; }
+      // an opponent throws from a hidden hand: each card is a 3D flipper that
+      // turns face-up mid-air inside the spinning group — a real flick onto the
+      // table. Your own throw leaves your hand already face-up.
+      let g;
+      if (!mine) {
+        g = document.createElement("div");
+        g.className = "anarchy-flipcard";
+        const inner = document.createElement("div");
+        inner.className = "anarchy-flip-inner";
+        inner.appendChild(cardEl(null, { faceUp: false }));
+        const face = cardEl(card); face.classList.add("anarchy-flip-front");
+        inner.appendChild(face);
+        g.appendChild(inner);
+      } else g = cardEl(card);
+      if (i) { g.style.position = "absolute"; g.style.left = (i * STEP) + "px"; g.style.top = "0"; }
       wrap.appendChild(g);
     });
     elFly.appendChild(wrap);
+    const T = mine ? 600 : 700; // the CPU flick is a touch slower so the reveal reads
     const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, direction varies by card
     const endRot = jitter(group[group.length - 1].id, 5, 1);    // settle at the pile's resting angle
     requestAnimationFrame(() => {
-      wrap.style.transition = "transform .6s cubic-bezier(.18,.72,.3,1), opacity .25s ease-in .38s";
+      wrap.style.transition = `transform ${T}ms cubic-bezier(.18,.72,.3,1), opacity .25s ease-in ${T - 220}ms`;
       wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn + endRot}deg)`;
       wrap.style.opacity = "0";
+      wrap.querySelectorAll(".anarchy-flip-inner").forEach((inner) => {
+        inner.style.transition = `transform ${Math.round(T * 0.45)}ms ease ${Math.round(T * 0.18)}ms`;
+        inner.style.transform = "rotateY(180deg)";
+      });
     });
-    setTimeout(() => wrap.remove(), 680);
+    setTimeout(() => wrap.remove(), T + 90);
   }
   // position of an element's top-left within the fly layer (which spans the whole
   // game), so flies can travel between the felt and the hand without being clipped
@@ -281,10 +312,16 @@ export function openAnarchy() {
     const reveal = idx === viewer();
     const T = opts.big ? 1050 : 900; // unhurried — the eye should be able to follow
     cards.slice(0, 3).forEach((card, k) => {
-      let toX, toY, endScale = 1, slotEl = null;
+      let toX, toY, endScale = 1, slotEl = null, fanEl = null;
       if (reveal && card) slotEl = [...elHand.children].find((el) => el.dataset && el.dataset.id === card.id) || null;
       if (slotEl) { const p = feltPos(slotEl); toX = p.x; toY = p.y; }
-      else { const to = feltPos(target); toX = to.x + to.w / 2 - 22; toY = to.y + (reveal ? -8 : to.h / 2); if (!reveal) endScale = 0.6; }
+      else if (!reveal && target.querySelector && (fanEl = target.querySelector(".anarchy-opp-fan")) && fanEl.lastElementChild) {
+        // an opponent's draw lands ON their fan — the newest card of the stack they
+        // hold, not just somewhere near their seat
+        const p = feltPos(fanEl.lastElementChild);
+        toX = p.x; toY = p.y; endScale = Math.max(0.4, 22 / CW);
+      }
+      else { const to = feltPos(target); toX = to.x + to.w / 2 - CW / 2; toY = to.y + (reveal ? -8 : to.h / 2); if (!reveal) endScale = 0.55; }
       const fly = document.createElement("div");
       fly.className = "anarchy-fly anarchy-fly3d" + (opts.big ? " anarchy-fly-pickup" : "");
       fly.style.left = from.x + "px"; fly.style.top = from.y + "px";
@@ -297,6 +334,7 @@ export function openAnarchy() {
       elFly.appendChild(fly);
       const d = k * 240;
       if (slotEl) { slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, d + T); }
+      if (fanEl) setTimeout(() => { fanEl.classList.remove("absorb"); void fanEl.offsetWidth; fanEl.classList.add("absorb"); }, d + T); // the fan swallows it
       setTimeout(() => {
         fly.style.transition = `transform ${T}ms cubic-bezier(.22,.7,.25,1)`;
         fly.style.transform = `translate(${toX - from.x}px, ${toY - from.y}px) scale(${endScale})`;
@@ -319,16 +357,20 @@ export function openAnarchy() {
     const from = feltPos(elPile), to = feltPos(target);
     const fly = card ? cardEl(card) : cardEl(null, { mini: true, faceUp: false });
     fly.classList.add("anarchy-fly", "anarchy-fly-pickup");
-    const fromX = from.x + 26, fromY = from.y + 20;
+    const fromX = from.x + Math.round(PW * 0.27), fromY = from.y + Math.round(CH * 0.32);
     fly.style.left = fromX + "px"; fly.style.top = fromY + "px";
     elFly.appendChild(fly);
     const T = 950;
     const slotEl = idx === viewer() && card ? [...elHand.children].find((el) => el.dataset && el.dataset.id === card.id) || null : null;
+    const fanEl = idx !== viewer() && target.querySelector ? target.querySelector(".anarchy-opp-fan") : null;
     let toX, toY, endScale;
     if (slotEl) {
       const p = feltPos(slotEl); toX = p.x; toY = p.y; endScale = 1;
       slotEl.style.visibility = "hidden"; setTimeout(() => { slotEl.style.visibility = ""; }, T);
-    } else { toX = to.x + to.w / 2 - 22; toY = to.y + (idx === viewer() ? -8 : to.h / 2); endScale = idx === viewer() ? 1.05 : 0.7; }
+    } else if (fanEl && fanEl.lastElementChild) { // the scooped card joins their held fan
+      const p = feltPos(fanEl.lastElementChild); toX = p.x; toY = p.y; endScale = Math.max(0.4, 22 / CW);
+      setTimeout(() => { fanEl.classList.remove("absorb"); void fanEl.offsetWidth; fanEl.classList.add("absorb"); }, T);
+    } else { toX = to.x + to.w / 2 - CW / 2; toY = to.y + (idx === viewer() ? -8 : to.h / 2); endScale = idx === viewer() ? 1.05 : 0.7; }
     requestAnimationFrame(() => {
       fly.style.transition = `transform ${T}ms cubic-bezier(.2,.7,.2,1)`;
       fly.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) scale(${endScale})`;
@@ -708,6 +750,7 @@ export function openAnarchy() {
   }
 
   function render() {
+    readDims(); // pick up the container-query card size for all layout math
     if (!state) { stopFireworks(); stopWinCascade(); elWin.style.display = "none"; elSetup.style.display = "flex"; elHandoff.style.display = "none"; return; }
     elSetup.style.display = "none";
     elHandoff.style.display = "none"; // replaced by the in-hand face-down reveal
@@ -760,24 +803,24 @@ export function openAnarchy() {
     elPile.innerHTML = "";
     const pile = state.pile;
     if (!pile.length) {
-      const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = "28px"; e.style.top = "18px"; elPile.appendChild(e);
+      const e = document.createElement("div"); e.className = "acard empty"; e.style.position = "absolute"; e.style.left = ((PW - CW) / 2) + "px"; e.style.top = ((PW - CH) / 2) + "px"; elPile.appendChild(e);
     } else {
       // the current play sits tight and centred; older cards step out to the
       // upper-left so they keep peeking and are never fully covered
       const groupN = Math.min(state.lastPlayCount || 1, 3);
       const buried = pile.slice(Math.max(0, pile.length - groupN - 2), pile.length - groupN);
       const group = pile.slice(pile.length - groupN);
-      const span = (group.length - 1) * 13;   // a pair barely overlaps — close together
-      const gLeft = (96 - (44 + span)) / 2;    // centre the current play in the 96px pile box
-      const gTop = 20;
+      const span = (group.length - 1) * STEP; // a pair barely overlaps — close together
+      const gLeft = (PW - (CW + span)) / 2;   // centre the current play in the pile box
+      const gTop = Math.round(CH * 0.32);
       // every card keeps a tiny seeded wobble (rotation + offset) so the table reads
       // like real stacking — controlled: the current play stays near-straight and
       // readable, history underneath gets messier
       buried.forEach((c, i) => {
         const e = cardEl(c);
         const depth = buried.length - i;       // 1..2 older
-        e.style.left = (gLeft - depth * 11 + jitter(c.id, 3, 2)) + "px"; // step up-left so each one keeps peeking
-        e.style.top = (gTop - depth * 8 + jitter(c.id, 2, 3)) + "px";
+        e.style.left = (gLeft - depth * Math.round(CW * 0.25) + jitter(c.id, 3, 2)) + "px"; // step up-left so each one keeps peeking
+        e.style.top = (gTop - depth * Math.round(CH * 0.13) + jitter(c.id, 2, 3)) + "px";
         e.style.transform = `rotate(${jitter(c.id, 9, 1)}deg)`;
         e.style.zIndex = String(2 - depth);
         e.classList.add("buried");
@@ -785,7 +828,7 @@ export function openAnarchy() {
       });
       group.forEach((c, i) => {
         const e = cardEl(c);
-        e.style.left = (gLeft + i * 13 + jitter(c.id, 3, 2)) + "px";
+        e.style.left = (gLeft + i * STEP + jitter(c.id, 3, 2)) + "px";
         e.style.top = (gTop + jitter(c.id, 2, 3)) + "px";
         e.style.transform = `rotate(${jitter(c.id, 5, 1)}deg)`;
         e.style.zIndex = String(10 + i);
@@ -940,7 +983,7 @@ export function openAnarchy() {
     if (els.length !== 2) return;
     const z = currentZoom() || 1;
     const dx = (els[1].getBoundingClientRect().left - els[0].getBoundingClientRect().left) / z;
-    const offset = 11; // close together: the back card peeks out just enough to read it
+    const offset = Math.max(8, Math.round(CW * 0.25)); // close together: the back card peeks out just enough to read it
     els.forEach((el, i) => {
       const front = el.classList.contains("sel-top");
       el.style.setProperty("--px", `${i === 0 ? 0 : offset - dx}px`); // pull the right card onto the left
