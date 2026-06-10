@@ -2,11 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=186";
-import { ICONS } from "./icons.js?v=186";
-import { saveImage, loadUserFS } from "./user-storage.js?v=186";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=186";
-import { FS } from "./file-system.js?v=186";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=187";
+import { ICONS } from "./icons.js?v=187";
+import { saveImage, loadUserFS } from "./user-storage.js?v=187";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=187";
+import { FS } from "./file-system.js?v=187";
+import { spawnStickmanAt } from "./stickman.js?v=187";
+import { currentZoom } from "./scale.js?v=187";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -275,6 +277,8 @@ export function openPaint(opts = {}) {
           <path d="M2 7 L5 10 L5 8" stroke="#0a3d6e" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
+      <span class="pt-sep"></span>
+      <button class="pt-btn pt-life" title="Bring to life!" aria-label="Bring to life">⚡</button>
       <span class="pt-sep"></span>
       <label class="pt-size">Size <span class="pt-size-slot"></span></label>
     </div>
@@ -581,6 +585,95 @@ export function openPaint(opts = {}) {
   canvas.addEventListener("touchstart",  start, { passive: false });
   canvas.addEventListener("touchmove",   move,  { passive: false });
   canvas.addEventListener("touchend",    end);
+
+  // ---- ⚡ Bring to Life — the Stickman game's origin ritual ---------------
+  // Find what the player drew, cut it off the canvas as a sprite, wake it up
+  // (shake, two hops), then hand it to the stickman engine mid-leap: the
+  // drawing escapes Paint and lands on the desktop, alive and controllable.
+  const lifeBtn = wrap.querySelector(".pt-life");
+  let waking = false;
+  function drawnBBox() {
+    const cw = canvas.width, chh = canvas.height;
+    const img = ctx.getImageData(0, 0, cw, chh).data;
+    let minX = cw, minY = chh, maxX = -1, maxY = -1;
+    for (let y = 0; y < chh; y++) {
+      for (let x = 0; x < cw; x++) {
+        const i = (y * cw + x) * 4;
+        if (img[i] < 246 || img[i + 1] < 246 || img[i + 2] < 246) {
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0 || (maxX - minX) < 6 || (maxY - minY) < 6) return null;
+    const pad = 3;
+    return {
+      x: Math.max(0, minX - pad), y: Math.max(0, minY - pad),
+      w: Math.min(cw - 1, maxX + pad) - Math.max(0, minX - pad) + 1,
+      h: Math.min(chh - 1, maxY + pad) - Math.max(0, minY - pad) + 1,
+    };
+  }
+  function paintToast(msg) {
+    const tEl = document.createElement("div");
+    tEl.className = "paint-life-hint";
+    tEl.textContent = msg;
+    wrap.querySelector(".paint-canvas-wrap").appendChild(tEl);
+    setTimeout(() => tEl.classList.add("fade"), 3400);
+    setTimeout(() => tEl.remove(), 4100);
+  }
+  function bringToLife() {
+    if (waking) return;
+    const box = drawnBBox();
+    if (!box) { paintToast("Draw a stickman first — then press ⚡"); return; }
+    waking = true;
+    lifeBtn.classList.remove("attn");
+    // cut the drawing into a transparent sprite (white drops out)
+    const cut = document.createElement("canvas");
+    cut.width = box.w; cut.height = box.h;
+    const cctx = cut.getContext("2d");
+    cctx.drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
+    const d = cctx.getImageData(0, 0, box.w, box.h);
+    for (let i = 0; i < d.data.length; i += 4) {
+      if (d.data[i] > 245 && d.data[i + 1] > 245 && d.data[i + 2] > 245) d.data[i + 3] = 0;
+    }
+    cctx.putImageData(d, 0, 0);
+    // overlay the sprite exactly over the drawing (body-internal px)
+    const z = currentZoom() || 1;
+    const cr = canvas.getBoundingClientRect();
+    const wrapEl = wrap.querySelector(".paint-canvas-wrap");
+    const wr = wrapEl.getBoundingClientRect();
+    const sx = (cr.width / z) / canvas.width, sy = (cr.height / z) / canvas.height;
+    const sprite = document.createElement("img");
+    sprite.src = cut.toDataURL();
+    sprite.className = "paint-wake-sprite";
+    sprite.style.left = ((cr.left - wr.left) / z + wrapEl.scrollLeft + box.x * sx) + "px";
+    sprite.style.top  = ((cr.top  - wr.top)  / z + wrapEl.scrollTop  + box.y * sy) + "px";
+    sprite.style.width  = (box.w * sx) + "px";
+    sprite.style.height = (box.h * sy) + "px";
+    wrapEl.appendChild(sprite);
+    // the drawing leaves the page — erase it (Ctrl+Z can resurrect a copy)
+    pushUndo();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    sprite.classList.add("wake");                                                  // …did it just move?
+    setTimeout(() => { sprite.classList.remove("wake"); sprite.classList.add("hop"); }, 640); // it's ALIVE — two excited hops
+    setTimeout(() => {
+      // the leap: hand off to the engine mid-air — the live figure arcs out of
+      // the Paint window and lands wherever physics says (titlebar, desktop…)
+      const sr = sprite.getBoundingClientRect();
+      const worldX = (sr.left + sr.width / 2) / z;
+      const worldY = sr.bottom / z;
+      const dir = worldX > (window.innerWidth / z) / 2 ? -1 : 1; // leap toward the roomier side
+      sprite.classList.remove("hop"); sprite.classList.add("poof");
+      spawnStickmanAt({ x: worldX, y: worldY - 4, vx: dir * 4.5, vy: -12.5 });
+      setTimeout(() => { sprite.remove(); waking = false; }, 260);
+    }, 640 + 800);
+  }
+  lifeBtn.addEventListener("click", bringToLife);
+  if (opts.stickmanHint) {
+    lifeBtn.classList.add("attn");
+    setTimeout(() => paintToast("Draw a stickman — then press ⚡ to bring it to life"), 400);
+  }
 
   const winId = openWindow({
     title: "Paint",

@@ -8,13 +8,21 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=186";
+import { currentZoom } from "./scale.js?v=187";
 
 let active = null; // single instance — the desktop icon toggles it
 
 export function openStickman() {
   if (active) { active.destroy(); active = null; return; }
   active = createStickman();
+}
+export function isStickmanActive() { return !!active; }
+export function dismissStickman() { if (active) { active.destroy(); active = null; } }
+// the Paint ritual hands the just-drawn figure to the engine mid-leap:
+// spawn at world (x, y) with an exit impulse, already alive
+export function spawnStickmanAt(opts) {
+  if (active) { active.destroy(); active = null; }
+  active = createStickman(opts || {});
 }
 
 // ---- figure geometry (SVG-local units; the viewBox is rendered 1:1) ----
@@ -35,7 +43,7 @@ const D2R = Math.PI / 180;
 const pt = (x, y, deg, len) => [x + len * Math.sin(deg * D2R), y + len * Math.cos(deg * D2R)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-function createStickman() {
+function createStickman(opts = {}) {
   const z0 = currentZoom() || 1;
   const W = window.innerWidth / z0, H = window.innerHeight / z0;
 
@@ -69,12 +77,17 @@ function createStickman() {
   setTimeout(() => hint.classList.add("fade"), 4200);
 
   // ---- state ----
+  const ritual = opts.x != null; // born from the Paint ritual: leap out alive, no pause
   const S = {
-    x: W / 2, y: H * 0.34,          // feet position; spawns mid-air and drops in
-    vx: 0, vy: 0, facing: 1,
+    x: ritual ? clamp(opts.x, 6, W - 6) : W / 2,
+    y: ritual ? opts.y : H * 0.34,   // feet position; default spawn drops in from mid-air
+    vx: ritual ? (opts.vx || 0) : 0,
+    vy: ritual ? (opts.vy || 0) : 0,
+    facing: (opts.vx || 1) >= 0 ? 1 : -1,
     grounded: false, coyote: 0, jumpBuf: 0,
-    phase: 0, mode: "spawn", t: 0,
+    phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
+  if (ritual) svg.classList.add("alive");
 
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
