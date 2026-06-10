@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=191";
+import { currentZoom } from "./scale.js?v=192";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -102,8 +102,8 @@ function createStickman(opts = {}) {
   }
   const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
   say(isTouch
-    ? "<b>It's alive.</b> Use the pads — ▲ jumps (twice = double), ▼ slides"
-    : "<b>It's alive.</b> ← → move · Shift run · ↓ slide · Space jump · Esc puts away");
+    ? "<b>It's alive.</b> Pads: ▲ jump (twice = double) · ▼ slide · 👊 attack"
+    : "<b>It's alive.</b> ← → move · Shift run · ↓ slide · Space jump · X attack · Esc away");
 
   // ---- state ----
   const ritual = opts.x != null; // born from the Paint ritual: leap out alive, no pause
@@ -125,13 +125,83 @@ function createStickman(opts = {}) {
     walled: 0,        // -1 = wall on the left, +1 = wall on the right (cling/wall-jump)
     sliding: false,   // knee slide (momentum, low friction)
     dirHold: 0,       // frames a direction has been held — mobile auto-sprint
+    attackTimer: 0, attackCd: 0, // strike animation + cooldown
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
   if (ritual) (img || svg).classList.add("alive");
-  if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Slam into a wall — jump against it!"); }, 6000);
+  if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Hit the wall (X / 👊) or slam into it!"); }, 6000);
   // windows that already exist never "open onto" the figure — only NEW ones do
   const knownWins = new WeakSet();
   document.querySelectorAll(".window").forEach((w) => knownWins.add(w));
+
+  // one shared crack path for body-slams AND attacks: 3 hits on a wall break it
+  function crackWall(side, wy) {
+    if (!confine || broken[side] || hitCooldown > 0) return false;
+    hitCooldown = 18;
+    wallHits[side] += 1;
+    if (confine.onCrack) confine.onCrack(side, wy, wallHits[side]);
+    if (wallHits[side] === 1) say("<b>CRACK.</b> Again — break it open!");
+    if (wallHits[side] >= 3) {
+      broken[side] = true;
+      if (confine.onBreak) confine.onBreak(side, wy);
+      say("<b>IT'S OPEN!</b> Through the hole — go!");
+    }
+    return true;
+  }
+
+  // ---- ATTACK: a quick strike in the facing direction. In the canvas it cracks
+  // the wall (the deliberate way out); on the desktop it knocks icons sliding
+  // and rattles windows. X / F, or the 👊 pad on touch.
+  function impactFlash(wx, wy) {
+    const f = document.createElement("div");
+    f.className = "sm-impact";
+    f.style.left = wx + "px"; f.style.top = wy + "px";
+    layer.appendChild(f);
+    setTimeout(() => f.remove(), 240);
+  }
+  function doAttack() {
+    if (S.attackCd > 0 || S.mode === "spawn") return;
+    S.attackCd = 22; S.attackTimer = 12; S.sliding = false;
+    const z = currentZoom() || 1;
+    const reach = 30;
+    const hx = S.x + S.facing * (FW / 2 + reach * 0.7); // strike centre
+    const hy = S.y - FH * 0.55;
+    if (stage === "canvas") {
+      const rb = confine.rect();
+      if (rb) {
+        if (S.facing < 0 && S.x - FW / 2 - reach <= rb.l + 8 && crackWall("left", S.y - 30)) impactFlash(rb.l + 8, hy);
+        else if (S.facing > 0 && S.x + FW / 2 + reach >= rb.r - 8 && crackWall("right", S.y - 30)) impactFlash(rb.r - 8, hy);
+      }
+      return;
+    }
+    // free desktop: knock icons, rattle windows
+    let hitSomething = false;
+    const x0 = Math.min(S.x + S.facing * (FW / 2), S.x + S.facing * (FW / 2 + reach));
+    const x1 = Math.max(S.x + S.facing * (FW / 2), S.x + S.facing * (FW / 2 + reach));
+    const yTop = S.y - FH * 0.9, yBot = S.y + 4;
+    document.querySelectorAll("#desktop-icons .desktop-icon").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const l = r.left / z, rr = r.right / z, tt = r.top / z, bb = r.bottom / z;
+      if (rr < x0 || l > x1 || bb < yTop || tt > yBot) return;
+      hitSomething = true;
+      // knocked: slide away with a wobble (not persisted — refresh resets the mess)
+      const desk = el.parentElement;
+      const maxX = (desk ? desk.clientWidth : W) - el.offsetWidth;
+      el.style.transition = "left .28s cubic-bezier(.2,.7,.3,1.3)";
+      el.style.left = clamp(el.offsetLeft + S.facing * 46, 0, Math.max(0, maxX)) + "px";
+      el.classList.remove("sm-icon-hit"); void el.offsetWidth; el.classList.add("sm-icon-hit");
+      setTimeout(() => { el.style.transition = ""; }, 320);
+    });
+    document.querySelectorAll(".window:not(.minimized)").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const l = r.left / z, rr = r.right / z, tt = r.top / z, bb = r.bottom / z;
+      if (rr < x0 || l > x1 || bb < yTop || tt > yBot) return;
+      hitSomething = true;
+      el.classList.remove("sm-win-shake"); void el.offsetWidth; el.classList.add("sm-win-shake");
+      setTimeout(() => el.classList.remove("sm-win-shake"), 340);
+    });
+    if (hitSomething) impactFlash(hx, hy);
+  }
 
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
@@ -202,6 +272,11 @@ function createStickman(opts = {}) {
       thighL: 34, shinL: -26, thighR: 10, shinR: -8,
       uarmL: 165, farmL: 175, uarmR: 30, farmR: 50 };
   }
+  function poseAttack(k) { // a punch: arm rams out front, body behind it
+    return { lean: 14 * k, head: -8 * k,
+      thighL: 18, shinL: 4, thighR: -14, shinR: -22,
+      uarmL: 96 + 14 * k, farmL: 92, uarmR: -20, farmR: -36 };
+  }
 
   // ---- platforms (recomputed each frame from the live DOM) ----
   function platforms() {
@@ -241,6 +316,7 @@ function createStickman(opts = {}) {
     const k = e.key.toLowerCase();
     if (k === "escape") { if (down) destroy(); return; }
     if (k === "shift") { keys.shift = down; return; }
+    if (k === "x" || k === "f") { if (down && !e.repeat) { e.preventDefault(); doAttack(); } return; }
     let m = null;
     if (k === "arrowleft" || k === "a") m = "left";
     else if (k === "arrowright" || k === "d") m = "right";
@@ -269,6 +345,7 @@ function createStickman(opts = {}) {
       </div>
       <div class="sm-pads-group">
         <button class="sm-pad" data-pad="down" aria-label="Slide">▼</button>
+        <button class="sm-pad" data-pad="hit" aria-label="Attack">👊</button>
         <button class="sm-pad sm-pad-jump" data-pad="jump" aria-label="Jump">▲</button>
       </div>`;
     layer.appendChild(pads);
@@ -285,6 +362,7 @@ function createStickman(opts = {}) {
         b.classList.toggle("on", on);
         if (code === "bye") { if (on) destroy(); return; }
         if (code === "jump") { if (on) S.jumpBuf = 8; return; }
+        if (code === "hit") { if (on) doAttack(); return; }
         if (code === "down" && on && !keys.down) tryStartSlide();
         keys[code] = on;
       };
@@ -347,6 +425,8 @@ function createStickman(opts = {}) {
     if (S.coyote > 0) S.coyote -= dt;
     if (S.landTimer > 0) S.landTimer -= dt;
     if (S.spinTimer > 0) S.spinTimer -= dt;
+    if (S.attackTimer > 0) S.attackTimer -= dt;
+    if (S.attackCd > 0) S.attackCd -= dt;
 
     const prevY = S.y;
     let nx = clamp(S.x + S.vx * dt, 6, W - 6);
@@ -362,19 +442,11 @@ function createStickman(opts = {}) {
         if (ny >= rb.b - 1) { if (!S.grounded) S.landTimer = 8; ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
         else if (S.grounded && ny < rb.b - 3) S.grounded = false;
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
-        // side walls — SLAM them (airborne, or running hard) to crack them
+        // side walls — SLAM them (airborne, or running hard) to crack them;
+        // a deliberate ATTACK (X / 👊) cracks them too, via the same crackWall
         const slam = (side) => {
-          if (broken[side] || hitCooldown > 0) return;
           if (S.grounded && Math.abs(S.vx) < 2.2) return; // a lazy lean doesn't count
-          hitCooldown = 18;
-          wallHits[side] += 1;
-          if (confine.onCrack) confine.onCrack(side, ny - 30, wallHits[side]);
-          if (wallHits[side] === 1) say("<b>CRACK.</b> Again — break it open!");
-          if (wallHits[side] >= 3) {
-            broken[side] = true;
-            if (confine.onBreak) confine.onBreak(side, ny - 30);
-            say("<b>IT'S OPEN!</b> Through the hole — go!");
-          }
+          crackWall(side, ny - 30);
         };
         S.walled = 0;
         if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); if (!S.grounded && dir < 0) { S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
@@ -443,7 +515,8 @@ function createStickman(opts = {}) {
     if (spriteMode) applySpriteVisual();
     else {
       let P;
-      if (S.sliding) P = poseSlide();
+      if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
+      else if (S.sliding) P = poseSlide();
       else if (keys.down && S.grounded) P = poseCrawl(S.phase);
       else if (!S.grounded && S.walled !== 0) { S.facing = S.walled; P = poseWallCling(); }
       else if (!S.grounded) P = S.vy < 0 ? poseJump() : poseFall();
@@ -465,8 +538,11 @@ function createStickman(opts = {}) {
   // the steps, stretch on the rise, squash on landing, flip on the double jump.
   // (transform-origin is the feet: bottom-center)
   function applySpriteVisual() {
-    let sx = 1, sy = 1, rot = 0, dy = 0;
-    if (S.sliding) {                             // knee slide: lean back, low, fast
+    let sx = 1, sy = 1, rot = 0, dy = 0, ax = 0;
+    if (S.attackTimer > 0) {                     // strike: lunge out and back
+      const k = Math.sin((1 - S.attackTimer / 12) * Math.PI);
+      ax = S.facing * k * 9; rot = 7 * k; sx = 1 + 0.14 * k; sy = 1 - 0.07 * k;
+    } else if (S.sliding) {                      // knee slide: lean back, low, fast
       rot = -22; sy = 0.62; sx = 1.18;
     } else if (keys.down && S.grounded) {        // crawl: low and waddling
       sy = 0.55; sx = 1.15;
@@ -487,7 +563,7 @@ function createStickman(opts = {}) {
       rot = Math.sin(S.t * 0.031) * 1.6;
     }
     if (S.walled !== 0 && !S.grounded) S.facing = S.walled; // face the wall while clinging
-    img.style.transform = `translate(${(S.x - FW / 2).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
+    img.style.transform = `translate(${(S.x - FW / 2 + ax).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
   raf = requestAnimationFrame(frame);
