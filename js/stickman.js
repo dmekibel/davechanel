@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=200";
+import { currentZoom } from "./scale.js?v=201";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -583,7 +583,7 @@ function createStickman(opts = {}) {
 
     // ---- pick the animation + advance the walk cycle ----
     if (Math.abs(S.vx) > 0.4 && S.grounded) S.phase += (Math.abs(S.vx) / 1.85) * 0.18 * dt;
-    if (spriteMode) applySpriteVisual();
+    if (spriteMode) applyRigVisual();
     else {
       let P;
       if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
@@ -605,9 +605,76 @@ function createStickman(opts = {}) {
     const tx = S.x - HIPX, ty = S.y - NECK_TO_FOOT;
     svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scaleX(${S.facing})`;
   }
+  // ===================== PER-LIMB RIG (sprite mode) =====================
+  // The drawing is sliced into bones — head, torso, two arms, two legs — and each
+  // slice is rotated about its joint (shoulder / hip) every frame by a live pose,
+  // so the character's OWN pixels articulate. A container holds the parts, so
+  // facing is one horizontal flip. Slicing assumes a roughly upright figure; the
+  // rest pose reassembles into the original drawing exactly.
+  const RJ = { hip: [0.50, 0.56], neck: [0.50, 0.30], headC: [0.50, 0.12],
+               handL: [0.16, 0.50], handR: [0.84, 0.50], footL: [0.40, 0.99], footR: [0.60, 0.99] };
+  // [name, proximal-joint, distal-joint]; torso first so the neck is known for arms/head
+  const RIG_BONES = [["torso","hip","neck"], ["legL","hip","footL"], ["legR","hip","footR"],
+                     ["armL","neck","handL"], ["armR","neck","handR"], ["head","neck","headC"]];
+  let rigBox = null, rigOK = false; const rigParts = [];
+  function buildRig() {
+    if (!spriteMode || !img || !FW || !FH) return;
+    rigBox = document.createElement("div");
+    rigBox.className = "stickman sm-rig";
+    rigBox.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;";
+    layer.appendChild(rigBox);
+    for (const [name, a, b] of RIG_BONES) {
+      const p0 = [RJ[a][0] * FW, RJ[a][1] * FH], p1 = [RJ[b][0] * FW, RJ[b][1] * FH];
+      const padX = FW * 0.18, padY = FH * 0.06;
+      const sx = clamp(Math.min(p0[0], p1[0]) - padX, 0, FW), sy = clamp(Math.min(p0[1], p1[1]) - padY, 0, FH);
+      const ex = clamp(Math.max(p0[0], p1[0]) + padX, 0, FW), ey = clamp(Math.max(p0[1], p1[1]) + padY, 0, FH);
+      const sw = Math.max(2, ex - sx), sh = Math.max(2, ey - sy);
+      const el = document.createElement("div");
+      el.style.cssText = `position:absolute;left:0;top:0;width:${sw.toFixed(1)}px;height:${sh.toFixed(1)}px;`
+        + `background:url("${img.src}") no-repeat ${(-sx).toFixed(1)}px ${(-sy).toFixed(1)}px;`
+        + `background-size:${FW.toFixed(1)}px ${FH.toFixed(1)}px;`;
+      rigBox.appendChild(el);
+      rigParts.push({ el, name, prox: a, ax: p0[0] - sx, ay: p0[1] - sy }); // ax/ay = joint within slice
+    }
+    img.style.display = "none"; // the rig replaces the flat sprite
+    rigOK = true;
+  }
+  // live per-bone angle DELTAS (radians) from the rest pose
+  function rigDeltas() {
+    const D = Math.PI / 180, d = { torso: 0, head: 0, armL: 0, armR: 0, legL: 0, legR: 0 };
+    if (S.attackTimer > 0) { const k = Math.sin((1 - S.attackTimer / 12) * Math.PI);
+      d.armR = -85 * D * k; d.armL = 22 * D * k; d.torso = 9 * D * k; d.head = -6 * D * k;
+    } else if (S.sliding) { d.torso = -34 * D; d.legL = 56 * D; d.legR = 46 * D; d.armL = -42 * D; d.armR = 28 * D;
+    } else if (keys.down && S.grounded) { d.torso = 46 * D; d.head = -10 * D; d.legL = 30 * D; d.legR = -30 * D;
+    } else if (!S.grounded) { const up = S.vy < 0;
+      d.armL = -100 * D; d.armR = 100 * D; d.legL = (up ? 18 : -12) * D; d.legR = (up ? -14 : 16) * D; d.torso = (up ? 6 : -5) * D; d.head = (up ? -3 : 5) * D;
+    } else if (Math.abs(S.vx) > 0.4) { const run = Math.abs(S.vx) > WALK + 0.5;
+      const A = (run ? 38 : 24) * D, arm = (run ? 34 : 20) * D, sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
+      d.legL = A * sL; d.legR = A * sR; d.armL = -arm * sL * 0.9; d.armR = -arm * sR * 0.9; d.torso = (run ? 9 : 5) * D; d.head = (run ? -5 : -3) * D;
+    } else { const b = Math.sin(S.t * 0.05); d.torso = b * 0.5 * D; d.head = -b * 0.4 * D; d.armL = b * 1.3 * D; d.armR = -b * 1.3 * D; }
+    return d;
+  }
+  function applyRigVisual() {
+    if (!rigOK) { applySpriteVisual(); return; }
+    const d = rigDeltas();
+    // FK in a feet-anchored frame (origin = feet at world S.x,S.y; +x right, +y down):
+    const hip = [0, -(1 - RJ.hip[1]) * FH];
+    const tA = Math.atan2((RJ.neck[1] - RJ.hip[1]) * FH, 0) + d.torso;       // torso tilts the neck
+    const tLen = (RJ.hip[1] - RJ.neck[1]) * FH;
+    const neck = [hip[0] + tLen * Math.cos(tA), hip[1] + tLen * Math.sin(tA)];
+    const joint = { hip, neck };
+    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${S.y.toFixed(1)}px) scaleX(${S.facing})`;
+    for (const part of rigParts) {
+      const jp = joint[part.prox];
+      // children of the neck inherit the torso tilt so arms/head ride the lean
+      const rot = (d[part.name] || 0) + (part.prox === "neck" ? d.torso : 0);
+      part.el.style.transformOrigin = `${part.ax.toFixed(1)}px ${part.ay.toFixed(1)}px`;
+      part.el.style.transform = `translate(${(jp[0] - part.ax).toFixed(1)}px, ${(jp[1] - part.ay).toFixed(1)}px) rotate(${rot.toFixed(4)}rad)`;
+    }
+  }
   // the DRAWING as the character: body-level life — lean into the run, bob with
   // the steps, stretch on the rise, squash on landing, flip on the double jump.
-  // (transform-origin is the feet: bottom-center)
+  // (transform-origin is the feet: bottom-center) — fallback if the rig is off.
   function applySpriteVisual() {
     let sx = 1, sy = 1, rot = 0, dy = 0, ax = 0;
     if (S.attackTimer > 0) {                     // PUNCH: wind up → snap forward → settle
@@ -643,6 +710,8 @@ function createStickman(opts = {}) {
     img.style.transform = `translate(${(S.x - FW / 2 + ax).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
+  buildRig();                       // slice the drawing into bones (sprite mode)
+  if (spriteMode && rigOK) applyRigVisual(); // place them at rest before the first frame
   raf = requestAnimationFrame(frame);
 
   function destroy() {
