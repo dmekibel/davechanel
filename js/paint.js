@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=202";
-import { ICONS } from "./icons.js?v=202";
-import { saveImage, loadUserFS } from "./user-storage.js?v=202";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=202";
-import { FS } from "./file-system.js?v=202";
-import { spawnStickmanAt } from "./stickman.js?v=202";
-import { currentZoom } from "./scale.js?v=202";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=203";
+import { ICONS } from "./icons.js?v=203";
+import { saveImage, loadUserFS } from "./user-storage.js?v=203";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=203";
+import { FS } from "./file-system.js?v=203";
+import { spawnStickmanAt } from "./stickman.js?v=203";
+import { currentZoom } from "./scale.js?v=203";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -644,6 +644,38 @@ export function openPaint(opts = {}) {
     const r = canvas.getBoundingClientRect();
     return { x: (wx - r.left / zz) * canvas.width / (r.width / zz), y: (wy - r.top / zz) * canvas.height / (r.height / zz) };
   }
+  function canvasYToWorld(cy) {
+    const zz = currentZoom() || 1;
+    const r = canvas.getBoundingClientRect();
+    return r.top / zz + cy * (r.height / zz) / canvas.height;
+  }
+  // ---- DRAWN INK = PLATFORMS ----------------------------------------------
+  // The stickman walks on whatever you paint. We cache the canvas pixels (read
+  // is throttled so it never janks) and answer "is there ink to stand on in this
+  // vertical slice?". surfaceY returns the world-y of the TOPMOST drawn pixel in
+  // column wx between wyTop..wyBot, or null if that strip is empty (free-fall).
+  let _surf = null, _surfW = 0, _surfH = 0, _surfT = -1e9;
+  function refreshSurface(force) {
+    const now = (typeof performance !== "undefined" ? performance.now() : 0);
+    if (!force && _surf && now - _surfT < 110) return; // throttle: ~9 reads/sec
+    _surfT = now;
+    if (!canvas.isConnected || !canvas.width || !canvas.height) { _surf = null; return; }
+    try { _surf = ctx.getImageData(0, 0, canvas.width, canvas.height).data; _surfW = canvas.width; _surfH = canvas.height; }
+    catch (_) { _surf = null; }
+  }
+  function canvasSurfaceY(wx, wyTop, wyBot) {
+    if (!_surf) return null;
+    const a = worldToCanvasPt(wx, wyTop), b = worldToCanvasPt(wx, wyBot);
+    const cx = Math.round(a.x);
+    if (cx < 0 || cx >= _surfW) return null;
+    let y0 = Math.max(0, Math.round(Math.min(a.y, b.y)));
+    let y1 = Math.min(_surfH - 1, Math.round(Math.max(a.y, b.y)));
+    for (let cy = y0; cy <= y1; cy++) {
+      const j = (cy * _surfW + cx) * 4;
+      if (_surf[j + 3] > 20 && (_surf[j] < 220 || _surf[j + 1] < 220 || _surf[j + 2] < 220)) return canvasYToWorld(cy);
+    }
+    return null;
+  }
   // each slam tears real cracks into the page (drawn into the actual canvas)
   function drawWallCrack(side, wy) {
     const p = worldToCanvasPt(0, wy);
@@ -724,18 +756,16 @@ export function openPaint(opts = {}) {
       const sr = sprite.getBoundingClientRect();
       const worldX = (sr.left + sr.width / 2) / z;
       const worldY = sr.bottom / z;
-      // MOBILE: Paint fills the top ~60% of the screen, so a canvas "Level 1" cage
-      // just parks the figure mid-screen — which reads as "floating in the white
-      // box". Instead, on a phone it's born alive in Paint and then DROPS OUT onto
-      // the desktop to walk the bottom (what David keeps asking for). On desktop
-      // there's room, so the canvas cage + crack-a-wall-to-escape stays.
-      const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+      // STAYS IN PAINT: the figure lives inside the canvas, and whatever you draw
+      // there is a platform it walks on (surfaceY samples the live ink). It falls
+      // through empty white space and lands on your strokes or the canvas floor.
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
         sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
-        dropToFloor: isNarrow,
-        confine: isNarrow ? null : {
+        confine: {
           rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
+          sampleSurface: refreshSurface, // refresh the ink cache once per frame (throttled)
+          surfaceY: canvasSurfaceY,       // drawn ink = platforms
           // escaped → un-maximize Paint so the figure lands on the real desktop
           onEscape: () => {
             const w = document.querySelector(`.window[data-id="${winId}"]`);
@@ -745,10 +775,6 @@ export function openPaint(opts = {}) {
       });
       sprite.remove(); // the engine renders the SAME bitmap from this exact spot
       waking = false;
-      // mobile: after a beat of being alive in Paint, Paint recedes and the figure
-      // drops onto the clean desktop (dropToFloor makes it fall past the icons to
-      // the taskbar, so it never snags mid-screen).
-      if (isNarrow) setTimeout(() => minimize(winId), 380);
     }, 640 + 800);
   }
   lifeBtn.addEventListener("click", bringToLife);

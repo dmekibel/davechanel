@@ -2929,7 +2929,8 @@ body.lang-ru .login-logo {
 /* TWO floating thumb-sticks (coarse pointers). Each side of the lower screen is an
    invisible touch zone; pressing it spawns a small, faint stick UNDER the thumb that
    follows it (dynamic), then vanishes on lift. Left = move, right = jump + attack. */
-.sm-zone { position: absolute; bottom: 0; height: 48%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: transparent; z-index: 2; }
+/* lower third only — leaves the Paint canvas above free to draw platforms on */
+.sm-zone { position: absolute; bottom: 0; height: 34%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: transparent; z-index: 2; }
 .sm-zone-left  { left: 0;  width: 50%; }
 .sm-zone-right { right: 0; width: 50%; }
 /* the floating stick: a faint ring + nub, centred on the touch point */

@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=202";
+import { currentZoom } from "./scale.js?v=203";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -512,8 +512,35 @@ function createStickman(opts = {}) {
         prevCanvasRb = { l: rb.l, t: rb.t };
         if (hitCooldown > 0) hitCooldown -= dt;
         const BODY = FH - 6; // head clearance above the feet
-        if (ny >= rb.b - 1) { if (!S.grounded) S.landTimer = 8; ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
-        else if (S.grounded && ny < rb.b - 3) S.grounded = false;
+        if (confine.sampleSurface) confine.sampleSurface(); // refresh the ink cache (throttled)
+        // ---- DRAWN INK = one-way platforms: walk on your strokes, fall through white ----
+        const foot = FW * 0.30; // sample under three foot points
+        const inkUnder = (yTop, yBot) => {
+          if (!confine.surfaceY) return null;
+          let best = null;
+          for (const cx of [S.x, S.x - foot, S.x + foot]) {
+            const sY = confine.surfaceY(cx, yTop, yBot);
+            if (sY != null && (best == null || sY < best)) best = sY;
+          }
+          return best;
+        };
+        let landed = false;
+        if (S.vy >= 0) {
+          const inkY = inkUnder(prevY - 1, ny + 2); // ink crossed on the way down
+          if (inkY != null && ny >= inkY - 0.5 && prevY <= inkY + 3) {
+            if (!S.grounded) S.landTimer = 8;
+            ny = inkY; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; landed = true;
+          }
+        }
+        if (!landed && ny >= rb.b - 1) {            // the canvas floor (the bottom dock)
+          if (!S.grounded) S.landTimer = 8; ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; landed = true;
+        }
+        if (!landed && S.grounded) {                 // walking — is there still a surface under the feet?
+          const onFloor = ny >= rb.b - 3;
+          const sup = onFloor ? rb.b - 1 : inkUnder(ny - 2, ny + 4);
+          if (sup != null && Math.abs(sup - ny) < 4) ny = sup;         // hug the surface
+          else { S.grounded = false; S.coyote = 6; }                   // nothing below → free-fall
+        }
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
         // side walls — SLAM them (airborne, or running hard) to crack them;
         // a deliberate ATTACK (X / 👊) cracks them too, via the same crackWall.
@@ -583,7 +610,7 @@ function createStickman(opts = {}) {
 
     // ---- pick the animation + advance the walk cycle ----
     if (Math.abs(S.vx) > 0.4 && S.grounded) S.phase += (Math.abs(S.vx) / 1.85) * 0.18 * dt;
-    if (spriteMode) applySpriteVisual(); // whole-body anim: feet stay planted (rig was disabled — it broke limbs)
+    if (spriteMode) applyRigVisual(); // per-limb rig with foot-planting (lowest foot stays on the ground)
     else {
       let P;
       if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
