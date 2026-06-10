@@ -2834,9 +2834,8 @@ body.lang-ru .login-logo {
 .anarchy-setup-btns { display: flex; gap: 8px; justify-content: center; }
 .anarchy-setup-btns button { font-family: Tahoma, sans-serif; font-size: 12px; padding: 6px 12px; background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; cursor: pointer; }
 .anarchy-setup-btns button:active { border-color: #808080 #fff #fff #808080; }
-.anarchy-modes-view { display: none; }
-.anarchy-start-btns { flex-direction: column; align-items: stretch; gap: 8px; margin-top: 6px; }
-.anarchy-start-btns .anarchy-start-go { font-size: 15px; padding: 11px; font-weight: bold; }
+/* the start screen IS the mode menu: two labelled rows of equal-width buttons */
+.anarchy-start-view .anarchy-setup-btns button { flex: 1 1 0; padding: 9px 4px; white-space: nowrap; }
 .anarchy-setup-section { font-size: 11px; font-weight: bold; color: #333; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
 
 /* opponents as a fan of face-down cards + count */

@@ -54,12 +54,6 @@ export function openAnarchy() {
         <h2>ANARCHY</h2>
         <p>Shed your whole hand first. Red sends the next player up, black sends them down.</p>
         <div class="anarchy-start-view">
-          <div class="anarchy-setup-btns anarchy-start-btns">
-            <button class="anarchy-start-go">Start Game</button>
-            <button class="anarchy-modes-open">Game Mode</button>
-          </div>
-        </div>
-        <div class="anarchy-modes-view">
           <div class="anarchy-setup-section">vs Computer</div>
           <div class="anarchy-setup-btns">
             <button data-mode="cpu" data-players="2">vs 1 CPU</button>
@@ -72,7 +66,6 @@ export function openAnarchy() {
             <button data-mode="local" data-players="3">3 Players</button>
             <button data-mode="local" data-players="4">4 Players</button>
           </div>
-          <div class="anarchy-setup-btns"><button class="anarchy-modes-back">Back</button></div>
         </div>
         <div class="anarchy-names-view">
           <div class="anarchy-setup-section">Player names</div>
@@ -138,7 +131,6 @@ export function openAnarchy() {
   const elActions = $(".anarchy-actions");
   const elSetup = $(".anarchy-setup");
   const elStartView = $(".anarchy-start-view");
-  const elModesView = $(".anarchy-modes-view");
   const elNamesView = $(".anarchy-names-view");
   const elHandoff = $(".anarchy-handoff");
   const elHelp = $(".anarchy-help");
@@ -1065,10 +1057,9 @@ export function openAnarchy() {
     scheduleBots();
   }
 
-  function showSetupStart() { elStartView.style.display = "block"; elModesView.style.display = "none"; elNamesView.style.display = "none"; }
-  function showSetupModes() { elStartView.style.display = "none"; elModesView.style.display = "block"; elNamesView.style.display = "none"; }
+  function showSetupStart() { elStartView.style.display = "block"; elNamesView.style.display = "none"; }
   function showNames(n) {
-    elStartView.style.display = "none"; elModesView.style.display = "none"; elNamesView.style.display = "block";
+    elStartView.style.display = "none"; elNamesView.style.display = "block";
     const fields = $(".anarchy-names-fields");
     fields.innerHTML = "";
     for (let i = 0; i < n; i++) {
@@ -1080,14 +1071,13 @@ export function openAnarchy() {
   }
   function toStart() { clearTimeout(botTimer); stopFireworks(); stopWinCascade(); state = null; selection = []; handoffPending = false; showSetupStart(); render(); }
 
+  // the start screen IS the mode choice: tap a mode and you're playing (local
+  // multiplayer detours through name entry first)
   root.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
     const n = parseInt(b.dataset.players, 10);
     if (b.dataset.mode === "local") showNames(n); else newGame("cpu", n); // local: enter names first
   }));
-  $(".anarchy-start-go").addEventListener("click", () => newGame("cpu", 2)); // quick 1-on-1 vs CPU
-  $(".anarchy-modes-open").addEventListener("click", showSetupModes);
-  $(".anarchy-modes-back").addEventListener("click", showSetupStart);
-  $(".anarchy-names-back").addEventListener("click", showSetupModes);
+  $(".anarchy-names-back").addEventListener("click", showSetupStart);
   $(".anarchy-names-start").addEventListener("click", () => {
     const inputs = [...$(".anarchy-names-fields").querySelectorAll("input")];
     const names = inputs.map((inp, i) => (inp.value.trim() || `Player ${i + 1}`).slice(0, 12));
