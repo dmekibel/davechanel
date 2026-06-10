@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=196";
+import { currentZoom } from "./scale.js?v=197";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -98,22 +98,11 @@ function createStickman(opts = {}) {
     layer.appendChild(svg);
   }
 
-  // hint toast — re-used as the tiny narrator through the escape arc
-  const hint = document.createElement("div");
-  hint.className = "stickman-hint";
-  layer.appendChild(hint);
   document.body.appendChild(layer);
-  let hintTimer = null;
-  function say(html, ms = 4200) {
-    hint.innerHTML = html;
-    hint.classList.remove("fade");
-    clearTimeout(hintTimer);
-    hintTimer = setTimeout(() => hint.classList.add("fade"), ms);
-  }
+  // Narrator toast removed per David — no hints. say() is a no-op kept so the
+  // existing call sites (escape, crack, sized-to-fit) don't need touching.
+  function say() {}
   const isTouch = typeof matchMedia !== "undefined" && matchMedia("(pointer: coarse)").matches;
-  say(isTouch
-    ? "<b>It's alive.</b> Pads: ▲ jump (twice = double) · ▼ slide · 👊 attack"
-    : "<b>It's alive.</b> ← → move · Shift run · ↓ slide · Space jump · X attack · Esc away");
 
   // ---- state ----
   const ritual = opts.x != null; // born from the Paint ritual: leap out alive, no pause
@@ -134,6 +123,7 @@ function createStickman(opts = {}) {
     airJumps: 1, landTimer: 0, spinTimer: 0, // double jump + landing squash + air-flip
     walled: 0,        // -1 = wall on the left, +1 = wall on the right (cling/wall-jump)
     sliding: false,   // knee slide (momentum, low friction)
+    dropping: false,  // just escaped — fall past mid-screen platforms to the floor
     dirHold: 0,       // frames a direction has been held — mobile auto-sprint
     attackTimer: 0, attackCd: 0, // strike animation + cooldown
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
@@ -148,7 +138,11 @@ function createStickman(opts = {}) {
   function goFree() {
     if (stage === "free") return;
     stage = "free"; S.grounded = false;
-    if (confine && confine.onEscape) confine.onEscape(); // un-maximize Paint if needed
+    // Drop straight to the FLOOR on escape — don't snag on a mid-screen icon or
+    // window edge (that read as "floating above"). Once it touches the ground it
+    // platforms normally again and can hop back up onto icons.
+    S.dropping = true;
+    if (confine && confine.onEscape) confine.onEscape(); // minimize/un-maximize Paint
     say("<b>It escaped!</b> The desktop is yours · Esc puts it away", 6500);
   }
   // one shared crack path for body-slams AND attacks: 3 hits on a wall break it
@@ -351,38 +345,84 @@ function createStickman(opts = {}) {
   window.addEventListener("keydown", kd);
   window.addEventListener("keyup", ku);
 
-  // ---- touch pads (coarse pointers): ◀ ▶ on the left, ▼ ▲ on the right, ✕ away ----
+  // ---- circular thumb controls (coarse pointers): a drag JOYSTICK for the left
+  // thumb (move + crouch/slide), round JUMP + ATTACK buttons for the right thumb,
+  // a small round ✕ up top to put it away. ----
   if (isTouch) {
-    layer.classList.add("sm-has-pads"); // lifts the hint toast clear of the pad band
     const pads = document.createElement("div");
     pads.className = "stickman-pads";
-    pads.innerHTML = `
-      <div class="sm-pads-group">
-        <button class="sm-pad" data-pad="left" aria-label="Left">◀</button>
-        <button class="sm-pad" data-pad="right" aria-label="Right">▶</button>
-      </div>
-      <div class="sm-pads-group">
-        <button class="sm-pad" data-pad="down" aria-label="Slide">▼</button>
-        <button class="sm-pad" data-pad="hit" aria-label="Attack">👊</button>
-        <button class="sm-pad sm-pad-jump" data-pad="jump" aria-label="Jump">▲</button>
-      </div>`;
+
+    // left: analog joystick (a base ring + a draggable nub)
+    const stick = document.createElement("div");
+    stick.className = "sm-stick";
+    const nub = document.createElement("div");
+    nub.className = "sm-nub";
+    stick.appendChild(nub);
+
+    // right: round action buttons
+    const acts = document.createElement("div");
+    acts.className = "sm-acts";
+    acts.innerHTML = `
+      <button class="sm-round sm-attack" data-act="hit" aria-label="Attack">👊</button>
+      <button class="sm-round sm-jump" data-act="jump" aria-label="Jump">▲</button>`;
+
+    pads.appendChild(stick);
+    pads.appendChild(acts);
     layer.appendChild(pads);
+
+    // dismiss ✕ — round, top-centre, clear of Paint's own min/max/close
     const bye = document.createElement("button");
-    bye.className = "sm-pad sm-pad-bye";
-    bye.dataset.pad = "bye";
+    bye.className = "sm-round sm-bye";
     bye.setAttribute("aria-label", "Put away");
     bye.textContent = "✕";
-    layer.appendChild(bye); // anchored to the layer's top-right, not the pad row
-    layer.querySelectorAll(".sm-pad").forEach((b) => {
-      const code = b.dataset.pad;
+    layer.appendChild(bye);
+    bye.addEventListener("pointerdown", (e) => { e.preventDefault(); destroy(); });
+
+    // --- joystick: drag the nub; its offset drives left / right / crouch ---
+    let R = 33, stickId = null; // max nub travel (body-internal px), recomputed from real sizes
+    const recomputeR = () => {
+      const z = currentZoom() || 1;
+      const sR = stick.getBoundingClientRect().width / z / 2;
+      const nR = nub.getBoundingClientRect().width / z / 2;
+      R = Math.max(16, sR - nR); // keep the nub inside the ring at any screen size
+    };
+    const setNub = (dx, dy) => { nub.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`; };
+    const clearMove = () => { keys.left = keys.right = keys.down = false; };
+    const track = (e) => {
+      if (stickId === null) return;
+      const z = currentZoom() || 1;
+      const r = stick.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      let dx = (e.clientX - cx) / z, dy = (e.clientY - cy) / z; // body-internal px
+      const d = Math.hypot(dx, dy) || 1;
+      if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+      setNub(dx, dy);
+      const nx = dx / R, ny = dy / R; // -1..1
+      keys.right = nx > 0.34;
+      keys.left  = nx < -0.34;
+      const wasDown = keys.down;
+      keys.down  = ny > 0.5 && Math.abs(nx) < 0.6; // push down to crouch / knee-slide
+      if (keys.down && !wasDown) tryStartSlide();
+    };
+    stick.addEventListener("pointerdown", (e) => {
+      e.preventDefault(); stickId = e.pointerId; recomputeR();
+      try { stick.setPointerCapture(e.pointerId); } catch (_) {}
+      track(e);
+    });
+    stick.addEventListener("pointermove", track);
+    const endStick = () => { if (stickId === null) return; stickId = null; setNub(0, 0); clearMove(); };
+    stick.addEventListener("pointerup", endStick);
+    stick.addEventListener("pointercancel", endStick);
+
+    // --- round action buttons: jump (tap twice in the air = double) + attack ---
+    layer.querySelectorAll(".sm-acts .sm-round").forEach((b) => {
+      const act = b.dataset.act;
       const press = (on) => (e) => {
         e.preventDefault();
         b.classList.toggle("on", on);
-        if (code === "bye") { if (on) destroy(); return; }
-        if (code === "jump") { if (on) S.jumpBuf = 8; return; }
-        if (code === "hit") { if (on) doAttack(); return; }
-        if (code === "down" && on && !keys.down) tryStartSlide();
-        keys[code] = on;
+        if (!on) return;
+        if (act === "jump") S.jumpBuf = 8;
+        else if (act === "hit") doAttack();
       };
       b.addEventListener("pointerdown", press(true));
       b.addEventListener("pointerup", press(false));
@@ -479,11 +519,12 @@ function createStickman(opts = {}) {
       let landed = false, bestTop = Infinity;
       if (S.vy >= 0) {
         for (const p of plats) {
+          if (S.dropping && !p.ground) continue; // escape drop: only the floor catches it
           if (nx < p.l - 2 || nx > p.r + 2) continue;
           if (prevY <= p.top + 1 && ny >= p.top && p.top < bestTop) { bestTop = p.top; landed = true; }
         }
       }
-      if (landed) { if (!S.grounded) S.landTimer = 8; ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
+      if (landed) { if (!S.grounded) S.landTimer = 8; ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; S.dropping = false; }
       else {
         // still grounded? only if a platform is right under the feet (else walk off the edge)
         let support = false;

@@ -2926,27 +2926,28 @@ body.lang-ru .login-logo {
 .stickman .sm-head { fill: #111; stroke: none; }
 /* the player's own drawing as the character — squash/stretch pivots at the feet */
 .stickman-sprite { transform-origin: 50% 100%; image-rendering: auto; }
-.stickman-hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s ease; }
-.stickman-hint.fade { opacity: 0; }
-.stickman-hint b { color: #111; }
-/* When the thumb pads are present the toast must float ABOVE them, not through them. */
-.stickman-layer.sm-has-pads .stickman-hint { bottom: 116px; }
-/* touch pads — thumb controls; sized to fit the NARROWEST phones (≈288px of
-   body-internal width at 125% zoom) so the two clusters never overlap or run
-   off the edge. Win98-beveled, semi-opaque; only on coarse pointers. */
-.stickman-pads { position: absolute; left: 0; right: 0; bottom: calc(36px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: flex-end; padding: 0 8px; pointer-events: none; z-index: 2; gap: 8px; }
-.sm-pads-group { display: flex; gap: 6px; pointer-events: none; flex: 0 0 auto; }
-/* Semi-transparent so the game shows through (the figure walks behind them);
-   the Win98 bevel + white text-shadow keep them readable even at low opacity. */
-.sm-pad { pointer-events: auto; width: 40px; height: 40px; border-radius: 9px; background: rgba(206,206,206,.42); border: 2px solid; border-color: rgba(255,255,255,.7) rgba(90,90,90,.7) rgba(90,90,90,.7) rgba(255,255,255,.7); font: bold 16px Tahoma, sans-serif; color: rgba(20,20,20,.92); text-shadow: 0 1px 0 rgba(255,255,255,.5); touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 1px 2px 4px rgba(0,0,0,.28); display: flex; align-items: center; justify-content: center; }
-.sm-pad.on { border-color: rgba(90,90,90,.8) rgba(255,255,255,.8) rgba(255,255,255,.8) rgba(90,90,90,.8); background: rgba(140,140,140,.6); transform: translateY(1px); }
-.sm-pad-jump { width: 46px; height: 46px; font-size: 18px; }
-/* Dismiss ✕ — top-CENTER so it never lands on Paint's own ×/□/− controls. */
-.sm-pad-bye { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; right: auto; transform: translateX(-50%); width: 34px; height: 34px; font-size: 13px; opacity: .55; }
-.sm-pad-bye.on { transform: translateX(-50%) translateY(1px); }
+/* Circular thumb controls (coarse pointers only): a drag joystick on the left,
+   round action buttons on the right. Semi-transparent so the game shows through;
+   the throw radius is computed from real sizes so it works at any phone width. */
+.stickman-pads { position: absolute; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; z-index: 2; }
+/* left: analog joystick (base ring + draggable nub) */
+.sm-stick { position: relative; width: 116px; height: 116px; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: radial-gradient(circle at 50% 42%, rgba(232,232,232,.34), rgba(150,150,150,.30)); border: 2px solid rgba(255,255,255,.5); box-shadow: inset 0 0 14px rgba(0,0,0,.20), 1px 2px 7px rgba(0,0,0,.28); }
+.sm-nub { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(150,150,150,.62); border: 2px solid; border-color: rgba(255,255,255,.85) rgba(85,85,85,.85) rgba(85,85,85,.85) rgba(255,255,255,.85); box-shadow: 1px 2px 6px rgba(0,0,0,.32); will-change: transform; }
+/* right: round action buttons (jump primary, attack up-left of it) */
+.sm-acts { position: relative; width: 140px; height: 116px; pointer-events: none; }
+.sm-round { position: absolute; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; display: flex; align-items: center; justify-content: center; background: rgba(206,206,206,.42); border: 2px solid; border-color: rgba(255,255,255,.7) rgba(90,90,90,.7) rgba(90,90,90,.7) rgba(255,255,255,.7); color: rgba(20,20,20,.92); text-shadow: 0 1px 0 rgba(255,255,255,.5); box-shadow: 1px 2px 5px rgba(0,0,0,.28); }
+.sm-round.on { background: rgba(140,140,140,.6); border-color: rgba(90,90,90,.8) rgba(255,255,255,.8) rgba(255,255,255,.8) rgba(90,90,90,.8); transform: translateY(1px); }
+.sm-jump { width: 68px; height: 68px; font-size: 23px; right: 0; bottom: 0; }
+.sm-attack { width: 58px; height: 58px; font-size: 25px; left: 0; bottom: 40px; }
+/* dismiss ✕ — round, top-centre, clear of Paint's own ×/□/− controls */
+.sm-bye { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 32px; height: 32px; font-size: 13px; background: rgba(206,206,206,.4); opacity: .68; }
+.sm-bye.on { transform: translateX(-50%) translateY(1px); }
 @media (max-width: 360px) {
-  .sm-pad { width: 36px; height: 36px; font-size: 15px; }
-  .sm-pad-jump { width: 42px; height: 42px; font-size: 17px; }
+  .sm-stick { width: 100px; height: 100px; }
+  .sm-nub { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
+  .sm-acts { width: 122px; height: 102px; }
+  .sm-jump { width: 60px; height: 60px; }
+  .sm-attack { width: 52px; height: 52px; bottom: 34px; }
 }
 /* attack feedback: a quick impact spark; knocked icons wobble; hit windows rattle */
 .sm-impact { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.95) 18%, rgba(255,225,77,.7) 45%, transparent 72%); pointer-events: none; animation: smImpact .22s ease-out forwards; z-index: 9001; }
