@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=193";
-import { ICONS } from "./icons.js?v=193";
-import { saveImage, loadUserFS } from "./user-storage.js?v=193";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=193";
-import { FS } from "./file-system.js?v=193";
-import { spawnStickmanAt } from "./stickman.js?v=193";
-import { currentZoom } from "./scale.js?v=193";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=194";
+import { ICONS } from "./icons.js?v=194";
+import { saveImage, loadUserFS } from "./user-storage.js?v=194";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=194";
+import { FS } from "./file-system.js?v=194";
+import { spawnStickmanAt } from "./stickman.js?v=194";
+import { currentZoom } from "./scale.js?v=194";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -688,8 +688,13 @@ export function openPaint(opts = {}) {
     const cctx = cut.getContext("2d");
     cctx.drawImage(canvas, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
     const d = cctx.getImageData(0, 0, box.w, box.h);
+    // key out the white page: WHITE is the only thing with every channel high,
+    // so test the MIN channel — that drops the background and the grey
+    // anti-aliased halo while keeping any coloured ink, with a soft edge ramp.
     for (let i = 0; i < d.data.length; i += 4) {
-      if (d.data[i] > 245 && d.data[i + 1] > 245 && d.data[i + 2] > 245) d.data[i + 3] = 0;
+      const mn = Math.min(d.data[i], d.data[i + 1], d.data[i + 2]);
+      if (mn >= 236) d.data[i + 3] = 0;
+      else if (mn >= 200) d.data[i + 3] = Math.min(d.data[i + 3], Math.round(255 * (236 - mn) / 36));
     }
     cctx.putImageData(d, 0, 0);
     // overlay the sprite exactly over the drawing (body-internal px)
@@ -722,7 +727,12 @@ export function openPaint(opts = {}) {
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
         sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
-        confine: { rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole },
+        confine: {
+          rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
+          // escaped → if Paint is maximized, un-maximize so the figure lands on
+          // the real desktop (and you can see it happen)
+          onEscape: () => { const w = document.querySelector(`.window[data-id="${winId}"]`); if (w && w.classList.contains("maximized")) toggleMaximize(winId); },
+        },
       });
       sprite.remove(); // the engine renders the SAME bitmap from this exact spot
       waking = false;
@@ -741,23 +751,35 @@ export function openPaint(opts = {}) {
     }
   }
 
+  // On mobile, DON'T maximize — leave the desktop (taskbar + a strip below)
+  // visible so the Stickman game's escape reads, and so the figure can roam
+  // the desktop. Paint takes the top ~62% of the screen.
+  const isNarrow = window.matchMedia("(max-width: 720px)").matches;
+  let openW = 720, openH = 540, openX, openY;
+  if (isNarrow) {
+    const z = currentZoom() || 1;
+    const vw = window.innerWidth / z, vh = window.innerHeight / z;
+    openW = Math.round(vw - 8);
+    openH = Math.round(vh * 0.6);
+    openX = Math.round((vw - openW) / 2);
+    openY = Math.round(vh * 0.04);
+  }
   const winId = openWindow({
     title: "Paint",
     icon: ICONS.paint(14),
     iconHtml: true,
     content: wrap,
-    width: 720,
-    height: 540,
+    width: openW,
+    height: openH,
+    x: openX,
+    y: openY,
     flush: true,
   });
 
-  // After the window mounts: on mobile, maximize so paint fills the screen.
-  // Then size the canvas to fully fit the canvas-wrap area, oriented the
-  // same way as the device (portrait window → portrait canvas, etc.).
+  // After the window mounts, size the canvas to fully fit the canvas-wrap area,
+  // oriented the same way as the device (portrait window → portrait canvas).
   setTimeout(() => {
-    const isNarrow = window.matchMedia("(max-width: 720px)").matches;
-    if (isNarrow) toggleMaximize(winId);
-    // Wait one more tick for the maximize layout to settle.
+    // Wait one more tick for the layout to settle.
     setTimeout(() => {
       const wrapEl = wrap.querySelector(".paint-canvas-wrap");
       if (!wrapEl) return;

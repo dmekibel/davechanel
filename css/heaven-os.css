@@ -2921,7 +2921,7 @@ body.lang-ru .login-logo {
 
 /* ===== Stickman — a drawn figure loose on the desktop (platformer overlay) ===== */
 .stickman-layer { position: fixed; inset: 0; pointer-events: none; z-index: 9000; overflow: hidden; }
-.stickman { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 25px 33px; will-change: transform; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.28)); }
+.stickman { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 25px 33px; will-change: transform; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.28)); z-index: 5; }
 .stickman .sm-seg { stroke: #111; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
 .stickman .sm-head { fill: #111; stroke: none; }
 /* the player's own drawing as the character — squash/stretch pivots at the feet */
@@ -2930,7 +2930,7 @@ body.lang-ru .login-logo {
 .stickman-hint.fade { opacity: 0; }
 .stickman-hint b { color: #111; }
 /* touch pads — thumb-sized, Win98-beveled, semi-transparent; only on coarse pointers */
-.stickman-pads { position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; }
+.stickman-pads { position: absolute; left: 0; right: 0; bottom: 44px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; z-index: 2; }
 .sm-pads-group { display: flex; gap: 10px; pointer-events: none; }
 .sm-pad { pointer-events: auto; width: 54px; height: 54px; border-radius: 10px; background: rgba(192,192,192,.72); border: 2px solid; border-color: rgba(255,255,255,.9) rgba(96,96,96,.9) rgba(96,96,96,.9) rgba(255,255,255,.9); font: bold 20px Tahoma, sans-serif; color: #222; touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 1px 2px 4px rgba(0,0,0,.3); }
 .sm-pad.on { border-color: rgba(96,96,96,.9) rgba(255,255,255,.9) rgba(255,255,255,.9) rgba(96,96,96,.9); background: rgba(170,170,170,.8); }

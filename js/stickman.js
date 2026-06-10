@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=193";
+import { currentZoom } from "./scale.js?v=194";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -144,6 +144,13 @@ function createStickman(opts = {}) {
   const knownWins = new WeakSet();
   document.querySelectorAll(".window").forEach((w) => knownWins.add(w));
 
+  // escape the canvas → the live desktop is the world now
+  function goFree() {
+    if (stage === "free") return;
+    stage = "free"; S.grounded = false;
+    if (confine && confine.onEscape) confine.onEscape(); // un-maximize Paint if needed
+    say("<b>It escaped!</b> The desktop is yours · Esc puts it away", 6500);
+  }
   // one shared crack path for body-slams AND attacks: 3 hits on a wall break it
   function crackWall(side, wy) {
     if (!confine || broken[side] || hitCooldown > 0) return false;
@@ -179,8 +186,8 @@ function createStickman(opts = {}) {
     if (stage === "canvas") {
       const rb = confine.rect();
       if (rb) {
-        if (S.facing < 0 && S.x - FW / 2 - reach <= rb.l + 8 && crackWall("left", S.y - 30)) impactFlash(rb.l + 8, hy);
-        else if (S.facing > 0 && S.x + FW / 2 + reach >= rb.r - 8 && crackWall("right", S.y - 30)) impactFlash(rb.r - 8, hy);
+        if (S.facing < 0 && S.x - FW / 2 - reach <= rb.l + 8 && crackWall("left", S.y - FH * 0.5)) impactFlash(rb.l + 8, hy);
+        else if (S.facing > 0 && S.x + FW / 2 + reach >= rb.r - 8 && crackWall("right", S.y - FH * 0.5)) impactFlash(rb.r - 8, hy);
       }
       return;
     }
@@ -445,7 +452,7 @@ function createStickman(opts = {}) {
     if (stage === "canvas") {
       // ---- Level 1: the canvas box IS the world. Crack a wall to get out. ----
       const rb = confine.rect();
-      if (!rb) { stage = "free"; } // the page is gone — it's already out
+      if (!rb) { goFree(); } // the page is gone — it's already out
       else {
         if (hitCooldown > 0) hitCooldown -= dt;
         const BODY = FH - 6; // head clearance above the feet
@@ -453,20 +460,17 @@ function createStickman(opts = {}) {
         else if (S.grounded && ny < rb.b - 3) S.grounded = false;
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
         // side walls — SLAM them (airborne, or running hard) to crack them;
-        // a deliberate ATTACK (X / 👊) cracks them too, via the same crackWall
+        // a deliberate ATTACK (X / 👊) cracks them too, via the same crackWall.
+        // The crack is drawn at the figure's CONTACT height (its mid-body).
         const slam = (side) => {
           if (S.grounded && Math.abs(S.vx) < 2.2) return; // a lazy lean doesn't count
-          crackWall(side, ny - 30);
+          crackWall(side, ny - FH * 0.5);
         };
         S.walled = 0;
         if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); if (!S.grounded && dir < 0) { S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
         if (nx >= rb.r - 8 && !broken.right) { slam("right"); nx = rb.r - 8;  S.vx = Math.min(0, S.vx * -0.3); if (!S.grounded && dir > 0) { S.walled = 1;  S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
         // out through a broken wall → the desktop world takes over
-        if (nx < rb.l - 12 || nx > rb.r + 12) {
-          stage = "free";
-          S.grounded = false;
-          say("<b>It escaped!</b> The desktop is yours · Esc puts it away", 6500);
-        }
+        if (nx < rb.l - 12 || nx > rb.r + 12) goFree();
       }
     } else {
       // ---- one-way platform collision (land on tops while falling) ----
@@ -549,30 +553,36 @@ function createStickman(opts = {}) {
   // (transform-origin is the feet: bottom-center)
   function applySpriteVisual() {
     let sx = 1, sy = 1, rot = 0, dy = 0, ax = 0;
-    if (S.attackTimer > 0) {                     // strike: lunge out and back
-      const k = Math.sin((1 - S.attackTimer / 12) * Math.PI);
-      ax = S.facing * k * 9; rot = 7 * k; sx = 1 + 0.14 * k; sy = 1 - 0.07 * k;
-    } else if (S.sliding) {                      // knee slide: lean back, low, fast
-      rot = -22; sy = 0.62; sx = 1.18;
-    } else if (keys.down && S.grounded) {        // crawl: low and waddling
-      sy = 0.55; sx = 1.15;
-      if (Math.abs(S.vx) > 0.3) dy = -Math.abs(Math.sin(S.phase * 0.7)) * 1.5;
-    } else if (S.landTimer > 0) {                // landing squash, recovering
+    if (S.attackTimer > 0) {                     // PUNCH: wind up → snap forward → settle
+      const p = 1 - S.attackTimer / 12;          // 0..1
+      let k;
+      if (p < 0.26) k = -(p / 0.26) * 0.55;                     // pull back
+      else if (p < 0.58) k = ((p - 0.26) / 0.32) * 1.55 - 0.55; // snap out (overshoot)
+      else k = (1 - (p - 0.58) / 0.42);                         // recover
+      ax = S.facing * k * 13; rot = k * 11; sx = 1 + Math.abs(k) * 0.16; sy = 1 - Math.abs(k) * 0.1;
+    } else if (S.sliding) {                       // knee slide: lean way back, low, fast
+      rot = -26; sy = 0.58; sx = 1.24; dy = 3;
+    } else if (keys.down && S.grounded) {         // crawl: low, waddling side to side
+      sy = 0.52; sx = 1.2;
+      rot = Math.sin(S.phase) * 7;
+      dy = Math.abs(Math.sin(S.phase * 0.5)) * 1.5;
+    } else if (S.landTimer > 0) {                 // landing squash, recovering
       const k = S.landTimer / 8;
-      sy = 1 - 0.22 * k; sx = 1 + 0.22 * k;
+      sy = 1 - 0.26 * k; sx = 1 + 0.26 * k;
     } else if (!S.grounded) {
-      if (S.walled !== 0) { rot = 8; sy = 1.04; sx = 0.97; } // clinging to a wall, sliding down
+      if (S.walled !== 0) { rot = 9; sy = 1.06; sx = 0.95; }    // clinging to a wall, sliding down
       else if (S.spinTimer > 0) rot = (1 - S.spinTimer / 16) * 360 * S.facing; // the double-jump flip
-      else { sy = S.vy < 0 ? 1.1 : 0.97; sx = 2 - sy; rot = clamp(S.vx * 1.8, -14, 14); }
-    } else if (Math.abs(S.vx) > 0.4) {           // running: lean + step-bob
-      rot = clamp(S.vx * 2.4, -13, 13);
-      dy = -Math.abs(Math.sin(S.phase)) * 3;
-      sy = 1 - Math.abs(Math.cos(S.phase)) * 0.045; sx = 2 - sy;
-    } else {                                     // idle: breathing
-      sy = 1 + Math.sin(S.t * 0.05) * 0.02;
-      rot = Math.sin(S.t * 0.031) * 1.6;
+      else { sy = S.vy < 0 ? 1.14 : 0.94; sx = 2 - sy; rot = clamp(S.vx * 1.8, -16, 16); } // stretch up, squash down
+    } else if (Math.abs(S.vx) > 0.4) {            // RUN: bound + marching sway + foot-plant squash
+      const bob = Math.abs(Math.sin(S.phase));
+      dy = -bob * 5.5;
+      rot = clamp(S.vx * 1.7, -9, 9) + Math.sin(S.phase) * 4.5 * S.facing; // pendulum sway from the feet
+      sy = 1 - (1 - bob) * 0.07; sx = 2 - sy;                   // squashes as the foot lands
+    } else {                                      // idle: breathing + subtle sway
+      sy = 1 + Math.sin(S.t * 0.05) * 0.025;
+      rot = Math.sin(S.t * 0.031) * 1.8;
     }
-    if (S.walled !== 0 && !S.grounded) S.facing = S.walled; // face the wall while clinging
+    if (S.walled !== 0 && !S.grounded) S.facing = S.walled;     // face the wall while clinging
     img.style.transform = `translate(${(S.x - FW / 2 + ax).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
