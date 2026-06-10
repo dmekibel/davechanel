@@ -2761,8 +2761,8 @@ body.lang-ru .login-logo {
 
 /* visible draw + бита piles (flanking the play pile) and flying cards */
 .anarchy-stock, .anarchy-bita-pile { position: absolute; top: 50%; transform: translateY(-50%); text-align: center; color: #cfeede; pointer-events: none; }
-.anarchy-stock { left: 3%; }
-.anarchy-bita-pile { right: 3%; }
+.anarchy-stock { left: 10%; }
+.anarchy-bita-pile { right: 10%; }
 /* when you owe a pickup, the draw deck lights up and accepts a tap */
 .anarchy-stock.pickup-ready { pointer-events: auto; cursor: pointer; animation: anarchyDeckPulse 1s ease-in-out infinite; }
 .anarchy-stock.tappable { pointer-events: auto; cursor: pointer; } /* the optional draw-and-pass is clickable without the urgent pulse */
