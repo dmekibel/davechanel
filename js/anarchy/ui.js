@@ -517,70 +517,53 @@ export function openAnarchy() {
   }
   function stopFireworks() { if (fxTimer) { clearInterval(fxTimer); fxTimer = null; } if (elFx) elFx.innerHTML = ""; }
 
-  // ---- win cascade: cards fling from the top and bounce down the felt, leaving
-  // trails, like the classic Windows Solitaire victory animation. ----
-  let cascadeRAF = null, cascadeCanvas = null;
+  // ---- win cascade: a flurry of REAL game cards (identical design to the table)
+  // rains down and bounces, BOUNDED to the felt so nothing ever clips off an edge. ----
+  let winRainRAF = null, winRainCards = [];
   function stopWinCascade() {
-    if (cascadeRAF) { cancelAnimationFrame(cascadeRAF); cascadeRAF = null; }
-    if (cascadeCanvas) { cascadeCanvas.remove(); cascadeCanvas = null; }
+    if (winRainRAF) { cancelAnimationFrame(winRainRAF); winRainRAF = null; }
+    winRainCards.forEach((s) => s.el.remove());
+    winRainCards = [];
   }
   function startWinCascade() {
-    if (cascadeCanvas || !elFly) return;
-    const z = currentZoom() || 1, dpr = window.devicePixelRatio || 1;
-    const rect = elFly.getBoundingClientRect();
-    const W = Math.max(120, rect.width / z), H = Math.max(120, rect.height / z); // the WHOLE game, full screen
-    const scale = dpr * z; // crisp on retina / mobile and under the OS zoom
-    const canvas = document.createElement("canvas");
-    canvas.className = "anarchy-cascade";
-    canvas.width = Math.round(W * scale); canvas.height = Math.round(H * scale);
-    canvas.style.width = W + "px"; canvas.style.height = H + "px";
-    elFly.appendChild(canvas); cascadeCanvas = canvas;
-    const ctx = canvas.getContext("2d");
-    ctx.scale(scale, scale);
-    const cw = CW, ch = CH;                          // match the real cards' live size
-    const rf = Math.max(8, Math.round(cw * 0.27));   // rank font, scaled to the card
-    const sf = Math.max(7, Math.round(cw * 0.24));   // suit font
-    const ix = Math.round(cw * 0.2), iy = Math.round(ch * 0.06);
-    const suits = [["♥", "#c40000"], ["♦", "#c40000"], ["♣", "#111"], ["♠", "#111"]];
-    const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-    const deck = [];
-    for (let i = 0; i < 48; i++) deck.push({ rank: ranks[(Math.random() * ranks.length) | 0], suit: suits[(Math.random() * suits.length) | 0] });
-    const spawn = () => {
-      const c = deck.pop(); if (!c) return null;
-      return { ...c,
-        x: W * (0.1 + Math.random() * 0.8) - cw / 2,        // launch from varied spots across the top
-        y: 4,
-        vx: (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 6), // wider, more varied sideways speed
-        vy: -(1 + Math.random() * 4),
-        g: 0.35 + Math.random() * 0.4,                       // varied gravity → varied arcs
-        rest: 0.68 + Math.random() * 0.2,                    // varied bounciness
-      };
+    if (winRainRAF || !elFly) return;
+    const z = currentZoom() || 1;
+    const f = elFly.getBoundingClientRect();
+    const W = Math.max(120, f.width / z), H = Math.max(120, f.height / z);
+    const RANKS = [2,3,4,5,6,7,8,9,10,11,12,13,14], SUITS = ["H","D","C","S"];
+    const maxX = Math.max(0, W - CW), floor = Math.max(0, H - CH);
+    const rc = () => { const r = RANKS[(Math.random()*RANKS.length)|0], s = SUITS[(Math.random()*SUITS.length)|0]; return { rank: r, suit: s, id: `${r}${s}` }; };
+    const launch = (sc, fromTop) => {
+      sc.x = Math.random() * maxX;
+      sc.y = fromTop ? -CH - Math.random() * H * 0.6 : Math.random() * floor; // first frame: spread across the felt
+      sc.vx = (Math.random() - 0.5) * 2.4;
+      sc.vy = 1 + Math.random() * 2.5;
+      sc.rot = Math.random() * 360; sc.vr = (Math.random() - 0.5) * 9; sc.bounces = 0;
+      sc.el.style.transform = `translate(${sc.x}px, ${sc.y}px) rotate(${sc.rot}deg)`; // set NOW so the first frame is correct
     };
-    const roundRect = (x, y, w, h, r) => {
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
-      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+    winRainCards = [];
+    for (let i = 0; i < 16; i++) {
+      const el = cardEl(rc());          // a REAL game card — same markup/design as the table
+      el.className += " anarchy-win-card";
+      elFly.appendChild(el);
+      const sc = { el }; launch(sc, false);
+      winRainCards.push(sc);
+    }
+    const GRAV = 0.22;
+    const tick = () => {
+      for (const sc of winRainCards) {
+        sc.vy += GRAV; sc.x += sc.vx; sc.y += sc.vy; sc.rot += sc.vr;
+        if (sc.x < 0) { sc.x = 0; sc.vx = -sc.vx * 0.9; }          // bounce off the sides — bounded, never clips
+        else if (sc.x > maxX) { sc.x = maxX; sc.vx = -sc.vx * 0.9; }
+        if (sc.y >= floor) {
+          if (sc.bounces < 2 && sc.vy > 2.2) { sc.y = floor; sc.vy = -sc.vy * 0.5; sc.vx *= 0.8; sc.bounces++; }
+          else { launch(sc, true); continue; }                     // settled → recycle from the top: an endless gentle rain
+        }
+        sc.el.style.transform = `translate(${sc.x}px, ${sc.y}px) rotate(${sc.rot}deg)`;
+      }
+      winRainRAF = requestAnimationFrame(tick);
     };
-    const idx = (c, ox, oy) => { // rank over suit — the same index the real cards use
-      ctx.fillStyle = c.suit[1]; ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.font = `bold ${rf}px Tahoma, sans-serif`; ctx.fillText(c.rank, ox, oy);
-      ctx.font = `${sf}px Tahoma, sans-serif`; ctx.fillText(c.suit[0], ox, oy + rf);
-    };
-    const draw = (c) => {
-      roundRect(c.x, c.y, cw, ch, 4);
-      ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#888"; ctx.lineWidth = 1; ctx.stroke();
-      idx(c, c.x + ix, c.y + iy); // top-left
-      ctx.save(); ctx.translate(c.x + cw - ix, c.y + ch - iy); ctx.rotate(Math.PI); idx(c, 0, 0); ctx.restore(); // bottom-right mirror
-    };
-    let cur = spawn();
-    const step = () => {
-      if (!cur) { cascadeRAF = null; return; } // out of cards — leave the trails on screen
-      cur.vy += cur.g; cur.x += cur.vx; cur.y += cur.vy;
-      if (cur.y + ch >= H) { cur.y = H - ch; cur.vy = Math.abs(cur.vy) < 2 ? -(4 + Math.random() * 4) : -cur.vy * cur.rest; }
-      draw(cur);
-      if (cur.x < -cw - 6 || cur.x > W + 6) cur = spawn(); // flew off the side → fling the next
-      cascadeRAF = requestAnimationFrame(step);
-    };
-    cascadeRAF = requestAnimationFrame(step);
+    winRainRAF = requestAnimationFrame(tick);
   }
 
   // ---- the move the current selection maps to (or null) ----
