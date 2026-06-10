@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=194";
-import { ICONS } from "./icons.js?v=194";
-import { saveImage, loadUserFS } from "./user-storage.js?v=194";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=194";
-import { FS } from "./file-system.js?v=194";
-import { spawnStickmanAt } from "./stickman.js?v=194";
-import { currentZoom } from "./scale.js?v=194";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=196";
+import { ICONS } from "./icons.js?v=196";
+import { saveImage, loadUserFS } from "./user-storage.js?v=196";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=196";
+import { FS } from "./file-system.js?v=196";
+import { spawnStickmanAt } from "./stickman.js?v=196";
+import { currentZoom } from "./scale.js?v=196";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -729,9 +729,17 @@ export function openPaint(opts = {}) {
         sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
         confine: {
           rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
-          // escaped → if Paint is maximized, un-maximize so the figure lands on
-          // the real desktop (and you can see it happen)
-          onEscape: () => { const w = document.querySelector(`.window[data-id="${winId}"]`); if (w && w.classList.contains("maximized")) toggleMaximize(winId); },
+          // escaped → get Paint out of the way so the figure lands on the REAL,
+          // visible desktop. On desktop it's usually maximized → un-maximize.
+          // On mobile it's a 60%-height window that covers the play area and whose
+          // hidden icons would become phantom platforms — so minimize it: the
+          // figure drops onto the actual icons + taskbar, and you watch Paint recede.
+          onEscape: () => {
+            const w = document.querySelector(`.window[data-id="${winId}"]`);
+            if (!w) return;
+            if (w.classList.contains("maximized")) { toggleMaximize(winId); return; }
+            if (window.matchMedia("(max-width: 720px)").matches) minimize(winId);
+          },
         },
       });
       sprite.remove(); // the engine renders the SAME bitmap from this exact spot

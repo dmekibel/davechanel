@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=194";
+import { currentZoom } from "./scale.js?v=196";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -353,6 +353,7 @@ function createStickman(opts = {}) {
 
   // ---- touch pads (coarse pointers): ◀ ▶ on the left, ▼ ▲ on the right, ✕ away ----
   if (isTouch) {
+    layer.classList.add("sm-has-pads"); // lifts the hint toast clear of the pad band
     const pads = document.createElement("div");
     pads.className = "stickman-pads";
     pads.innerHTML = `
