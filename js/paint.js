@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=187";
-import { ICONS } from "./icons.js?v=187";
-import { saveImage, loadUserFS } from "./user-storage.js?v=187";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=187";
-import { FS } from "./file-system.js?v=187";
-import { spawnStickmanAt } from "./stickman.js?v=187";
-import { currentZoom } from "./scale.js?v=187";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=188";
+import { ICONS } from "./icons.js?v=188";
+import { saveImage, loadUserFS } from "./user-storage.js?v=188";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=188";
+import { FS } from "./file-system.js?v=188";
+import { spawnStickmanAt } from "./stickman.js?v=188";
+import { currentZoom } from "./scale.js?v=188";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -621,6 +621,50 @@ export function openPaint(opts = {}) {
     setTimeout(() => tEl.classList.add("fade"), 3400);
     setTimeout(() => tEl.remove(), 4100);
   }
+  // ---- the figure's Level-1 world: the live canvas box, in body-internal px ----
+  function canvasWorldRect() {
+    if (!canvas.isConnected) return null;
+    const zz = currentZoom() || 1;
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return { l: r.left / zz, t: r.top / zz, r: r.right / zz, b: r.bottom / zz };
+  }
+  function worldToCanvasPt(wx, wy) {
+    const zz = currentZoom() || 1;
+    const r = canvas.getBoundingClientRect();
+    return { x: (wx - r.left / zz) * canvas.width / (r.width / zz), y: (wy - r.top / zz) * canvas.height / (r.height / zz) };
+  }
+  // each slam tears real cracks into the page (drawn into the actual canvas)
+  function drawWallCrack(side, wy) {
+    const p = worldToCanvasPt(0, wy);
+    const edgeX = side === "left" ? 1 : canvas.width - 1;
+    const dir = side === "left" ? 1 : -1;
+    ctx.save();
+    ctx.strokeStyle = "#6f6f6f"; ctx.lineWidth = 1.4; ctx.lineCap = "round";
+    for (let i = 0; i < 3; i++) {
+      let cx = edgeX, cy = p.y + (Math.random() * 30 - 15);
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      for (let s = 0; s < 4; s++) { cx += dir * (5 + Math.random() * 10); cy += Math.random() * 16 - 8; ctx.lineTo(cx, cy); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // the third slam tears a hole clean through — the gray behind the page shows
+  function drawWallHole(side, wy) {
+    const p = worldToCanvasPt(0, wy);
+    const edgeX = side === "left" ? 0 : canvas.width;
+    const dir = side === "left" ? 1 : -1;
+    ctx.save();
+    ctx.fillStyle = "#808080";
+    ctx.beginPath();
+    ctx.moveTo(edgeX, p.y - 44);
+    for (let i = 1; i <= 7; i++) ctx.lineTo(edgeX + dir * (10 + Math.random() * 22), p.y - 44 + (88 / 7) * i);
+    ctx.lineTo(edgeX, p.y + 44);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#5c5c5c"; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.restore();
+  }
+
   function bringToLife() {
     if (waking) return;
     const box = drawnBBox();
@@ -658,14 +702,16 @@ export function openPaint(opts = {}) {
     sprite.classList.add("wake");                                                  // …did it just move?
     setTimeout(() => { sprite.classList.remove("wake"); sprite.classList.add("hop"); }, 640); // it's ALIVE — two excited hops
     setTimeout(() => {
-      // the leap: hand off to the engine mid-air — the live figure arcs out of
-      // the Paint window and lands wherever physics says (titlebar, desktop…)
+      // hand off to the engine IN PLACE — Level 1 is the canvas itself: the
+      // figure lives on the page now, and must crack a wall to get out
       const sr = sprite.getBoundingClientRect();
       const worldX = (sr.left + sr.width / 2) / z;
       const worldY = sr.bottom / z;
-      const dir = worldX > (window.innerWidth / z) / 2 ? -1 : 1; // leap toward the roomier side
       sprite.classList.remove("hop"); sprite.classList.add("poof");
-      spawnStickmanAt({ x: worldX, y: worldY - 4, vx: dir * 4.5, vy: -12.5 });
+      spawnStickmanAt({
+        x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
+        confine: { rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole },
+      });
       setTimeout(() => { sprite.remove(); waking = false; }, 260);
     }, 640 + 800);
   }

@@ -2,26 +2,26 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=187";
-import { FS, findByPath } from "./file-system.js?v=187";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=187";
-import { win98Prompt } from "./win98-dialogs.js?v=187";
-import { ICONS, iconFor } from "./icons.js?v=187";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=187";
-import { openPaint } from "./paint.js?v=187";
-import { openImageViewer } from "./image-viewer.js?v=187";
-import { openMinesweeper } from "./minesweeper.js?v=187";
-import { openAnarchy } from "./anarchy/ui.js?v=187";
-import { isStickmanActive, dismissStickman } from "./stickman.js?v=187";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=188";
+import { FS, findByPath } from "./file-system.js?v=188";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=188";
+import { win98Prompt } from "./win98-dialogs.js?v=188";
+import { ICONS, iconFor } from "./icons.js?v=188";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=188";
+import { openPaint } from "./paint.js?v=188";
+import { openImageViewer } from "./image-viewer.js?v=188";
+import { openMinesweeper } from "./minesweeper.js?v=188";
+import { openAnarchy } from "./anarchy/ui.js?v=188";
+import { isStickmanActive, dismissStickman } from "./stickman.js?v=188";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=187";
-import { showContextMenu } from "./context-menu.js?v=187";
-import { currentZoom } from "./scale.js?v=187";
-import { t } from "./i18n.js?v=187";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=187";
+} from "./os-mode.js?v=188";
+import { showContextMenu } from "./context-menu.js?v=188";
+import { currentZoom } from "./scale.js?v=188";
+import { t } from "./i18n.js?v=188";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=188";
 
 // ---- Notepad --------------------------------------------------------
 

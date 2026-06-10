@@ -1,13 +1,13 @@
 // Heaven OS — desktop init: icons, start menu, clock
 
-import { rootDesktopItems } from "./file-system.js?v=187";
-import { openProgram, openFile } from "./programs.js?v=187";
-import { listItems } from "./user-storage.js?v=187";
-import { ICONS, iconFor } from "./icons.js?v=187";
-import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=187";
-import { showContextMenu, closeContextMenu } from "./context-menu.js?v=187";
-import { t } from "./i18n.js?v=187";
-import { currentZoom } from "./scale.js?v=187";
+import { rootDesktopItems } from "./file-system.js?v=188";
+import { openProgram, openFile } from "./programs.js?v=188";
+import { listItems } from "./user-storage.js?v=188";
+import { ICONS, iconFor } from "./icons.js?v=188";
+import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=188";
+import { showContextMenu, closeContextMenu } from "./context-menu.js?v=188";
+import { t } from "./i18n.js?v=188";
+import { currentZoom } from "./scale.js?v=188";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",

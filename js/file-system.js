@@ -6,8 +6,8 @@
 // kind on a file says how to open it: "notepad", "explorer", "media", "compose", "html", "image"
 // data is the payload (string, url, html, or folder path).
 
-import { FINE_ART } from "./fine-art-manifest.js?v=187";
-import { UPSCALES } from "./upscale-manifest.js?v=187";
+import { FINE_ART } from "./fine-art-manifest.js?v=188";
+import { UPSCALES } from "./upscale-manifest.js?v=188";
 
 // Dev mode: ?dev=1 in the URL surfaces the "Upscale Tests" folder so
 // David can review gpt-image-2 variants via the Image Viewer. Persists

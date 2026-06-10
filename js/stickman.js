@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=187";
+import { currentZoom } from "./scale.js?v=188";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -68,16 +68,29 @@ function createStickman(opts = {}) {
   g.appendChild(head);
   layer.appendChild(svg);
 
-  // hint toast
+  // hint toast — re-used as the tiny narrator through the escape arc
   const hint = document.createElement("div");
   hint.className = "stickman-hint";
-  hint.innerHTML = "<b>It's alive.</b> ← → move · Space jump · Esc to put away";
   layer.appendChild(hint);
   document.body.appendChild(layer);
-  setTimeout(() => hint.classList.add("fade"), 4200);
+  let hintTimer = null;
+  function say(html, ms = 4200) {
+    hint.innerHTML = html;
+    hint.classList.remove("fade");
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => hint.classList.add("fade"), ms);
+  }
+  say("<b>It's alive.</b> ← → move · Space jump · Esc to put away");
 
   // ---- state ----
   const ritual = opts.x != null; // born from the Paint ritual: leap out alive, no pause
+  // Level 1 — the canvas. While confined, the page IS the world: its edges are
+  // the floor/walls/ceiling. The figure earns its freedom by cracking a wall.
+  const confine = opts.confine || null; // { rect(), onCrack(side, wy), onBreak(side) }
+  let stage = confine ? "canvas" : "free";
+  const wallHits = { left: 0, right: 0 };
+  const broken = { left: false, right: false };
+  let hitCooldown = 0;
   const S = {
     x: ritual ? clamp(opts.x, 6, W - 6) : W / 2,
     y: ritual ? opts.y : H * 0.34,   // feet position; default spawn drops in from mid-air
@@ -88,6 +101,7 @@ function createStickman(opts = {}) {
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
   if (ritual) svg.classList.add("alive");
+  if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Slam into a wall — jump against it!"); }, 6000);
 
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
@@ -217,21 +231,56 @@ function createStickman(opts = {}) {
     let nx = clamp(S.x + S.vx * dt, 6, W - 6);
     let ny = S.y + S.vy * dt;
 
-    // ---- one-way platform collision (land on tops while falling) ----
-    const plats = platforms();
-    let landed = false, bestTop = Infinity;
-    if (S.vy >= 0) {
-      for (const p of plats) {
-        if (nx < p.l - 2 || nx > p.r + 2) continue;
-        if (prevY <= p.top + 1 && ny >= p.top && p.top < bestTop) { bestTop = p.top; landed = true; }
+    if (stage === "canvas") {
+      // ---- Level 1: the canvas box IS the world. Crack a wall to get out. ----
+      const rb = confine.rect();
+      if (!rb) { stage = "free"; } // the page is gone — it's already out
+      else {
+        if (hitCooldown > 0) hitCooldown -= dt;
+        const BODY = 54; // head clearance above the feet
+        if (ny >= rb.b - 1) { ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; }
+        else if (S.grounded && ny < rb.b - 3) S.grounded = false;
+        if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
+        // side walls — SLAM them (airborne, or running hard) to crack them
+        const slam = (side) => {
+          if (broken[side] || hitCooldown > 0) return;
+          if (S.grounded && Math.abs(S.vx) < 2.2) return; // a lazy lean doesn't count
+          hitCooldown = 18;
+          wallHits[side] += 1;
+          if (confine.onCrack) confine.onCrack(side, ny - 30, wallHits[side]);
+          if (wallHits[side] === 1) say("<b>CRACK.</b> Again — break it open!");
+          if (wallHits[side] >= 3) {
+            broken[side] = true;
+            if (confine.onBreak) confine.onBreak(side, ny - 30);
+            say("<b>IT'S OPEN!</b> Through the hole — go!");
+          }
+        };
+        if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); }
+        if (nx >= rb.r - 8 && !broken.right) { slam("right"); nx = rb.r - 8;  S.vx = Math.min(0, S.vx * -0.3); }
+        // out through a broken wall → the desktop world takes over
+        if (nx < rb.l - 12 || nx > rb.r + 12) {
+          stage = "free";
+          S.grounded = false;
+          say("<b>It escaped!</b> The desktop is yours · Esc puts it away", 6500);
+        }
       }
-    }
-    if (landed) { ny = bestTop; S.vy = 0; if (!S.grounded) { /* land */ } S.grounded = true; S.coyote = 6; }
-    else {
-      // still grounded? only if a platform is right under the feet (else walk off the edge)
-      let support = false;
-      for (const p of plats) { if (nx >= p.l - 2 && nx <= p.r + 2 && Math.abs(ny - p.top) < 2.5) { support = true; ny = p.top; break; } }
-      if (S.grounded && !support) { S.grounded = false; S.coyote = 6; }
+    } else {
+      // ---- one-way platform collision (land on tops while falling) ----
+      const plats = platforms();
+      let landed = false, bestTop = Infinity;
+      if (S.vy >= 0) {
+        for (const p of plats) {
+          if (nx < p.l - 2 || nx > p.r + 2) continue;
+          if (prevY <= p.top + 1 && ny >= p.top && p.top < bestTop) { bestTop = p.top; landed = true; }
+        }
+      }
+      if (landed) { ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; }
+      else {
+        // still grounded? only if a platform is right under the feet (else walk off the edge)
+        let support = false;
+        for (const p of plats) { if (nx >= p.l - 2 && nx <= p.r + 2 && Math.abs(ny - p.top) < 2.5) { support = true; ny = p.top; break; } }
+        if (S.grounded && !support) { S.grounded = false; S.coyote = 6; }
+      }
     }
 
     S.x = nx; S.y = ny;
