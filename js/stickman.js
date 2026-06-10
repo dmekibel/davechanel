@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=192";
+import { currentZoom } from "./scale.js?v=193";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -60,10 +60,20 @@ function createStickman(opts = {}) {
   let FW = VB, FH = NECK_TO_FOOT; // the figure's physical width/height (feet at bottom-center)
   let svg = null, seg = null, head = null, img = null;
   if (spriteMode) {
-    // clamp the play size so giant / tiny doodles still control well
-    const sf = opts.sprite.h > 96 ? 96 / opts.sprite.h : opts.sprite.h < 40 ? 40 / opts.sprite.h : 1;
-    FW = Math.max(14, opts.sprite.w * sf);
-    FH = Math.max(24, opts.sprite.h * sf);
+    // SIZE THE DRAWING TO FIT THE GAME: a big doodle is scaled DOWN so it can
+    // actually move and jump — capped to ~11% of the screen, ~42% of the canvas
+    // it's born in, and a sane width (wide scribbles shrink too). Normal-sized
+    // drawings are kept as drawn; tiny ones are nudged up to a playable floor.
+    const vH = window.innerHeight / z0, vW = window.innerWidth / z0;
+    let maxH = Math.min(74, vH * 0.11);
+    const rb = opts.confine && opts.confine.rect && opts.confine.rect();
+    if (rb) maxH = Math.min(maxH, (rb.b - rb.t) * 0.42);
+    const maxW = Math.min(vW * 0.18, maxH * 2.6);
+    let sf = Math.min(1, maxH / opts.sprite.h, maxW / opts.sprite.w); // only ever scale DOWN big ones
+    if (opts.sprite.h * sf < 28) sf = Math.min(28 / opts.sprite.h, maxH / opts.sprite.h, maxW / opts.sprite.w); // floor tiny doodles
+    FW = Math.max(12, opts.sprite.w * sf);
+    FH = Math.max(20, opts.sprite.h * sf);
+    if (sf < 0.8) setTimeout(() => say("<b>Sized to fit.</b> Big drawing — shrunk so it can roam!", 3400), 1500);
     img = document.createElement("img");
     img.src = opts.sprite.url;
     img.className = "stickman stickman-sprite";
