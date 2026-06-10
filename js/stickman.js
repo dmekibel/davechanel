@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=197";
+import { currentZoom } from "./scale.js?v=198";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -113,6 +113,7 @@ function createStickman(opts = {}) {
   const wallHits = { left: 0, right: 0 };
   const broken = { left: false, right: false };
   let hitCooldown = 0;
+  let prevCanvasRb = null; // last frame's canvas rect — so the figure rides a dragged window
   const S = {
     x: ritual ? clamp(opts.x, 6, W - 6) : W / 2,
     y: ritual ? opts.y : H * 0.34,   // feet position; default spawn drops in from mid-air
@@ -129,6 +130,9 @@ function createStickman(opts = {}) {
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,
   };
   if (ritual) (img || svg).classList.add("alive");
+  // place the sprite at its spawn point right away so it never flashes at (0,0)
+  // before the first animation frame (visible on a slow first frame).
+  if (spriteMode && img) img.style.transform = `translate(${(S.x - FW / 2).toFixed(1)}px, ${(S.y - FH).toFixed(1)}px) scale(${S.facing}, 1)`;
   if (confine) setTimeout(() => { if (stage === "canvas") say("<b>It wants OUT.</b> Hit the wall (X / 👊) or slam into it!"); }, 6000);
   // windows that already exist never "open onto" the figure — only NEW ones do
   const knownWins = new WeakSet();
@@ -348,6 +352,7 @@ function createStickman(opts = {}) {
   // ---- circular thumb controls (coarse pointers): a drag JOYSTICK for the left
   // thumb (move + crouch/slide), round JUMP + ATTACK buttons for the right thumb,
   // a small round ✕ up top to put it away. ----
+  let detachTouch = null; // window-level pointer cleanup, called from destroy()
   if (isTouch) {
     const pads = document.createElement("div");
     pads.className = "stickman-pads";
@@ -410,9 +415,23 @@ function createStickman(opts = {}) {
       track(e);
     });
     stick.addEventListener("pointermove", track);
-    const endStick = () => { if (stickId === null) return; stickId = null; setNub(0, 0); clearMove(); };
+    const endStick = (e) => {
+      if (stickId === null) return;
+      try { stick.releasePointerCapture(stickId); } catch (_) {}
+      stickId = null; setNub(0, 0); clearMove(); // snap back to centre, stop moving
+    };
     stick.addEventListener("pointerup", endStick);
     stick.addEventListener("pointercancel", endStick);
+    // safety net: if a pointerup ever slips past the stick (touch can drop it),
+    // releasing anywhere still re-centres the nub so the figure never "runs away".
+    window.addEventListener("pointerup", endStick);
+    window.addEventListener("pointercancel", endStick);
+    window.addEventListener("blur", endStick);
+    detachTouch = () => {
+      window.removeEventListener("pointerup", endStick);
+      window.removeEventListener("pointercancel", endStick);
+      window.removeEventListener("blur", endStick);
+    };
 
     // --- round action buttons: jump (tap twice in the air = double) + attack ---
     layer.querySelectorAll(".sm-acts .sm-round").forEach((b) => {
@@ -495,6 +514,14 @@ function createStickman(opts = {}) {
       const rb = confine.rect();
       if (!rb) { goFree(); } // the page is gone — it's already out
       else {
+        // RIDE THE WINDOW: if Paint was dragged since last frame, carry the figure
+        // by the same delta so it stays inside its world instead of being left
+        // floating where the canvas used to be.
+        if (prevCanvasRb) {
+          const ddx = rb.l - prevCanvasRb.l, ddy = rb.t - prevCanvasRb.t;
+          if (Math.abs(ddx) > 0.5 || Math.abs(ddy) > 0.5) { nx += ddx; ny += ddy; }
+        }
+        prevCanvasRb = { l: rb.l, t: rb.t };
         if (hitCooldown > 0) hitCooldown -= dt;
         const BODY = FH - 6; // head clearance above the feet
         if (ny >= rb.b - 1) { if (!S.grounded) S.landTimer = 8; ny = rb.b - 1; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; }
@@ -634,6 +661,7 @@ function createStickman(opts = {}) {
     cancelAnimationFrame(raf);
     window.removeEventListener("keydown", kd);
     window.removeEventListener("keyup", ku);
+    if (detachTouch) detachTouch();
     layer.remove();
     active = null;
   }

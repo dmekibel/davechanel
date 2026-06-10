@@ -2930,18 +2930,18 @@ body.lang-ru .login-logo {
    round action buttons on the right. Semi-transparent so the game shows through;
    the throw radius is computed from real sizes so it works at any phone width. */
 .stickman-pads { position: absolute; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; pointer-events: none; z-index: 2; }
-/* left: analog joystick (base ring + draggable nub) */
-.sm-stick { position: relative; width: 116px; height: 116px; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: radial-gradient(circle at 50% 42%, rgba(232,232,232,.34), rgba(150,150,150,.30)); border: 2px solid rgba(255,255,255,.5); box-shadow: inset 0 0 14px rgba(0,0,0,.20), 1px 2px 7px rgba(0,0,0,.28); }
-.sm-nub { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(150,150,150,.62); border: 2px solid; border-color: rgba(255,255,255,.85) rgba(85,85,85,.85) rgba(85,85,85,.85) rgba(255,255,255,.85); box-shadow: 1px 2px 6px rgba(0,0,0,.32); will-change: transform; }
+/* left: analog joystick (base ring + draggable nub) — subtle + see-through */
+.sm-stick { position: relative; width: 116px; height: 116px; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: radial-gradient(circle at 50% 42%, rgba(235,235,235,.18), rgba(150,150,150,.16)); border: 1.5px solid rgba(255,255,255,.32); box-shadow: inset 0 0 12px rgba(0,0,0,.12); }
+.sm-nub { position: absolute; left: 50%; top: 50%; width: 50px; height: 50px; margin: -25px 0 0 -25px; border-radius: 50%; background: rgba(160,160,160,.4); border: 1.5px solid rgba(255,255,255,.5); box-shadow: 0 1px 4px rgba(0,0,0,.22); will-change: transform; }
 /* right: round action buttons (jump primary, attack up-left of it) */
 .sm-acts { position: relative; width: 140px; height: 116px; pointer-events: none; }
-.sm-round { position: absolute; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; display: flex; align-items: center; justify-content: center; background: rgba(206,206,206,.42); border: 2px solid; border-color: rgba(255,255,255,.7) rgba(90,90,90,.7) rgba(90,90,90,.7) rgba(255,255,255,.7); color: rgba(20,20,20,.92); text-shadow: 0 1px 0 rgba(255,255,255,.5); box-shadow: 1px 2px 5px rgba(0,0,0,.28); }
-.sm-round.on { background: rgba(140,140,140,.6); border-color: rgba(90,90,90,.8) rgba(255,255,255,.8) rgba(255,255,255,.8) rgba(90,90,90,.8); transform: translateY(1px); }
-.sm-jump { width: 68px; height: 68px; font-size: 23px; right: 0; bottom: 0; }
-.sm-attack { width: 58px; height: 58px; font-size: 25px; left: 0; bottom: 40px; }
+.sm-round { position: absolute; border-radius: 50%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; display: flex; align-items: center; justify-content: center; background: rgba(210,210,210,.24); border: 1.5px solid rgba(255,255,255,.4); color: rgba(20,20,20,.78); text-shadow: 0 1px 0 rgba(255,255,255,.4); box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.sm-round.on { background: rgba(150,150,150,.42); border-color: rgba(255,255,255,.55); transform: scale(.95); }
+.sm-jump { width: 68px; height: 68px; font-size: 22px; right: 0; bottom: 0; }
+.sm-attack { width: 58px; height: 58px; font-size: 24px; left: 0; bottom: 40px; }
 /* dismiss ✕ — round, top-centre, clear of Paint's own ×/□/− controls */
-.sm-bye { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 32px; height: 32px; font-size: 13px; background: rgba(206,206,206,.4); opacity: .68; }
-.sm-bye.on { transform: translateX(-50%) translateY(1px); }
+.sm-bye { position: absolute; top: calc(8px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 30px; height: 30px; font-size: 12px; background: rgba(210,210,210,.22); opacity: .5; }
+.sm-bye.on { transform: translateX(-50%) scale(.95); }
 @media (max-width: 360px) {
   .sm-stick { width: 100px; height: 100px; }
   .sm-nub { width: 46px; height: 46px; margin: -23px 0 0 -23px; }
