@@ -634,11 +634,18 @@ export function openAnarchy() {
       if (dragging || (dy < -14 && Math.abs(dy) > Math.abs(dx))) {
         dragging = true;
         const z = currentZoom() || 1;
-        e.style.transition = "none";
-        e.style.zIndex = "70";
-        e.style.transform = `translate(${dx / z}px, ${dy / z}px)`;
-        const p = partnerEl(); // the partner trails just behind so both cards stay visible
-        if (p) { p.style.transition = "none"; p.style.zIndex = "69"; p.style.transform = `translate(${dx / z - 13}px, ${dy / z + 2}px)`; }
+        // a selected pair sits in a tight stack (--px/--py from layoutSelectedPair);
+        // keep each card's own offset under the drag so the stack flies as one unit
+        const lift = (el, zi) => {
+          if (!el) return;
+          const bx = parseFloat(el.style.getPropertyValue("--px")) || 0;
+          const by = parseFloat(el.style.getPropertyValue("--py")) || 0;
+          el.style.transition = "none";
+          el.style.zIndex = zi;
+          el.style.transform = `translate(${bx + dx / z}px, ${by + dy / z}px)`;
+        };
+        lift(e, "70");
+        lift(partnerEl(), "69");
       }
     });
     const end = (ev) => {
