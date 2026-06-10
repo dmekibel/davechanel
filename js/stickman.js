@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=188";
+import { currentZoom } from "./scale.js?v=189";
 
 let active = null; // single instance — the desktop icon toggles it
 

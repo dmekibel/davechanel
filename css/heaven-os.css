@@ -2953,7 +2953,7 @@ body.lang-ru .login-logo {
 }
 .paint-wake-sprite.poof { animation: smPoof .26s ease-out forwards; }
 @keyframes smPoof { to { transform: scale(1.55); opacity: 0; filter: blur(2px); } }
-.paint-life-hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 31; background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s; }
+.paint-life-hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 31; background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s; pointer-events: none; }
 .paint-life-hint.fade { opacity: 0; }
 .anarchy-fw-burst { position: absolute; }
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }

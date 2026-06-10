@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=188";
-import { ICONS } from "./icons.js?v=188";
-import { saveImage, loadUserFS } from "./user-storage.js?v=188";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=188";
-import { FS } from "./file-system.js?v=188";
-import { spawnStickmanAt } from "./stickman.js?v=188";
-import { currentZoom } from "./scale.js?v=188";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=189";
+import { ICONS } from "./icons.js?v=189";
+import { saveImage, loadUserFS } from "./user-storage.js?v=189";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=189";
+import { FS } from "./file-system.js?v=189";
+import { spawnStickmanAt } from "./stickman.js?v=189";
+import { currentZoom } from "./scale.js?v=189";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -483,13 +483,23 @@ export function openPaint(opts = {}) {
     ]},
   ]);
 
-  // Coords helper
+  // Coords helper — work entirely in BODY-INTERNAL px (the same convention as
+  // window/icon dragging): pointer clientX/Y arrive post-zoom, offsetLeft/Top
+  // are pre-zoom, and on iOS WebKit getBoundingClientRect disagrees with touch
+  // coords under CSS zoom — which made strokes land away from the finger.
   function pos(e) {
-    const r = canvas.getBoundingClientRect();
     const p = e.touches ? e.touches[0] || e.changedTouches[0] : e;
+    const z = currentZoom() || 1;
+    let ax = 0, ay = 0, el = canvas;
+    while (el) { ax += el.offsetLeft; ay += el.offsetTop; el = el.offsetParent; }
+    // a scrolled ancestor (the canvas-wrap, the window body…) shifts the canvas
+    for (let sc = canvas.parentElement; sc && sc !== document.body; sc = sc.parentElement) {
+      ax -= sc.scrollLeft; ay -= sc.scrollTop;
+    }
+    const cw = canvas.offsetWidth || canvas.width, chh = canvas.offsetHeight || canvas.height;
     return {
-      x: Math.round((p.clientX - r.left) * canvas.width  / r.width),
-      y: Math.round((p.clientY - r.top)  * canvas.height / r.height),
+      x: Math.round((p.clientX / z - ax) * canvas.width  / cw),
+      y: Math.round((p.clientY / z - ay) * canvas.height / chh),
     };
   }
   const coordEl = wrap.querySelector(".pt-status-coord");
@@ -671,6 +681,7 @@ export function openPaint(opts = {}) {
     if (!box) { paintToast("Draw a stickman first — then press ⚡"); return; }
     waking = true;
     lifeBtn.classList.remove("attn");
+    try { sessionStorage.setItem("sm-life-used", "1"); } catch (_) {}
     // cut the drawing into a transparent sprite (white drops out)
     const cut = document.createElement("canvas");
     cut.width = box.w; cut.height = box.h;
@@ -716,9 +727,16 @@ export function openPaint(opts = {}) {
     }, 640 + 800);
   }
   lifeBtn.addEventListener("click", bringToLife);
-  if (opts.stickmanHint) {
+  // the ⚡ IS the game's front door now — it pulses until the player has used
+  // it once (per session), and the invitation toast shows once per session
+  let lifeUsed = false;
+  try { lifeUsed = sessionStorage.getItem("sm-life-used") === "1"; } catch (_) {}
+  if (!lifeUsed) {
     lifeBtn.classList.add("attn");
-    setTimeout(() => paintToast("Draw a stickman — then press ⚡ to bring it to life"), 400);
+    if (!openPaint.__hinted) {
+      openPaint.__hinted = true;
+      setTimeout(() => paintToast("Draw a stickman — then press ⚡ to bring it to life"), 600);
+    }
   }
 
   const winId = openWindow({

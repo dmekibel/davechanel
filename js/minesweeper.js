@@ -2,9 +2,9 @@
 // Mouse: left-click reveal, right-click flag. Touch: tap reveal,
 // long-press flag (350ms).
 
-import { openWindow } from "./window-manager.js?v=188";
-import { ICONS } from "./icons.js?v=188";
-import { currentZoom } from "./scale.js?v=188";
+import { openWindow } from "./window-manager.js?v=189";
+import { ICONS } from "./icons.js?v=189";
+import { currentZoom } from "./scale.js?v=189";
 
 const LEVELS = {
   beginner:     { w:  9, h:  9, mines: 10 },

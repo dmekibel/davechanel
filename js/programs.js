@@ -2,26 +2,25 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=188";
-import { FS, findByPath } from "./file-system.js?v=188";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=188";
-import { win98Prompt } from "./win98-dialogs.js?v=188";
-import { ICONS, iconFor } from "./icons.js?v=188";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=188";
-import { openPaint } from "./paint.js?v=188";
-import { openImageViewer } from "./image-viewer.js?v=188";
-import { openMinesweeper } from "./minesweeper.js?v=188";
-import { openAnarchy } from "./anarchy/ui.js?v=188";
-import { isStickmanActive, dismissStickman } from "./stickman.js?v=188";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=189";
+import { FS, findByPath } from "./file-system.js?v=189";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=189";
+import { win98Prompt } from "./win98-dialogs.js?v=189";
+import { ICONS, iconFor } from "./icons.js?v=189";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=189";
+import { openPaint } from "./paint.js?v=189";
+import { openImageViewer } from "./image-viewer.js?v=189";
+import { openMinesweeper } from "./minesweeper.js?v=189";
+import { openAnarchy } from "./anarchy/ui.js?v=189";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=188";
-import { showContextMenu } from "./context-menu.js?v=188";
-import { currentZoom } from "./scale.js?v=188";
-import { t } from "./i18n.js?v=188";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=188";
+} from "./os-mode.js?v=189";
+import { showContextMenu } from "./context-menu.js?v=189";
+import { currentZoom } from "./scale.js?v=189";
+import { t } from "./i18n.js?v=189";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=189";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -877,9 +876,7 @@ export function openProgram(progId) {
     case "image-viewer": return openImageViewer("", "Image Viewer");
     case "minesweeper":  return openMinesweeper();
     case "anarchy":      return openAnarchy();
-    // the Stickman game starts in Paint: you DRAW the character, then ⚡ wakes
-    // it. If one is already loose on the desktop, the icon puts it away.
-    case "stickman":     return isStickmanActive() ? dismissStickman() : openPaint({ stickmanHint: true });
+    case "stickman":     return openPaint(); // the game lives inside Paint (the ⚡ button)
     case "welcome":      return openWelcome();
     case "settings":     return openSettings();
     case "control-panel":return openSettings();

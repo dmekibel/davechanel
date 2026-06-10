@@ -1,13 +1,13 @@
 // Heaven OS — desktop init: icons, start menu, clock
 
-import { rootDesktopItems } from "./file-system.js?v=188";
-import { openProgram, openFile } from "./programs.js?v=188";
-import { listItems } from "./user-storage.js?v=188";
-import { ICONS, iconFor } from "./icons.js?v=188";
-import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=188";
-import { showContextMenu, closeContextMenu } from "./context-menu.js?v=188";
-import { t } from "./i18n.js?v=188";
-import { currentZoom } from "./scale.js?v=188";
+import { rootDesktopItems } from "./file-system.js?v=189";
+import { openProgram, openFile } from "./programs.js?v=189";
+import { listItems } from "./user-storage.js?v=189";
+import { ICONS, iconFor } from "./icons.js?v=189";
+import { buildStartMenu, closeAllStartMenus } from "./start-menu.js?v=189";
+import { showContextMenu, closeContextMenu } from "./context-menu.js?v=189";
+import { t } from "./i18n.js?v=189";
+import { currentZoom } from "./scale.js?v=189";
 
 const PROG_FOR = {
   "Fine Art": "fine-art",
@@ -25,25 +25,7 @@ const DESKTOP_SHORTCUTS = [
   { name: "Paint",       iconFn: () => ICONS.paint(28),       program: "paint"       },
   { name: "Minesweeper", iconFn: () => ICONS.minesweeper(28), program: "minesweeper" },
   { name: "Anarchy",     iconFn: () => ICONS.anarchy(28),     program: "anarchy"     },
-  { name: "Stickman",    iconFn: () => stickmanIcon(28),      program: "stickman"    },
 ];
-
-// a little drawn stick figure on a "paper" tile — the game's desktop icon
-function stickmanIcon(s = 28) {
-  return `<svg viewBox="0 0 28 28" width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg" style="display:block">
-    <rect x="2.5" y="1.5" width="23" height="25" rx="1.5" fill="#fbfbf4" stroke="#9a9a86" stroke-width="1"/>
-    <line x1="4.5" y1="6" x2="23.5" y2="6" stroke="#e6e6d8" stroke-width="1"/>
-    <line x1="4.5" y1="22" x2="23.5" y2="22" stroke="#e6e6d8" stroke-width="1"/>
-    <g fill="none" stroke="#111" stroke-width="1.6" stroke-linecap="round">
-      <circle cx="14" cy="8.5" r="2.4" fill="#111"/>
-      <line x1="14" y1="11" x2="14" y2="17"/>
-      <line x1="14" y1="13" x2="9.5" y2="15.5"/>
-      <line x1="14" y1="13" x2="18.5" y2="11"/>
-      <line x1="14" y1="17" x2="10" y2="23"/>
-      <line x1="14" y1="17" x2="18.5" y2="22.5"/>
-    </g>
-  </svg>`;
-}
 
 export function initDesktop() {
   document.title = "David Mekibel";
