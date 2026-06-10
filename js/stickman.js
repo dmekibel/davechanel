@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=201";
+import { currentZoom } from "./scale.js?v=202";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -583,7 +583,7 @@ function createStickman(opts = {}) {
 
     // ---- pick the animation + advance the walk cycle ----
     if (Math.abs(S.vx) > 0.4 && S.grounded) S.phase += (Math.abs(S.vx) / 1.85) * 0.18 * dt;
-    if (spriteMode) applyRigVisual();
+    if (spriteMode) applySpriteVisual(); // whole-body anim: feet stay planted (rig was disabled — it broke limbs)
     else {
       let P;
       if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
@@ -710,8 +710,8 @@ function createStickman(opts = {}) {
     img.style.transform = `translate(${(S.x - FW / 2 + ax).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
-  buildRig();                       // slice the drawing into bones (sprite mode)
-  if (spriteMode && rigOK) applyRigVisual(); // place them at rest before the first frame
+  // NOTE: the per-limb rig (buildRig/applyRigVisual) is kept in the file but
+  // disabled — slicing a freehand drawing into limbs broke during the walk.
   raf = requestAnimationFrame(frame);
 
   function destroy() {
