@@ -2,13 +2,13 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=198";
-import { ICONS } from "./icons.js?v=198";
-import { saveImage, loadUserFS } from "./user-storage.js?v=198";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=198";
-import { FS } from "./file-system.js?v=198";
-import { spawnStickmanAt } from "./stickman.js?v=198";
-import { currentZoom } from "./scale.js?v=198";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=199";
+import { ICONS } from "./icons.js?v=199";
+import { saveImage, loadUserFS } from "./user-storage.js?v=199";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=199";
+import { FS } from "./file-system.js?v=199";
+import { spawnStickmanAt } from "./stickman.js?v=199";
+import { currentZoom } from "./scale.js?v=199";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -724,26 +724,31 @@ export function openPaint(opts = {}) {
       const sr = sprite.getBoundingClientRect();
       const worldX = (sr.left + sr.width / 2) / z;
       const worldY = sr.bottom / z;
+      // MOBILE: Paint fills the top ~60% of the screen, so a canvas "Level 1" cage
+      // just parks the figure mid-screen — which reads as "floating in the white
+      // box". Instead, on a phone it's born alive in Paint and then DROPS OUT onto
+      // the desktop to walk the bottom (what David keeps asking for). On desktop
+      // there's room, so the canvas cage + crack-a-wall-to-escape stays.
+      const isNarrow = window.matchMedia("(max-width: 720px)").matches;
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
         sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
-        confine: {
+        dropToFloor: isNarrow,
+        confine: isNarrow ? null : {
           rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
-          // escaped → get Paint out of the way so the figure lands on the REAL,
-          // visible desktop. On desktop it's usually maximized → un-maximize.
-          // On mobile it's a 60%-height window that covers the play area and whose
-          // hidden icons would become phantom platforms — so minimize it: the
-          // figure drops onto the actual icons + taskbar, and you watch Paint recede.
+          // escaped → un-maximize Paint so the figure lands on the real desktop
           onEscape: () => {
             const w = document.querySelector(`.window[data-id="${winId}"]`);
-            if (!w) return;
-            if (w.classList.contains("maximized")) { toggleMaximize(winId); return; }
-            if (window.matchMedia("(max-width: 720px)").matches) minimize(winId);
+            if (w && w.classList.contains("maximized")) toggleMaximize(winId);
           },
         },
       });
       sprite.remove(); // the engine renders the SAME bitmap from this exact spot
       waking = false;
+      // mobile: after a beat of being alive in Paint, Paint recedes and the figure
+      // drops onto the clean desktop (dropToFloor makes it fall past the icons to
+      // the taskbar, so it never snags mid-screen).
+      if (isNarrow) setTimeout(() => minimize(winId), 380);
     }, 640 + 800);
   }
   lifeBtn.addEventListener("click", bringToLife);

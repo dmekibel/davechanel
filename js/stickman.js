@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=198";
+import { currentZoom } from "./scale.js?v=199";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -124,7 +124,7 @@ function createStickman(opts = {}) {
     airJumps: 1, landTimer: 0, spinTimer: 0, // double jump + landing squash + air-flip
     walled: 0,        // -1 = wall on the left, +1 = wall on the right (cling/wall-jump)
     sliding: false,   // knee slide (momentum, low friction)
-    dropping: false,  // just escaped — fall past mid-screen platforms to the floor
+    dropping: !!opts.dropToFloor, // born straight onto the desktop floor (mobile)
     dirHold: 0,       // frames a direction has been held — mobile auto-sprint
     attackTimer: 0, attackCd: 0, // strike animation + cooldown
     phase: 0, mode: ritual ? "fall" : "spawn", t: 0,

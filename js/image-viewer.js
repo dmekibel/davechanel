@@ -7,11 +7,11 @@
 //   openImageViewer(src, title)
 //   openImageViewer({ list, index })   // list: [{src, name}], index: 0..n-1
 
-import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./window-manager.js?v=198";
-import { ICONS } from "./icons.js?v=198";
-import { FS } from "./file-system.js?v=198";
-import { currentZoom } from "./scale.js?v=198";
-import { getDescription } from "./fine-art-descriptions.js?v=198";
+import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./window-manager.js?v=199";
+import { ICONS } from "./icons.js?v=199";
+import { FS } from "./file-system.js?v=199";
+import { currentZoom } from "./scale.js?v=199";
+import { getDescription } from "./fine-art-descriptions.js?v=199";
 
 // Collect every kind:"image" leaf in the virtual file system. Used as the
 // default list when the viewer is opened from the start menu.
