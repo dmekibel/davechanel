@@ -243,7 +243,7 @@ export function openAnarchy() {
     const src = idx === viewer() ? elHand : oppBoxMap[idx];
     if (!src || !elPile) return;
     const mine = idx === viewer();
-    const from = feltPos(src), to = feltPos(elPile);
+    const from = feltPos(src);
     const span = (group.length - 1) * STEP; // tight: a pair flies and lands close together
     let fromX = from.x + from.w / 2 - (CW + span) / 2, fromY = from.y + (mine ? -6 : from.h / 2);
     if (mine && throwOrigin && group.some((c) => throwOrigin.ids.has(c.id))) {
@@ -253,8 +253,13 @@ export function openAnarchy() {
       fromY = (throwOrigin.rect.top - f.top) / z;
     }
     throwOrigin = null;
-    const gLeft = (PW - (CW + span)) / 2; // mirror the pile's own (flat) layout math
-    const toX = to.x + gLeft, toY = to.y + Math.round(CH * 0.32); // land exactly on the current-play slot
+    // aim at the REAL pile cards' MEASURED positions, so the ghost lands exactly
+    // where the cards rest — no computed-vs-rendered drift, no last-pixel jump
+    const pileCards = group.map((c) => elPile.querySelector(`.acard[data-id="${c.id}"]`)).filter(Boolean);
+    if (!pileCards.length) return;
+    const land0 = feltPos(pileCards[0]);
+    const toX = land0.x, toY = land0.y;
+    pileCards.forEach((el) => { el.style.visibility = "hidden"; }); // hidden until the ghost arrives on them
     const wrap = document.createElement("div");
     wrap.className = "anarchy-fly anarchy-throw";
     wrap.style.left = fromX + "px"; wrap.style.top = fromY + "px";
@@ -277,23 +282,27 @@ export function openAnarchy() {
       wrap.appendChild(g);
     });
     elFly.appendChild(wrap);
-    // the pile cards for THIS play stay hidden while the ghost is airborne — the
-    // ghost IS the card in flight, and the real cards appear only when it lands,
-    // so the play flies into place instead of teleporting into the pile
-    const pileCards = group.map((c) => elPile.querySelector(`.acard[data-id="${c.id}"]`)).filter(Boolean);
-    pileCards.forEach((el) => { el.style.visibility = "hidden"; });
     const T = mine ? 560 : 680; // the CPU flick is a touch slower so its reveal reads
     const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, landing flat (360 ≡ 0)
+    // reveal the real cards the INSTANT the ghost actually lands (transitionend) —
+    // never on a guessed timer, so the card can't pop in early at the final spot
+    // while the ghost is still gliding the last stretch (the "kiss then teleport")
+    let landed = false;
+    const land = () => {
+      if (landed) return; landed = true;
+      pileCards.forEach((el) => { el.style.visibility = ""; }); // real cards take over exactly where the ghost rests
+      setTimeout(() => wrap.remove(), 30); // one frame of overlap (ghost over real), then drop it
+    };
+    wrap.addEventListener("transitionend", (e) => { if (e.target === wrap && e.propertyName === "transform") land(); });
     requestAnimationFrame(() => {
-      wrap.style.transition = `transform ${T}ms cubic-bezier(.21,.74,.28,1)`; // eases in and settles into the slot
+      wrap.style.transition = `transform ${T}ms cubic-bezier(.22,.68,.3,1)`; // glides in and settles onto the slot
       wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn}deg)`;
       wrap.querySelectorAll(".anarchy-flip-inner").forEach((inner) => {
         inner.style.transition = `transform ${Math.round(T * 0.45)}ms ease ${Math.round(T * 0.18)}ms`;
         inner.style.transform = "rotateY(180deg)";
       });
     });
-    setTimeout(() => { pileCards.forEach((el) => { el.style.visibility = ""; }); }, T); // real cards appear exactly as it lands
-    setTimeout(() => wrap.remove(), T + 50); // the opaque ghost lingers a beat over them, then goes — no flicker
+    setTimeout(land, T + 160); // fallback only — if transitionend never fires, still reveal
   }
   // position of an element's top-left within the fly layer (which spans the whole
   // game), so flies can travel between the felt and the hand without being clipped
