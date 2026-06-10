@@ -2822,6 +2822,10 @@ body.lang-ru .login-logo {
 /* a 7 you CAN slip in out of turn — available but understated: a faint purple
    edge, no lift, no pulse (you'll know it's there; it won't shout) */
 .anarchy-hand .acard.interrupt { cursor: pointer; box-shadow: 0 0 0 1px rgba(155,120,235,.65); }
+/* a 7 or Ace holds a special SWITCH power — a violet edge marks it. It plays as a
+   normal card by default; re-tap a selected one to ARM the switch (bold violet ring). */
+.anarchy-hand .acard.switchcard:not(.sel):not(.sel-top) { cursor: pointer; box-shadow: 0 0 0 2px #9b78eb, 1px 1px 2px rgba(0,0,0,.35); }
+.anarchy-hand .acard.switching { box-shadow: 0 0 0 3px #b884ff, 0 0 11px rgba(160,110,245,.8), 1px 1px 2px rgba(0,0,0,.4) !important; }
 /* you hold the SAME rank as the play before you — answering in kind punishes the
    previous player or completes the four. A red ring and a restless little wiggle
    (rocking on the `transform` channel composes with the hand-fan `rotate`). With

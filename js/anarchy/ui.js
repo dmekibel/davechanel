@@ -153,6 +153,7 @@ export function openAnarchy() {
   let mode = "cpu";          // "cpu" | "local"
   let selection = [];
   let aceTake = false;
+  let switchMode = false; // a selected 7/Ace: false = play it as a regular card, true = use its switch power
   let botTimer = null;
   let handoffPending = false; // local mode: hide the hand until the next player confirms
   let flashMsg = "";
@@ -586,9 +587,21 @@ export function openAnarchy() {
     const d = state.demand;
     if (sel.length === 1) {
       const c = sel[0];
-      if (c.rank === 7) return { label: "Switch 7", action: { type: "SWITCH7", card: c.id } };
-      if (c.rank === 14 && d.type === "pickup") return { label: "Cancel (Ace switch)", action: { type: "ACE_CANCEL", card: c.id, take: true } };
-      if (c.rank === 14) return { label: aceTake ? "Play Ace + take" : "Play Ace", action: { type: "ACE_SWITCH", card: c.id, take: aceTake } };
+      if (c.rank === 7 || c.rank === 14) {
+        // a 7/Ace can play as a REGULAR card (e.g. stack a 3rd Ace onto a pair of
+        // Aces to send 2 back) OR use its switch power. Default to regular when
+        // that's a legal move; switchMode (a re-tap) arms the special power.
+        const regularLegal = activeAndLegal().legal.some((m) =>
+          m.type === "PLAY" && m.cards.length === 1 &&
+          (hand.find((x) => x.id === m.cards[0]) || {}).rank === c.rank);
+        if (regularLegal && !switchMode) {
+          const what = c.rank === 14 ? "Ace" : "7";
+          return { label: (d.type === "pickup" ? "Stack " : "Play ") + what, action: { type: "PLAY", cards: [c.id] } };
+        }
+        if (c.rank === 7) return { label: "Switch 7", action: { type: "SWITCH7", card: c.id } };
+        if (d.type === "pickup") return { label: "Ace — cancel pickup", action: { type: "ACE_CANCEL", card: c.id, take: true } };
+        return { label: aceTake ? "Ace switch + take" : "Ace switch", action: { type: "ACE_SWITCH", card: c.id, take: aceTake } };
+      }
     }
     // generic single/pair, matched by RANK (the engine lists one card per rank,
     // so match on rank+count and play whatever copies are actually selected)
@@ -617,7 +630,7 @@ export function openAnarchy() {
     const demandBefore = state.demand.type;
     try { state = reduce(state, action); }
     catch (e) { flash(e.message); return; }
-    selection = []; aceTake = false;
+    selection = []; aceTake = false; switchMode = false;
     // local mode: hand off the device whenever the active player changes
     if (mode === "local" && state.status === "playing" && state.turn !== prevTurn) {
       handoffPending = true;
@@ -714,6 +727,14 @@ export function openAnarchy() {
         selection = [selection[1], newTop];
         flipPairTop(newTop); return;
       }
+      // - a lone selected 7/Ace → re-tap toggles regular ↔ switch power when BOTH
+      //   are real moves (the card / button / a throw commits the chosen mode)
+      if (card.rank === 7 || card.rank === 14) {
+        const lg = activeAndLegal().legal;
+        const regularLegal = lg.some((m) => m.type === "PLAY" && m.cards.length === 1 && (hand.find((x) => x.id === m.cards[0]) || {}).rank === card.rank);
+        const switchLegal = lg.some((m) => (m.type === "SWITCH7" || m.type === "ACE_SWITCH" || m.type === "ACE_CANCEL") && m.card === id);
+        if (regularLegal && switchLegal) { switchMode = !switchMode; render(); return; }
+      }
       // - a lone selected card → tap again to play it
       const sa = selectionAction();
       if (sa) apply(sa.action); else { selection = []; render(); }
@@ -724,7 +745,7 @@ export function openAnarchy() {
     const selRank = selection.length === 1 ? (hand.find((c) => c.id === selection[0]) || {}).rank : null;
     selection = (selRank != null && selRank === card.rank && card.rank !== 7) ? [...selection, id] : [id];
     newCardIds.delete(id); // you've picked the card up — the NEW tag has done its job
-    aceTake = false;
+    aceTake = false; switchMode = false; // a fresh selection starts as a plain card
     render();
   }
 
@@ -734,7 +755,10 @@ export function openAnarchy() {
     if (!canAct()) { if (!offTurnCardPlay(id)) render(); return; } // a flick can still slap the 4th / slip a 7 in; refused → the card glides home
     const hand = state.players[viewer()].hand;
     if (!hand.find((c) => c.id === id)) { render(); return; }
-    if (!(selection.includes(id) && selection.length === 2)) selection = [id]; // keep a raised pair, else play this one
+    if (!(selection.includes(id) && selection.length === 2)) {
+      if (!(selection.length === 1 && selection[0] === id)) switchMode = false; // a fresh/different card throws as a plain card
+      selection = [id]; // keep a raised pair, else play this one
+    }
     const sa = selectionAction();
     if (sa) apply(sa.action); else { selection = [id]; render(); }
   }
@@ -1018,10 +1042,13 @@ export function openAnarchy() {
       const is7Int = interrupt && c.rank === 7; // tap to switch in, out of turn
       const isFresh = newCardIds.has(c.id); // just drawn / picked up
       const isCounter = counterRank != null && c.rank === counterRank; // same rank as their play: punish back / complete the 4
+      const isSwitch = (c.rank === 7 || c.rank === 14) && isLegal && !isCounter; // a special card with a switch power
       if (isSel) e.classList.add("sel");
       // for a selected pair, mark the card that will land on top (last in order)
       if (isSel && selection.length === 2 && c.id === selection[selection.length - 1]) e.classList.add("sel-top");
-      if (isLegal) e.classList.add("legal");
+      if (isLegal && !isSwitch) e.classList.add("legal"); // switch cards get the violet edge instead of the blue legal ring
+      if (isSwitch) e.classList.add("switchcard");
+      if (isSel && selection.length === 1 && switchMode && (c.rank === 7 || c.rank === 14)) e.classList.add("switching"); // armed: will use its switch power
       if (isCounter) { e.classList.add("counter"); if (counterMine >= 2) e.classList.add("fire"); }
       if (is7Int) e.classList.add("interrupt"); // a quiet, tappable out-of-turn 7 (not loud)
       if (isFresh) e.classList.add("fresh"); // "NEW" badge so it's obvious what just arrived
@@ -1205,7 +1232,9 @@ export function openAnarchy() {
     if (sa) add(sa.label, () => apply(sa.action), "primary");
 
     const sel = selection.map((id) => hand.find((c) => c.id === id));
-    if (sel.length === 1 && sel[0] && sel[0].rank === 14 && state.pile.length)
+    // the "take below" toggle only matters when the Ace acts as a SWITCH (armed),
+    // not when it stacks as a regular card, and not under a pickup (cancel always takes)
+    if (sel.length === 1 && sel[0] && sel[0].rank === 14 && switchMode && state.demand.type !== "pickup" && state.pile.length)
       add(aceTake ? "☑ take below" : "☐ take below", () => { aceTake = !aceTake; render(); }, "toggle");
 
     const { active } = activeAndLegal();
@@ -1234,7 +1263,7 @@ export function openAnarchy() {
       : Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`));
     const humanIndices = m === "cpu" ? [0] : names.map((_, i) => i);
     state = createGame({ numPlayers, humanIndices, names });
-    selection = []; aceTake = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
+    selection = []; aceTake = false; switchMode = false; flashMsg = ""; handoffPending = false; reservedByPlayer.clear();
     lastTopId = null; lastPileLen = 0; // don't fire a stray бита on the first render
     lastHandCounts = state.players.map((p) => p.hand.length); // the deal isn't a "draw"
     render();
