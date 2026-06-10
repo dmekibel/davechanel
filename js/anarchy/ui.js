@@ -282,12 +282,16 @@ export function openAnarchy() {
       if (i) { g.style.position = "absolute"; g.style.left = (i * STEP) + "px"; g.style.top = "0"; }
       wrap.appendChild(g);
     });
+    // launch FLAT at the start point, then force a reflow so the browser commits
+    // that frame. Without this the start + target collapse into one frame and the
+    // transition is SKIPPED — the card just jumps to the pile (the "teleport").
+    wrap.style.transform = "translate(0px, 0px) rotate(0deg)";
     elFly.appendChild(wrap);
+    void wrap.offsetWidth; // commit the launch frame — now the glide actually runs
     const T = mine ? 560 : 680; // the CPU flick is a touch slower so its reveal reads
     const turn = (jitter(group[0].id, 1, 7) >= 0 ? 360 : -360); // one full spin, landing flat (360 ≡ 0)
-    // reveal the real cards the INSTANT the ghost actually lands (transitionend) —
-    // never on a guessed timer, so the card can't pop in early at the final spot
-    // while the ghost is still gliding the last stretch (the "kiss then teleport")
+    // reveal the real cards the INSTANT the ghost actually lands (transitionend),
+    // never on a guessed timer, so it can't pop in early while the ghost still glides
     let landed = false;
     const land = () => {
       if (landed) return; landed = true;
@@ -295,13 +299,11 @@ export function openAnarchy() {
       setTimeout(() => wrap.remove(), 30); // one frame of overlap (ghost over real), then drop it
     };
     wrap.addEventListener("transitionend", (e) => { if (e.target === wrap && e.propertyName === "transform") land(); });
-    requestAnimationFrame(() => {
-      wrap.style.transition = `transform ${T}ms cubic-bezier(.22,.68,.3,1)`; // glides in and settles onto the slot
-      wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn}deg)`;
-      wrap.querySelectorAll(".anarchy-flip-inner").forEach((inner) => {
-        inner.style.transition = `transform ${Math.round(T * 0.45)}ms ease ${Math.round(T * 0.18)}ms`;
-        inner.style.transform = "rotateY(180deg)";
-      });
+    wrap.style.transition = `transform ${T}ms cubic-bezier(.22,.68,.3,1)`; // glides in and settles onto the slot
+    wrap.style.transform = `translate(${toX - fromX}px, ${toY - fromY}px) rotate(${turn}deg)`;
+    wrap.querySelectorAll(".anarchy-flip-inner").forEach((inner) => {
+      inner.style.transition = `transform ${Math.round(T * 0.45)}ms ease ${Math.round(T * 0.18)}ms`;
+      inner.style.transform = "rotateY(180deg)";
     });
     setTimeout(land, T + 160); // fallback only — if transitionend never fires, still reveal
   }
@@ -535,7 +537,10 @@ export function openAnarchy() {
     elFly.appendChild(canvas); cascadeCanvas = canvas;
     const ctx = canvas.getContext("2d");
     ctx.scale(scale, scale);
-    const cw = 46, ch = 64;
+    const cw = CW, ch = CH;                          // match the real cards' live size
+    const rf = Math.max(8, Math.round(cw * 0.27));   // rank font, scaled to the card
+    const sf = Math.max(7, Math.round(cw * 0.24));   // suit font
+    const ix = Math.round(cw * 0.2), iy = Math.round(ch * 0.06);
     const suits = [["♥", "#c40000"], ["♦", "#c40000"], ["♣", "#111"], ["♠", "#111"]];
     const ranks = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
     const deck = [];
@@ -557,14 +562,14 @@ export function openAnarchy() {
     };
     const idx = (c, ox, oy) => { // rank over suit — the same index the real cards use
       ctx.fillStyle = c.suit[1]; ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.font = "bold 12px Tahoma, sans-serif"; ctx.fillText(c.rank, ox, oy);
-      ctx.font = "11px Tahoma, sans-serif"; ctx.fillText(c.suit[0], ox, oy + 12);
+      ctx.font = `bold ${rf}px Tahoma, sans-serif`; ctx.fillText(c.rank, ox, oy);
+      ctx.font = `${sf}px Tahoma, sans-serif`; ctx.fillText(c.suit[0], ox, oy + rf);
     };
     const draw = (c) => {
       roundRect(c.x, c.y, cw, ch, 4);
       ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#888"; ctx.lineWidth = 1; ctx.stroke();
-      idx(c, c.x + 9, c.y + 4); // top-left
-      ctx.save(); ctx.translate(c.x + cw - 9, c.y + ch - 4); ctx.rotate(Math.PI); idx(c, 0, 0); ctx.restore(); // bottom-right mirror
+      idx(c, c.x + ix, c.y + iy); // top-left
+      ctx.save(); ctx.translate(c.x + cw - ix, c.y + ch - iy); ctx.rotate(Math.PI); idx(c, 0, 0); ctx.restore(); // bottom-right mirror
     };
     let cur = spawn();
     const step = () => {
@@ -1163,8 +1168,11 @@ export function openAnarchy() {
     if (!containerW) return;
     const gap = 4;
     const natural = cards.length * cw + (cards.length - 1) * gap + splitW;
-    if (natural <= containerW) { if (splitW) cards[splitIdx].style.marginLeft = SPLIT + "px"; return; }
-    const overlap = (natural - containerW) / (cards.length - 1) + 0.5;
+    // a held hand always tucks its cards together like a real fan (each shows ~60%);
+    // squeeze tighter only if the natural fan still wouldn't fit the width
+    const minOverlap = Math.round(cw * 0.4);
+    const fitOverlap = natural > containerW ? (natural - containerW) / (cards.length - 1) + 0.5 : 0;
+    const overlap = Math.max(minOverlap, fitOverlap);
     cards.forEach((el, i) => { if (i) el.style.marginLeft = (splitW && i === splitIdx ? SPLIT - overlap : -overlap) + "px"; });
   }
 
