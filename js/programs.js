@@ -2,25 +2,26 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=185";
-import { FS, findByPath } from "./file-system.js?v=185";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=185";
-import { win98Prompt } from "./win98-dialogs.js?v=185";
-import { ICONS, iconFor } from "./icons.js?v=185";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=185";
-import { openPaint } from "./paint.js?v=185";
-import { openImageViewer } from "./image-viewer.js?v=185";
-import { openMinesweeper } from "./minesweeper.js?v=185";
-import { openAnarchy } from "./anarchy/ui.js?v=185";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=186";
+import { FS, findByPath } from "./file-system.js?v=186";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=186";
+import { win98Prompt } from "./win98-dialogs.js?v=186";
+import { ICONS, iconFor } from "./icons.js?v=186";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=186";
+import { openPaint } from "./paint.js?v=186";
+import { openImageViewer } from "./image-viewer.js?v=186";
+import { openMinesweeper } from "./minesweeper.js?v=186";
+import { openAnarchy } from "./anarchy/ui.js?v=186";
+import { openStickman } from "./stickman.js?v=186";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=185";
-import { showContextMenu } from "./context-menu.js?v=185";
-import { currentZoom } from "./scale.js?v=185";
-import { t } from "./i18n.js?v=185";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=185";
+} from "./os-mode.js?v=186";
+import { showContextMenu } from "./context-menu.js?v=186";
+import { currentZoom } from "./scale.js?v=186";
+import { t } from "./i18n.js?v=186";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=186";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -876,6 +877,7 @@ export function openProgram(progId) {
     case "image-viewer": return openImageViewer("", "Image Viewer");
     case "minesweeper":  return openMinesweeper();
     case "anarchy":      return openAnarchy();
+    case "stickman":     return openStickman();
     case "welcome":      return openWelcome();
     case "settings":     return openSettings();
     case "control-panel":return openSettings();

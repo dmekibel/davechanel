@@ -2917,6 +2917,15 @@ body.lang-ru .login-logo {
 /* a winning rain of real cards — absolutely placed in the fly layer, behind the
    win box, transform-driven each frame (no transition fighting the rAF) */
 .anarchy-win-card { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 44; transition: none; will-change: transform; }
+
+/* ===== Stickman — a drawn figure loose on the desktop (platformer overlay) ===== */
+.stickman-layer { position: fixed; inset: 0; pointer-events: none; z-index: 9000; overflow: hidden; }
+.stickman { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 25px 33px; will-change: transform; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.28)); }
+.stickman .sm-seg { stroke: #111; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+.stickman .sm-head { fill: #111; stroke: none; }
+.stickman-hint { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); background: #ffffdc; border: 1px solid #b59a00; color: #3a3000; font: 11px Tahoma, "MS Sans Serif", sans-serif; padding: 5px 12px; border-radius: 2px; box-shadow: 1px 1px 3px rgba(0,0,0,.3); white-space: nowrap; transition: opacity .6s ease; }
+.stickman-hint.fade { opacity: 0; }
+.stickman-hint b { color: #111; }
 .anarchy-fw-burst { position: absolute; }
 .anarchy-fw-particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: anarchyFw .95s ease-out forwards; }
 @keyframes anarchyFw { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
