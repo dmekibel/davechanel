@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=205";
+import { currentZoom } from "./scale.js?v=206";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -542,11 +542,11 @@ function createStickman(opts = {}) {
           else { S.grounded = false; S.coyote = 6; }                   // nothing below → free-fall
         }
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
-        // side walls — SLAM them (airborne, or running hard) to crack them;
-        // a deliberate ATTACK (X / 👊) cracks them too, via the same crackWall.
-        // The crack is drawn at the figure's CONTACT height (its mid-body).
+        // side walls — only an AIRBORNE slam cracks them (or a deliberate ATTACK,
+        // via doAttack). Walking into a wall must NOT scribble the canvas — that
+        // mess fought the draw-your-own-platforms idea.
         const slam = (side) => {
-          if (S.grounded && Math.abs(S.vx) < 2.2) return; // a lazy lean doesn't count
+          if (S.grounded) return; // grounded walking just stops at the wall, no crack
           crackWall(side, ny - FH * 0.5);
         };
         S.walled = 0;
