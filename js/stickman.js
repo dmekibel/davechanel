@@ -17,7 +17,7 @@
 //                  (rectZoom≈1). Dividing rects by currentZoom() instead made
 //                  every surface compute ~20% too high on iPhone — the
 //                  "floating above everything, figure too small" bug.
-import { currentZoom, rectZoom } from "./scale.js?v=209";
+import { currentZoom, rectZoom } from "./scale.js?v=210";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -185,7 +185,7 @@ function createStickman(opts = {}) {
   }
   function doAttack() {
     if (S.attackCd > 0 || S.mode === "spawn") return;
-    S.attackCd = 22; S.attackTimer = 12; S.sliding = false;
+    S.attackCd = 18; S.attackTimer = 10; S.sliding = false; // short + chainable = tight
     const z = rectZoom() || 1; // rect-derived hitboxes below — calibrated divisor
     const reach = 30;
     const hx = S.x + S.facing * (FW / 2 + reach * 0.7); // strike centre
@@ -552,8 +552,10 @@ function createStickman(opts = {}) {
         }
         if (!landed && S.grounded) {                 // walking — is there still a surface under the feet?
           const onFloor = ny >= rb.b - 3;
-          const sup = onFloor ? rb.b - 1 : inkUnder(ny - 2, ny + 4);
-          if (sup != null && Math.abs(sup - ny) < 4) ny = sup;         // hug the surface
+          // generous follow window so hand-drawn (wobbly, sloping) strokes walk
+          // smoothly: climb up to 7px of rise, follow up to 5px of dip per frame
+          const sup = onFloor ? rb.b - 1 : inkUnder(ny - 7, ny + 5);
+          if (sup != null && sup - ny > -7 && sup - ny < 5) ny = sup;  // hug the surface
           else { S.grounded = false; S.coyote = 6; }                   // nothing below → free-fall
         }
         if (ny - BODY < rb.t && S.vy < 0) { ny = rb.t + BODY; S.vy = 0; }
@@ -565,27 +567,33 @@ function createStickman(opts = {}) {
           crackWall(side, ny - FH * 0.5);
         };
         S.walled = 0;
-        if (nx <= rb.l + 8 && !broken.left)  { slam("left");  nx = rb.l + 8;  S.vx = Math.max(0, S.vx * -0.3); if (!S.grounded && dir < 0) { S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
-        if (nx >= rb.r - 8 && !broken.right) { slam("right"); nx = rb.r - 8;  S.vx = Math.min(0, S.vx * -0.3); if (!S.grounded && dir > 0) { S.walled = 1;  S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
+        const halfW = Math.max(8, FW / 2); // collide with the BODY's edge, not its centre
+        if (nx <= rb.l + halfW && !broken.left)  { slam("left");  nx = rb.l + halfW;  S.vx = Math.max(0, S.vx * -0.3); if (!S.grounded && dir < 0) { S.walled = -1; S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
+        if (nx >= rb.r - halfW && !broken.right) { slam("right"); nx = rb.r - halfW;  S.vx = Math.min(0, S.vx * -0.3); if (!S.grounded && dir > 0) { S.walled = 1;  S.vy = Math.min(S.vy, WALL_SLIDE_VY); } }
         // out through a broken wall → the desktop world takes over
         if (nx < rb.l - 12 || nx > rb.r + 12) goFree();
       }
     } else {
       // ---- one-way platform collision (land on tops while falling) ----
+      // The body is FW wide: it lands / stays supported while ANY foot point
+      // (centre or either foot at ±0.3·FW) is over the platform — so it can
+      // stand on an edge with a foot, instead of falling the moment its centre
+      // crosses (which read as "collisions feel off").
       const plats = platforms();
+      const footR = FW * 0.3;
       let landed = false, bestTop = Infinity;
       if (S.vy >= 0) {
         for (const p of plats) {
           if (S.dropping && !p.ground) continue; // escape drop: only the floor catches it
-          if (nx < p.l - 2 || nx > p.r + 2) continue;
+          if (nx + footR < p.l - 2 || nx - footR > p.r + 2) continue;
           if (prevY <= p.top + 1 && ny >= p.top && p.top < bestTop) { bestTop = p.top; landed = true; }
         }
       }
       if (landed) { if (!S.grounded) S.landTimer = 8; ny = bestTop; S.vy = 0; S.grounded = true; S.coyote = 6; S.airJumps = 1; S.dropping = false; }
       else {
-        // still grounded? only if a platform is right under the feet (else walk off the edge)
+        // still grounded? only while some foot point has a platform under it
         let support = false;
-        for (const p of plats) { if (nx >= p.l - 2 && nx <= p.r + 2 && Math.abs(ny - p.top) < 2.5) { support = true; ny = p.top; break; } }
+        for (const p of plats) { if (nx + footR >= p.l - 2 && nx - footR <= p.r + 2 && Math.abs(ny - p.top) < 2.5) { support = true; ny = p.top; break; } }
         if (S.grounded && !support) { S.grounded = false; S.coyote = 6; }
       }
       // ---- walls (Fancy Pants): airborne, pressing into a window's side edge or
@@ -629,7 +637,7 @@ function createStickman(opts = {}) {
     if (spriteMode) applyRigVisual(dt); // per-limb rig: blended poses + foot-planting
     else {
       let P;
-      if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
+      if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 10) * Math.PI));
       else if (S.sliding) P = poseSlide();
       else if (keys.down && S.grounded) P = poseCrawl(S.phase);
       else if (!S.grounded && S.walled !== 0) { S.facing = S.walled; P = poseWallCling(); }
@@ -689,42 +697,53 @@ function createStickman(opts = {}) {
       return (px - qx) * (px - qx) + (py - qy) * (py - qy);
     };
     const owner = new Int8Array(srcW * srcH).fill(-1);
-    const bb = SEGS.map(() => ({ x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, n: 0 }));
     for (let y = 0; y < srcH; y++) for (let x = 0; x < srcW; x++) {
       const i = y * srcW + x;
       if (d[i * 4 + 3] < 12) continue; // transparent — belongs to no bone
       let bi = 0, bd = Infinity;
       for (let s = 0; s < SEGS.length; s++) { const dd = segD2(x, y, SEGS[s]); if (dd < bd) { bd = dd; bi = s; } }
       owner[i] = bi;
-      const B = bb[bi];
-      if (x < B.x0) B.x0 = x; if (x > B.x1) B.x1 = x;
-      if (y < B.y0) B.y0 = y; if (y > B.y1) B.y1 = y;
-      B.n++;
     }
+    // JOINT PATCHES: a bone also carries every drawn pixel within R of the joint it
+    // rotates about (torso: both its joints). Those few duplicated pixels sit at the
+    // rotation pivot, so they barely move between the two copies — they FILL the seam
+    // a rotating limb would otherwise tear open, without re-creating the old
+    // fan-apart duplication (which lived far from the pivots).
+    const R = Math.max(3, srcH * 0.055), R2 = R * R;
+    const near = (x, y, p) => { const dx = x - p[0], dy = y - p[1]; return dx * dx + dy * dy <= R2; };
+    const incl = (s, x, y, i) =>
+      owner[i] === s || near(x, y, SEGS[s].a) || (SEGS[s].name === "torso" && near(x, y, SEGS[s].b));
     const kx = FW / srcW, ky = FH / srcH; // image px → layout px
     rigBox = document.createElement("div");
     rigBox.className = "stickman sm-rig";
     rigBox.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;";
     layer.appendChild(rigBox);
     for (let s = 0; s < SEGS.length; s++) {
-      const B = bb[s];
-      if (!B.n) continue; // the drawing has nothing for this limb — skip it
-      const w = B.x1 - B.x0 + 1, h = B.y1 - B.y0 + 1;
+      let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+      for (let y = 0; y < srcH; y++) for (let x = 0; x < srcW; x++) {
+        const i = y * srcW + x;
+        if (owner[i] === -1 || !incl(s, x, y, i)) continue;
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+        n++;
+      }
+      if (!n) continue; // the drawing has nothing for this limb — skip it
+      const w = x1 - x0 + 1, h = y1 - y0 + 1;
       const pc = document.createElement("canvas");
       pc.width = w; pc.height = h;
       const pctx = pc.getContext("2d");
       const pd = pctx.createImageData(w, h);
-      for (let y = B.y0; y <= B.y1; y++) for (let x = B.x0; x <= B.x1; x++) {
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         const i = y * srcW + x;
-        if (owner[i] !== s) continue;
-        const o = ((y - B.y0) * w + (x - B.x0)) * 4, j = i * 4;
+        if (owner[i] === -1 || !incl(s, x, y, i)) continue;
+        const o = ((y - y0) * w + (x - x0)) * 4, j = i * 4;
         pd.data[o] = d[j]; pd.data[o + 1] = d[j + 1]; pd.data[o + 2] = d[j + 2]; pd.data[o + 3] = d[j + 3];
       }
       pctx.putImageData(pd, 0, 0);
       pc.style.cssText = `position:absolute;left:0;top:0;width:${(w * kx).toFixed(1)}px;height:${(h * ky).toFixed(1)}px;`;
       rigBox.appendChild(pc);
       rigParts.push({ el: pc, name: SEGS[s].name, prox: SEGS[s].prox,
-        ax: (SEGS[s].a[0] - B.x0) * kx, ay: (SEGS[s].a[1] - B.y0) * ky }); // joint within the slice
+        ax: (SEGS[s].a[0] - x0) * kx, ay: (SEGS[s].a[1] - y0) * ky }); // joint within the slice
     }
     img.style.display = "none"; // the rig replaces the flat sprite
     rigOK = true;
@@ -745,18 +764,18 @@ function createStickman(opts = {}) {
     if (S.grounded && dir !== 0 && Math.sign(S.vx) === -dir && sp > 2.2) skidT = 9;
     if (skidT > 0) skidT -= dt;
 
-    if (S.attackTimer > 0) {              // PUNCH: wind up → snap → recover
-      const p = 1 - S.attackTimer / 12;
+    if (S.attackTimer > 0) {              // PUNCH: sharp wind-up → overshooting snap → recover
+      const p = 1 - S.attackTimer / 10;
       let k;
-      if (p < 0.26) k = -(p / 0.26) * 0.55;
-      else if (p < 0.58) k = ((p - 0.26) / 0.32) * 1.55 - 0.55;
-      else k = 1 - (p - 0.58) / 0.42;
-      t.armR = -95 * D * k; t.armL = 30 * D * k; t.torso = 10 * D * k; t.head = -7 * D * k;
-      t.legL = 8 * D; t.legR = -10 * D;
-      rate = 0.6;                          // punches snap, they don't ease
+      if (p < 0.22) k = -(p / 0.22) * 0.6;                              // coil back
+      else if (p < 0.5) k = ((p - 0.22) / 0.28) * 1.78 - 0.6;           // SNAP, overshoot to 1.18
+      else k = 1.18 * (1 - (p - 0.5) / 0.5);                            // settle
+      t.armR = -118 * D * k; t.armL = 38 * D * k; t.torso = 15 * D * k; t.head = -9 * D * k;
+      t.legL = 12 * D; t.legR = -14 * D;
+      rate = 0.88;                         // near-direct: punches hit, they don't ease
     } else if (S.sliding) {                // knee slide: lean way back, low and fast
       t.torso = -36 * D; t.head = 16 * D; t.legL = 58 * D; t.legR = 46 * D; t.armL = -46 * D; t.armR = 30 * D;
-      rate = 0.45;
+      rate = 0.5;
     } else if (keys.down && S.grounded) {  // crawl: low scuttle
       const s = Math.sin(S.phase) * 14 * D;
       t.torso = 48 * D; t.head = -12 * D; t.legL = 28 * D + s; t.legR = -28 * D - s; t.armL = 20 * D - s; t.armR = -20 * D + s;
@@ -765,23 +784,23 @@ function createStickman(opts = {}) {
         t.torso = 8 * D; t.legL = 26 * D; t.legR = -10 * D; t.armL = -120 * D; t.armR = 30 * D;
       } else {                             // air: rise tucked with arms high, fall spread
         const up = clamp(-S.vy / 11, 0, 1), down = clamp(S.vy / 11, 0, 1);
-        t.armL = -(70 + 75 * up + 20 * down) * D;
-        t.armR =  (70 + 75 * up + 20 * down) * D;
+        t.armL = -(65 + 55 * up + 15 * down) * D;
+        t.armR =  (65 + 55 * up + 15 * down) * D;
         t.legL =  (12 + 16 * up - 26 * down) * D;
         t.legR = -(10 + 12 * up - 30 * down) * D;
         t.torso = (7 * up - 6 * down) * D; t.head = (-4 * up + 6 * down) * D;
-        rate = 0.38;
+        rate = 0.45;
       }
     } else if (skidT > 0) {                // turn-around skid: brace forward, lean back hard
       t.torso = -30 * D; t.head = 12 * D; t.legL = 34 * D; t.legR = -14 * D; t.armL = 50 * D; t.armR = 65 * D;
-      rate = 0.5;
+      rate = 0.6;
     } else if (sp > 0.4) {                 // stride: swing + lean grow with speed
       const A = (15 + 27 * spK) * D, arm = (11 + 25 * spK) * D;
       const sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
       t.legL = A * sL; t.legR = A * sR;
       t.armL = -arm * sL; t.armR = -arm * sR;
       t.torso = (4 + 8 * spK) * D; t.head = -(2 + 4 * spK) * D;
-      rate = 0.42;
+      rate = 0.5;
     } else {                               // idle: breathing + sway
       const b = Math.sin(S.t * 0.05);
       t.torso = b * 0.6 * D; t.head = -b * 0.5 * D; t.armL = b * 1.5 * D; t.armR = -b * 1.5 * D;
@@ -820,8 +839,15 @@ function createStickman(opts = {}) {
       sy = 1 - dip; sx = 1 + dip * 0.6;
     }
     if (S.spinTimer > 0 && !S.grounded) rot = (1 - S.spinTimer / 16) * 360;
+    // punch LUNGE: the whole body drives forward with the snap (facing-local x)
+    let lunge = 0;
+    if (S.attackTimer > 0) {
+      const p = 1 - S.attackTimer / 10;
+      const k = p < 0.22 ? -(p / 0.22) * 0.6 : p < 0.5 ? ((p - 0.22) / 0.28) * 1.78 - 0.6 : 1.18 * (1 - (p - 0.5) / 0.5);
+      lunge = k * 0.22 * FW;
+    }
     const spin = rot ? ` translate(0px, ${hipY.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) translate(0px, ${(-hipY).toFixed(1)}px)` : "";
-    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${(S.y - plant).toFixed(1)}px) scaleX(${S.facing})${spin} scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${(S.y - plant).toFixed(1)}px) scaleX(${S.facing})${lunge ? ` translate(${lunge.toFixed(1)}px, 0px)` : ""}${spin} scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
     for (const part of rigParts) {
       const jp = joint[part.prox];
       // children of the neck inherit the torso tilt so arms/head ride the lean
@@ -836,7 +862,7 @@ function createStickman(opts = {}) {
   function applySpriteVisual() {
     let sx = 1, sy = 1, rot = 0, dy = 0, ax = 0;
     if (S.attackTimer > 0) {                     // PUNCH: wind up → snap forward → settle
-      const p = 1 - S.attackTimer / 12;          // 0..1
+      const p = 1 - S.attackTimer / 10;          // 0..1
       let k;
       if (p < 0.26) k = -(p / 0.26) * 0.55;                     // pull back
       else if (p < 0.58) k = ((p - 0.26) / 0.32) * 1.55 - 0.55; // snap out (overshoot)
