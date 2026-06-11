@@ -2926,11 +2926,13 @@ body.lang-ru .login-logo {
 .stickman .sm-head { fill: #111; stroke: none; }
 /* the player's own drawing as the character — squash/stretch pivots at the feet */
 .stickman-sprite { transform-origin: 50% 100%; image-rendering: auto; }
-/* TWO floating thumb-sticks (coarse pointers). Each side of the lower screen is an
-   invisible touch zone; pressing it spawns a small, faint stick UNDER the thumb that
-   follows it (dynamic), then vanishes on lift. Left = move, right = jump + attack. */
-/* lower third only — leaves the Paint canvas above free to draw platforms on */
-.sm-zone { position: absolute; bottom: 0; height: 34%; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: transparent; z-index: 2; }
+/* TWO floating thumb-sticks (coarse pointers). Each side of a STRIP along the very
+   bottom is an invisible touch zone; pressing it spawns a small, faint stick UNDER
+   the thumb that follows it, then vanishes on lift. Left = move, right = jump +
+   attack. The strip sits just above the taskbar and is only ~120px tall, so the
+   whole rest of the screen (Paint canvas, windows, icons, taskbar) stays fully
+   interactable while the game runs. */
+.sm-zone { position: absolute; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); height: 120px; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; background: transparent; z-index: 2; }
 .sm-zone-left  { left: 0;  width: 50%; }
 .sm-zone-right { right: 0; width: 50%; }
 /* the floating stick: a faint ring + nub, centred on the touch point */

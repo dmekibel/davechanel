@@ -17,7 +17,7 @@
 //                  (rectZoom≈1). Dividing rects by currentZoom() instead made
 //                  every surface compute ~20% too high on iPhone — the
 //                  "floating above everything, figure too small" bug.
-import { currentZoom, rectZoom } from "./scale.js?v=208";
+import { currentZoom, rectZoom } from "./scale.js?v=209";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -649,35 +649,82 @@ function createStickman(opts = {}) {
     svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scaleX(${S.facing})`;
   }
   // ===================== PER-LIMB RIG (sprite mode) =====================
-  // The drawing is sliced into bones — head, torso, two arms, two legs — and each
-  // slice is rotated about its joint (shoulder / hip) every frame by a live pose,
-  // so the character's OWN pixels articulate. A container holds the parts, so
-  // facing is one horizontal flip. Slicing assumes a roughly upright figure; the
-  // rest pose reassembles into the original drawing exactly.
+  // The drawing's PIXELS are partitioned among six bones — every opaque pixel is
+  // assigned to exactly ONE bone (its nearest limb segment in the rest pose), and
+  // each bone becomes its own little canvas rotated about its joint each frame.
+  // No pixel is ever duplicated, so a swinging arm can't drag a ghost copy of the
+  // torso with it — that duplication is what made limbs look "broken" in motion
+  // with the old rectangle slices (which overlapped heavily and only lined up at
+  // rest). Seams sit at the joints, and rotation about a joint keeps the two cut
+  // edges adjacent, so strokes stay visually connected through a stride.
   const RJ = { hip: [0.50, 0.56], neck: [0.50, 0.30], headC: [0.50, 0.12],
                handL: [0.16, 0.50], handR: [0.84, 0.50], footL: [0.40, 0.99], footR: [0.60, 0.99] };
-  // [name, proximal-joint, distal-joint]; torso first so the neck is known for arms/head
-  const RIG_BONES = [["torso","hip","neck"], ["legL","hip","footL"], ["legR","hip","footR"],
-                     ["armL","neck","handL"], ["armR","neck","handR"], ["head","neck","headC"]];
   let rigBox = null, rigOK = false; const rigParts = [];
   function buildRig() {
     if (!spriteMode || !img || !FW || !FH) return;
+    if (!img.complete || !img.naturalWidth) { img.addEventListener("load", buildRig, { once: true }); return; }
+    const srcW = img.naturalWidth, srcH = img.naturalHeight;
+    let d;
+    try {
+      const src = document.createElement("canvas");
+      src.width = srcW; src.height = srcH;
+      const sctx = src.getContext("2d");
+      sctx.drawImage(img, 0, 0);
+      d = sctx.getImageData(0, 0, srcW, srcH).data;
+    } catch (_) { return; } // can't read pixels → the squash fallback keeps running
+    // bone segments in image px (rest pose); torso/legs root at the hip, arms/head at the neck
+    const P = (j) => [RJ[j][0] * srcW, RJ[j][1] * srcH];
+    const SEGS = [
+      { name: "torso", prox: "hip",  a: P("hip"),  b: P("neck")  },
+      { name: "legL",  prox: "hip",  a: P("hip"),  b: P("footL") },
+      { name: "legR",  prox: "hip",  a: P("hip"),  b: P("footR") },
+      { name: "armL",  prox: "neck", a: P("neck"), b: P("handL") },
+      { name: "armR",  prox: "neck", a: P("neck"), b: P("handR") },
+      { name: "head",  prox: "neck", a: P("neck"), b: P("headC") },
+    ];
+    const segD2 = (px, py, s) => { // squared distance from a pixel to a bone segment
+      const dx = s.b[0] - s.a[0], dy = s.b[1] - s.a[1], L2 = dx * dx + dy * dy || 1;
+      const t = clamp(((px - s.a[0]) * dx + (py - s.a[1]) * dy) / L2, 0, 1);
+      const qx = s.a[0] + t * dx, qy = s.a[1] + t * dy;
+      return (px - qx) * (px - qx) + (py - qy) * (py - qy);
+    };
+    const owner = new Int8Array(srcW * srcH).fill(-1);
+    const bb = SEGS.map(() => ({ x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9, n: 0 }));
+    for (let y = 0; y < srcH; y++) for (let x = 0; x < srcW; x++) {
+      const i = y * srcW + x;
+      if (d[i * 4 + 3] < 12) continue; // transparent — belongs to no bone
+      let bi = 0, bd = Infinity;
+      for (let s = 0; s < SEGS.length; s++) { const dd = segD2(x, y, SEGS[s]); if (dd < bd) { bd = dd; bi = s; } }
+      owner[i] = bi;
+      const B = bb[bi];
+      if (x < B.x0) B.x0 = x; if (x > B.x1) B.x1 = x;
+      if (y < B.y0) B.y0 = y; if (y > B.y1) B.y1 = y;
+      B.n++;
+    }
+    const kx = FW / srcW, ky = FH / srcH; // image px → layout px
     rigBox = document.createElement("div");
     rigBox.className = "stickman sm-rig";
     rigBox.style.cssText = "position:absolute;left:0;top:0;width:0;height:0;";
     layer.appendChild(rigBox);
-    for (const [name, a, b] of RIG_BONES) {
-      const p0 = [RJ[a][0] * FW, RJ[a][1] * FH], p1 = [RJ[b][0] * FW, RJ[b][1] * FH];
-      const padX = FW * 0.18, padY = FH * 0.06;
-      const sx = clamp(Math.min(p0[0], p1[0]) - padX, 0, FW), sy = clamp(Math.min(p0[1], p1[1]) - padY, 0, FH);
-      const ex = clamp(Math.max(p0[0], p1[0]) + padX, 0, FW), ey = clamp(Math.max(p0[1], p1[1]) + padY, 0, FH);
-      const sw = Math.max(2, ex - sx), sh = Math.max(2, ey - sy);
-      const el = document.createElement("div");
-      el.style.cssText = `position:absolute;left:0;top:0;width:${sw.toFixed(1)}px;height:${sh.toFixed(1)}px;`
-        + `background:url("${img.src}") no-repeat ${(-sx).toFixed(1)}px ${(-sy).toFixed(1)}px;`
-        + `background-size:${FW.toFixed(1)}px ${FH.toFixed(1)}px;`;
-      rigBox.appendChild(el);
-      rigParts.push({ el, name, prox: a, ax: p0[0] - sx, ay: p0[1] - sy }); // ax/ay = joint within slice
+    for (let s = 0; s < SEGS.length; s++) {
+      const B = bb[s];
+      if (!B.n) continue; // the drawing has nothing for this limb — skip it
+      const w = B.x1 - B.x0 + 1, h = B.y1 - B.y0 + 1;
+      const pc = document.createElement("canvas");
+      pc.width = w; pc.height = h;
+      const pctx = pc.getContext("2d");
+      const pd = pctx.createImageData(w, h);
+      for (let y = B.y0; y <= B.y1; y++) for (let x = B.x0; x <= B.x1; x++) {
+        const i = y * srcW + x;
+        if (owner[i] !== s) continue;
+        const o = ((y - B.y0) * w + (x - B.x0)) * 4, j = i * 4;
+        pd.data[o] = d[j]; pd.data[o + 1] = d[j + 1]; pd.data[o + 2] = d[j + 2]; pd.data[o + 3] = d[j + 3];
+      }
+      pctx.putImageData(pd, 0, 0);
+      pc.style.cssText = `position:absolute;left:0;top:0;width:${(w * kx).toFixed(1)}px;height:${(h * ky).toFixed(1)}px;`;
+      rigBox.appendChild(pc);
+      rigParts.push({ el: pc, name: SEGS[s].name, prox: SEGS[s].prox,
+        ax: (SEGS[s].a[0] - B.x0) * kx, ay: (SEGS[s].a[1] - B.y0) * ky }); // joint within the slice
     }
     img.style.display = "none"; // the rig replaces the flat sprite
     rigOK = true;
