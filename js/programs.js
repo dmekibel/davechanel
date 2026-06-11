@@ -2,25 +2,25 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=207";
-import { FS, findByPath } from "./file-system.js?v=207";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=207";
-import { win98Prompt } from "./win98-dialogs.js?v=207";
-import { ICONS, iconFor } from "./icons.js?v=207";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=207";
-import { openPaint } from "./paint.js?v=207";
-import { openImageViewer } from "./image-viewer.js?v=207";
-import { openMinesweeper } from "./minesweeper.js?v=207";
-import { openAnarchy } from "./anarchy/ui.js?v=207";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=208";
+import { FS, findByPath } from "./file-system.js?v=208";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=208";
+import { win98Prompt } from "./win98-dialogs.js?v=208";
+import { ICONS, iconFor } from "./icons.js?v=208";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=208";
+import { openPaint } from "./paint.js?v=208";
+import { openImageViewer } from "./image-viewer.js?v=208";
+import { openMinesweeper } from "./minesweeper.js?v=208";
+import { openAnarchy } from "./anarchy/ui.js?v=208";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=207";
-import { showContextMenu } from "./context-menu.js?v=207";
-import { currentZoom, rectZoom } from "./scale.js?v=207";
-import { t } from "./i18n.js?v=207";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=207";
+} from "./os-mode.js?v=208";
+import { showContextMenu } from "./context-menu.js?v=208";
+import { currentZoom, rectZoom } from "./scale.js?v=208";
+import { t } from "./i18n.js?v=208";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=208";
 
 // ---- Notepad --------------------------------------------------------
 

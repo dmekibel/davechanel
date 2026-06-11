@@ -2,16 +2,16 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=207";
-import { ICONS } from "./icons.js?v=207";
-import { saveImage, loadUserFS } from "./user-storage.js?v=207";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=207";
-import { FS } from "./file-system.js?v=207";
-import { spawnStickmanAt } from "./stickman.js?v=207";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=208";
+import { ICONS } from "./icons.js?v=208";
+import { saveImage, loadUserFS } from "./user-storage.js?v=208";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=208";
+import { FS } from "./file-system.js?v=208";
+import { spawnStickmanAt } from "./stickman.js?v=208";
 // currentZoom() divides POINTER coords (clientX/Y — proven iOS-correct in pos());
 // rectZoom() divides getBoundingClientRect() values (engine-calibrated: ≈zoom on
 // Chromium, ≈1 on iOS WebKit where rects under CSS zoom are already layout px).
-import { currentZoom, rectZoom } from "./scale.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=208";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).

@@ -17,7 +17,7 @@
 //                  (rectZoom≈1). Dividing rects by currentZoom() instead made
 //                  every surface compute ~20% too high on iPhone — the
 //                  "floating above everything, figure too small" bug.
-import { currentZoom, rectZoom } from "./scale.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=208";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -626,7 +626,7 @@ function createStickman(opts = {}) {
 
     // ---- pick the animation + advance the walk cycle ----
     if (Math.abs(S.vx) > 0.4 && S.grounded) S.phase += (Math.abs(S.vx) / 1.85) * 0.18 * dt;
-    if (spriteMode) applyRigVisual(); // per-limb rig with foot-planting (lowest foot stays on the ground)
+    if (spriteMode) applyRigVisual(dt); // per-limb rig: blended poses + foot-planting
     else {
       let P;
       if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 12) * Math.PI));
@@ -682,47 +682,105 @@ function createStickman(opts = {}) {
     img.style.display = "none"; // the rig replaces the flat sprite
     rigOK = true;
   }
-  // live per-bone angle DELTAS (radians) from the rest pose
-  function rigDeltas() {
-    const D = Math.PI / 180, d = { torso: 0, head: 0, armL: 0, armR: 0, legL: 0, legR: 0 };
-    if (S.attackTimer > 0) { const k = Math.sin((1 - S.attackTimer / 12) * Math.PI);
-      d.armR = -85 * D * k; d.armL = 22 * D * k; d.torso = 9 * D * k; d.head = -6 * D * k;
-    } else if (S.sliding) { d.torso = -34 * D; d.legL = 56 * D; d.legR = 46 * D; d.armL = -42 * D; d.armR = 28 * D;
-    } else if (keys.down && S.grounded) { d.torso = 46 * D; d.head = -10 * D; d.legL = 30 * D; d.legR = -30 * D;
-    } else if (!S.grounded) { const up = S.vy < 0;
-      d.armL = -100 * D; d.armR = 100 * D; d.legL = (up ? 18 : -12) * D; d.legR = (up ? -14 : 16) * D; d.torso = (up ? 6 : -5) * D; d.head = (up ? -3 : 5) * D;
-    } else if (Math.abs(S.vx) > 0.4) { const run = Math.abs(S.vx) > WALK + 0.5;
-      const A = (run ? 30 : 19) * D, arm = (run ? 26 : 15) * D, sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
-      d.legL = A * sL; d.legR = A * sR; d.armL = -arm * sL * 0.9; d.armR = -arm * sR * 0.9; d.torso = (run ? 8 : 4) * D; d.head = (run ? -4 : -2) * D;
-    } else { const b = Math.sin(S.t * 0.05); d.torso = b * 0.5 * D; d.head = -b * 0.4 * D; d.armL = b * 1.3 * D; d.armR = -b * 1.3 * D; }
-    return d;
+  // ---- pose engine (the Fancy Pants feel) ----
+  // Each state declares TARGET joint angles; the live POSE eases toward them every
+  // frame, so the figure FLOWS between moves instead of snapping. Stride amplitude
+  // and lean scale continuously with speed; reversing at speed triggers a skid;
+  // the air pose responds to vertical velocity; the double jump is a full flip.
+  const POSE = { torso: 0, head: 0, armL: 0, armR: 0, legL: 0, legR: 0 };
+  let skidT = 0; // turn-around skid timer (frames)
+  function rigTargets(dt) {
+    const D = Math.PI / 180;
+    const t = { torso: 0, head: 0, armL: 0, armR: 0, legL: 0, legR: 0 };
+    let rate = 0.3; // blend speed per 60fps frame (higher = snappier)
+    const sp = Math.abs(S.vx), spK = clamp(sp / SPRINT, 0, 1);
+    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (S.grounded && dir !== 0 && Math.sign(S.vx) === -dir && sp > 2.2) skidT = 9;
+    if (skidT > 0) skidT -= dt;
+
+    if (S.attackTimer > 0) {              // PUNCH: wind up → snap → recover
+      const p = 1 - S.attackTimer / 12;
+      let k;
+      if (p < 0.26) k = -(p / 0.26) * 0.55;
+      else if (p < 0.58) k = ((p - 0.26) / 0.32) * 1.55 - 0.55;
+      else k = 1 - (p - 0.58) / 0.42;
+      t.armR = -95 * D * k; t.armL = 30 * D * k; t.torso = 10 * D * k; t.head = -7 * D * k;
+      t.legL = 8 * D; t.legR = -10 * D;
+      rate = 0.6;                          // punches snap, they don't ease
+    } else if (S.sliding) {                // knee slide: lean way back, low and fast
+      t.torso = -36 * D; t.head = 16 * D; t.legL = 58 * D; t.legR = 46 * D; t.armL = -46 * D; t.armR = 30 * D;
+      rate = 0.45;
+    } else if (keys.down && S.grounded) {  // crawl: low scuttle
+      const s = Math.sin(S.phase) * 14 * D;
+      t.torso = 48 * D; t.head = -12 * D; t.legL = 28 * D + s; t.legR = -28 * D - s; t.armL = 20 * D - s; t.armR = -20 * D + s;
+    } else if (!S.grounded) {
+      if (S.walled !== 0) {                // wall cling: hugging, sliding
+        t.torso = 8 * D; t.legL = 26 * D; t.legR = -10 * D; t.armL = -120 * D; t.armR = 30 * D;
+      } else {                             // air: rise tucked with arms high, fall spread
+        const up = clamp(-S.vy / 11, 0, 1), down = clamp(S.vy / 11, 0, 1);
+        t.armL = -(70 + 75 * up + 20 * down) * D;
+        t.armR =  (70 + 75 * up + 20 * down) * D;
+        t.legL =  (12 + 16 * up - 26 * down) * D;
+        t.legR = -(10 + 12 * up - 30 * down) * D;
+        t.torso = (7 * up - 6 * down) * D; t.head = (-4 * up + 6 * down) * D;
+        rate = 0.38;
+      }
+    } else if (skidT > 0) {                // turn-around skid: brace forward, lean back hard
+      t.torso = -30 * D; t.head = 12 * D; t.legL = 34 * D; t.legR = -14 * D; t.armL = 50 * D; t.armR = 65 * D;
+      rate = 0.5;
+    } else if (sp > 0.4) {                 // stride: swing + lean grow with speed
+      const A = (15 + 27 * spK) * D, arm = (11 + 25 * spK) * D;
+      const sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
+      t.legL = A * sL; t.legR = A * sR;
+      t.armL = -arm * sL; t.armR = -arm * sR;
+      t.torso = (4 + 8 * spK) * D; t.head = -(2 + 4 * spK) * D;
+      rate = 0.42;
+    } else {                               // idle: breathing + sway
+      const b = Math.sin(S.t * 0.05);
+      t.torso = b * 0.6 * D; t.head = -b * 0.5 * D; t.armL = b * 1.5 * D; t.armR = -b * 1.5 * D;
+      rate = 0.12;
+    }
+    const k = 1 - Math.pow(1 - rate, dt);  // dt-normalized exponential ease
+    for (const key in POSE) POSE[key] += (t[key] - POSE[key]) * k;
+    return POSE;
   }
-  function applyRigVisual() {
+  function applyRigVisual(dt = 1) {
     if (!rigOK) { applySpriteVisual(); return; }
-    const d = rigDeltas();
+    const d = rigTargets(dt);
     // FK in a feet-anchored frame (origin = feet at world S.x,S.y; +x right, +y down):
-    const hip = [0, -(1 - RJ.hip[1]) * FH];
-    const tA = Math.atan2((RJ.neck[1] - RJ.hip[1]) * FH, 0) + d.torso;       // torso tilts the neck
+    const hipY = -(1 - RJ.hip[1]) * FH;
+    const hip = [0, hipY];
+    const tA = -Math.PI / 2 + d.torso;     // torso tilts the neck off vertical
     const tLen = (RJ.hip[1] - RJ.neck[1]) * FH;
     const neck = [hip[0] + tLen * Math.cos(tA), hip[1] + tLen * Math.sin(tA)];
     const joint = { hip, neck };
     // FOOT-PLANT: find each foot's height after its leg swings, and (when grounded)
     // shift the whole figure so the LOWEST foot sits exactly on the surface (S.y).
-    // This is the fix for "floats when made smaller" — the legs swing without ever
-    // lifting the figure off the ground, at any scale.
+    // The legs swing without ever lifting the figure off the ground, at any scale.
     const footY = (restFoot, dleg) => {
       const fx = (restFoot[0] - 0.5) * FW, fy = -(1 - restFoot[1]) * FH;     // rest foot, feet-frame
       const vx = fx - hip[0], vy = fy - hip[1], len = Math.hypot(vx, vy);
       return hip[1] + len * Math.sin(Math.atan2(vy, vx) + dleg);             // y after the leg rotates
     };
     const plant = S.grounded ? Math.max(footY(RJ.footL, d.legL), footY(RJ.footR, d.legR)) : 0;
-    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${(S.y - plant).toFixed(1)}px) scaleX(${S.facing})`;
+    // container-level life — all anchored at the feet so the plant is never broken:
+    //   landing squash · run-bob knee compression (dips between foot-plants) ·
+    //   the double-jump is a full flip about the hip
+    let sx = 1, sy = 1, rot = 0;
+    if (S.landTimer > 0) { const k = S.landTimer / 8; sy = 1 - 0.2 * k; sx = 1 + 0.2 * k; }
+    else if (S.grounded && Math.abs(S.vx) > 0.4) {
+      const dip = (1 - Math.abs(Math.sin(S.phase))) * 0.05 * clamp(Math.abs(S.vx) / SPRINT, 0, 1);
+      sy = 1 - dip; sx = 1 + dip * 0.6;
+    }
+    if (S.spinTimer > 0 && !S.grounded) rot = (1 - S.spinTimer / 16) * 360;
+    const spin = rot ? ` translate(0px, ${hipY.toFixed(1)}px) rotate(${rot.toFixed(1)}deg) translate(0px, ${(-hipY).toFixed(1)}px)` : "";
+    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${(S.y - plant).toFixed(1)}px) scaleX(${S.facing})${spin} scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
     for (const part of rigParts) {
       const jp = joint[part.prox];
       // children of the neck inherit the torso tilt so arms/head ride the lean
-      const rot = (d[part.name] || 0) + (part.prox === "neck" ? d.torso : 0);
+      const rot2 = (d[part.name] || 0) + (part.prox === "neck" ? d.torso : 0);
       part.el.style.transformOrigin = `${part.ax.toFixed(1)}px ${part.ay.toFixed(1)}px`;
-      part.el.style.transform = `translate(${(jp[0] - part.ax).toFixed(1)}px, ${(jp[1] - part.ay).toFixed(1)}px) rotate(${rot.toFixed(4)}rad)`;
+      part.el.style.transform = `translate(${(jp[0] - part.ax).toFixed(1)}px, ${(jp[1] - part.ay).toFixed(1)}px) rotate(${rot2.toFixed(4)}rad)`;
     }
   }
   // the DRAWING as the character: body-level life — lean into the run, bob with
