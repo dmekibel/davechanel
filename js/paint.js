@@ -2,13 +2,16 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=206";
-import { ICONS } from "./icons.js?v=206";
-import { saveImage, loadUserFS } from "./user-storage.js?v=206";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=206";
-import { FS } from "./file-system.js?v=206";
-import { spawnStickmanAt } from "./stickman.js?v=206";
-import { currentZoom } from "./scale.js?v=206";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=207";
+import { ICONS } from "./icons.js?v=207";
+import { saveImage, loadUserFS } from "./user-storage.js?v=207";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=207";
+import { FS } from "./file-system.js?v=207";
+import { spawnStickmanAt } from "./stickman.js?v=207";
+// currentZoom() divides POINTER coords (clientX/Y — proven iOS-correct in pos());
+// rectZoom() divides getBoundingClientRect() values (engine-calibrated: ≈zoom on
+// Chromium, ≈1 on iOS WebKit where rects under CSS zoom are already layout px).
+import { currentZoom, rectZoom } from "./scale.js?v=207";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -107,9 +110,10 @@ function buildMenubar(rootEl, menus) {
         drop.appendChild(item);
       }
       const r = btn.getBoundingClientRect();
+      const rz = rectZoom() || 1; // fixed-pos child of the zoomed body = layout px
       drop.style.position = "fixed";
-      drop.style.left = r.left + "px";
-      drop.style.top  = r.bottom + "px";
+      drop.style.left = (r.left / rz) + "px";
+      drop.style.top  = (r.bottom / rz) + "px";
       document.body.appendChild(drop);
       openDrop = drop;
       document.addEventListener("click", outsideClose, true);
@@ -634,18 +638,18 @@ export function openPaint(opts = {}) {
   // ---- the figure's Level-1 world: the live canvas box, in body-internal px ----
   function canvasWorldRect() {
     if (!canvas.isConnected) return null;
-    const zz = currentZoom() || 1;
+    const zz = rectZoom() || 1; // rect-derived: calibrated divisor, NOT currentZoom
     const r = canvas.getBoundingClientRect();
     if (!r.width || !r.height) return null;
     return { l: r.left / zz, t: r.top / zz, r: r.right / zz, b: r.bottom / zz };
   }
   function worldToCanvasPt(wx, wy) {
-    const zz = currentZoom() || 1;
+    const zz = rectZoom() || 1;
     const r = canvas.getBoundingClientRect();
     return { x: (wx - r.left / zz) * canvas.width / (r.width / zz), y: (wy - r.top / zz) * canvas.height / (r.height / zz) };
   }
   function canvasYToWorld(cy) {
-    const zz = currentZoom() || 1;
+    const zz = rectZoom() || 1;
     const r = canvas.getBoundingClientRect();
     return r.top / zz + cy * (r.height / zz) / canvas.height;
   }
@@ -729,8 +733,10 @@ export function openPaint(opts = {}) {
       else if (mn >= 200) d.data[i + 3] = Math.min(d.data[i + 3], Math.round(255 * (236 - mn) / 36));
     }
     cctx.putImageData(d, 0, 0);
-    // overlay the sprite exactly over the drawing (body-internal px)
-    const z = currentZoom() || 1;
+    // overlay the sprite exactly over the drawing (body-internal px). Every value
+    // here is rect-derived → divide by the CALIBRATED rect scale (scrollLeft/Top
+    // are already layout px — never divided).
+    const z = rectZoom() || 1;
     const cr = canvas.getBoundingClientRect();
     const wrapEl = wrap.querySelector(".paint-canvas-wrap");
     const wr = wrapEl.getBoundingClientRect();
@@ -754,14 +760,15 @@ export function openPaint(opts = {}) {
       // the exact cut-out bitmap becomes the playable figure, no swap, no poof.
       // Level 1 is the canvas itself: it must crack a wall to get out.
       const sr = sprite.getBoundingClientRect();
-      const worldX = (sr.left + sr.width / 2) / z;
-      const worldY = sr.bottom / z;
+      const zh = rectZoom() || 1; // re-measure: the captured z is ~1.4s old by now
+      const worldX = (sr.left + sr.width / 2) / zh;
+      const worldY = sr.bottom / zh;
       // STAYS IN PAINT: the figure lives inside the canvas, and whatever you draw
       // there is a platform it walks on (surfaceY samples the live ink). It falls
       // through empty white space and lands on your strokes or the canvas floor.
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
-        sprite: { url: sprite.src, w: sr.width / z, h: sr.height / z },
+        sprite: { url: sprite.src, w: sr.width / zh, h: sr.height / zh },
         confine: {
           rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
           sampleSurface: refreshSurface, // refresh the ink cache once per frame (throttled)

@@ -2,25 +2,25 @@
 // Each program builds DOM content for a window. The window manager wraps it
 // in chrome and handles drag/resize.
 
-import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=206";
-import { FS, findByPath } from "./file-system.js?v=206";
-import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=206";
-import { win98Prompt } from "./win98-dialogs.js?v=206";
-import { ICONS, iconFor } from "./icons.js?v=206";
-import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=206";
-import { openPaint } from "./paint.js?v=206";
-import { openImageViewer } from "./image-viewer.js?v=206";
-import { openMinesweeper } from "./minesweeper.js?v=206";
-import { openAnarchy } from "./anarchy/ui.js?v=206";
+import { openWindow, closeWindow, toggleMaximize } from "./window-manager.js?v=207";
+import { FS, findByPath } from "./file-system.js?v=207";
+import { listItems, addItem, removeItem, renameItem, createFolder, saveImage } from "./user-storage.js?v=207";
+import { win98Prompt } from "./win98-dialogs.js?v=207";
+import { ICONS, iconFor } from "./icons.js?v=207";
+import { startScreensaver, SAVERS, getSaver, setSaver } from "./screensaver.js?v=207";
+import { openPaint } from "./paint.js?v=207";
+import { openImageViewer } from "./image-viewer.js?v=207";
+import { openMinesweeper } from "./minesweeper.js?v=207";
+import { openAnarchy } from "./anarchy/ui.js?v=207";
 import {
   MODES, MODE_LIST,
   getMode, setMode,
   getWallpaper, setWallpaper,
-} from "./os-mode.js?v=206";
-import { showContextMenu } from "./context-menu.js?v=206";
-import { currentZoom } from "./scale.js?v=206";
-import { t } from "./i18n.js?v=206";
-import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=206";
+} from "./os-mode.js?v=207";
+import { showContextMenu } from "./context-menu.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=207";
+import { t } from "./i18n.js?v=207";
+import { SCALES, getScale, setScale, isTouchDevice } from "./scale.js?v=207";
 
 // ---- Notepad --------------------------------------------------------
 
@@ -256,11 +256,11 @@ export function openExplorer(startPath = []) {
     const start = (clientX, clientY, isTouchEv) => {
       if (paneEl.scrollLeft || paneEl.scrollTop) { /* still proceed */ }
       const pRect = paneEl.getBoundingClientRect();
-      // pRect & pointer coords are post-zoom; scrollLeft/Top are pre-zoom.
-      // Convert pointer offset into pane-internal (pre-zoom) px.
-      const z = currentZoom();
-      const x0 = (clientX - pRect.left) / z + paneEl.scrollLeft;
-      const y0 = (clientY - pRect.top)  / z + paneEl.scrollTop;
+      // Pointer coords divide by currentZoom(); rect values by rectZoom().
+      // scrollLeft/Top are already pre-zoom.
+      const z = currentZoom(), rz = rectZoom();
+      const x0 = clientX / z - pRect.left / rz + paneEl.scrollLeft;
+      const y0 = clientY / z - pRect.top  / rz + paneEl.scrollTop;
       let dragged = false;
       let mq = null;
 
@@ -279,8 +279,8 @@ export function openExplorer(startPath = []) {
           paneEl.appendChild(mq);
         }
         if (e && e.cancelable) e.preventDefault();
-        const x1 = (cx - pRect.left) / z + paneEl.scrollLeft;
-        const y1 = (cy - pRect.top)  / z + paneEl.scrollTop;
+        const x1 = cx / z - pRect.left / rz + paneEl.scrollLeft;
+        const y1 = cy / z - pRect.top  / rz + paneEl.scrollTop;
         const left = Math.min(x0, x1);
         const top  = Math.min(y0, y1);
         const w    = Math.abs(x1 - x0);
@@ -751,8 +751,8 @@ export function openExplorer(startPath = []) {
     const rect = anchorEl.getBoundingClientRect();
     const dd = document.createElement("div");
     dd.className = "menu-dropdown";
-    dd.style.left = rect.left + "px";
-    dd.style.top  = rect.bottom + "px";
+    dd.style.left = rect.left / rectZoom() + "px";
+    dd.style.top  = rect.bottom / rectZoom() + "px";
     for (const it of items) {
       if (it === "sep") {
         const s = document.createElement("div");

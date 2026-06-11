@@ -8,7 +8,16 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=206";
+// COORDINATE SPACES — read before touching any geometry here:
+//   currentZoom()  divides POINTER coords (clientX/Y) and innerWidth/Height,
+//                  which are visual px on every engine.
+//   rectZoom()     divides getBoundingClientRect() values. On desktop Chromium
+//                  rects are visual px (rectZoom≈zoom); on the iOS WebKit the
+//                  user plays on, rects under CSS zoom are ALREADY layout px
+//                  (rectZoom≈1). Dividing rects by currentZoom() instead made
+//                  every surface compute ~20% too high on iPhone — the
+//                  "floating above everything, figure too small" bug.
+import { currentZoom, rectZoom } from "./scale.js?v=207";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -47,7 +56,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 function createStickman(opts = {}) {
   const z0 = currentZoom() || 1;
-  const W = window.innerWidth / z0, H = window.innerHeight / z0;
+  let W = window.innerWidth / z0, H = window.innerHeight / z0; // world size — kept live in frame() (rotation/resize)
 
   // overlay layer — on top of everything, but click-through
   const layer = document.createElement("div");
@@ -177,7 +186,7 @@ function createStickman(opts = {}) {
   function doAttack() {
     if (S.attackCd > 0 || S.mode === "spawn") return;
     S.attackCd = 22; S.attackTimer = 12; S.sliding = false;
-    const z = currentZoom() || 1;
+    const z = rectZoom() || 1; // rect-derived hitboxes below — calibrated divisor
     const reach = 30;
     const hx = S.x + S.facing * (FW / 2 + reach * 0.7); // strike centre
     const hy = S.y - FH * 0.55;
@@ -295,7 +304,7 @@ function createStickman(opts = {}) {
 
   // ---- platforms (recomputed each frame from the live DOM) ----
   function platforms() {
-    const z = currentZoom() || 1;
+    const z = rectZoom() || 1; // every value below is rect-derived
     const out = [];
     const add = (el, full) => {
       if (!el) return;
@@ -446,6 +455,11 @@ function createStickman(opts = {}) {
     last = ts;
     S.t += dt;
     const age = ts - born;
+    // keep the world size live: rotation / resize / a Settings scale change all
+    // move the screen-edge walls and the fallback floor (innerWidth is visual px
+    // on every engine, so currentZoom is the right divisor here)
+    const zNow = currentZoom() || 1;
+    W = window.innerWidth / zNow; H = window.innerHeight / zNow;
 
     // a brief "drawn to life" beat before control kicks in
     if (S.mode === "spawn") {
@@ -493,7 +507,7 @@ function createStickman(opts = {}) {
     if (S.attackTimer > 0) S.attackTimer -= dt;
     if (S.attackCd > 0) S.attackCd -= dt;
 
-    const prevY = S.y;
+    let prevY = S.y; // mutable: the ride-the-window shift below moves it with the frame
     let nx = clamp(S.x + S.vx * dt, 6, W - 6);
     let ny = S.y + S.vy * dt;
 
@@ -504,10 +518,11 @@ function createStickman(opts = {}) {
       else {
         // RIDE THE WINDOW: if Paint was dragged since last frame, carry the figure
         // by the same delta so it stays inside its world instead of being left
-        // floating where the canvas used to be.
+        // floating where the canvas used to be. prevY shifts too, so the ink-landing
+        // sweep below compares positions in the same (post-drag) frame.
         if (prevCanvasRb) {
           const ddx = rb.l - prevCanvasRb.l, ddy = rb.t - prevCanvasRb.t;
-          if (Math.abs(ddx) > 0.5 || Math.abs(ddy) > 0.5) { nx += ddx; ny += ddy; }
+          if (Math.abs(ddx) > 0.5 || Math.abs(ddy) > 0.5) { nx += ddx; ny += ddy; prevY += ddy; }
         }
         prevCanvasRb = { l: rb.l, t: rb.t };
         if (hitCooldown > 0) hitCooldown -= dt;
@@ -577,6 +592,7 @@ function createStickman(opts = {}) {
       // the screen edge → cling (slow slide) and wall-jump away. Grounded walking
       // is never blocked — the figure strolls in front of windows freely.
       S.walled = 0;
+      const rz = rectZoom() || 1; // live calibrated divisor for the rects below
       if (!S.grounded) {
         const half = FW / 2;
         const cling = (wx, sideDir, topY, botY) => { // sideDir: -1 wall on left, +1 wall on right
@@ -587,8 +603,8 @@ function createStickman(opts = {}) {
         document.querySelectorAll(".window:not(.minimized)").forEach((el) => {
           const r = el.getBoundingClientRect();
           if (r.width < 4) return;
-          cling(r.left / z0, 1, r.top / z0, r.bottom / z0);   // approach from the left → wall on your right
-          cling(r.right / z0, -1, r.top / z0, r.bottom / z0); // approach from the right → wall on your left
+          cling(r.left / rz, 1, r.top / rz, r.bottom / rz);   // approach from the left → wall on your right
+          cling(r.right / rz, -1, r.top / rz, r.bottom / rz); // approach from the right → wall on your left
         });
         cling(6, -1, 0, H);     // screen edges are walls too
         cling(W - 6, 1, 0, H);
@@ -598,9 +614,9 @@ function createStickman(opts = {}) {
         if (knownWins.has(el)) return;
         knownWins.add(el);
         const r = el.getBoundingClientRect();
-        if (nx > r.left / z0 && nx < r.right / z0 && ny > r.top / z0 && ny < r.bottom / z0 + 20) {
+        if (nx > r.left / rz && nx < r.right / rz && ny > r.top / rz && ny < r.bottom / rz + 20) {
           const tbEl = el.querySelector(".window-titlebar");
-          ny = ((tbEl || el).getBoundingClientRect().top) / z0;
+          ny = ((tbEl || el).getBoundingClientRect().top) / rz;
           S.vy = 0; S.grounded = true; S.landTimer = 8; S.airJumps = 1;
         }
       });

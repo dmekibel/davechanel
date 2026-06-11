@@ -2,9 +2,9 @@
 // Mouse: left-click reveal, right-click flag. Touch: tap reveal,
 // long-press flag (350ms).
 
-import { openWindow } from "./window-manager.js?v=206";
-import { ICONS } from "./icons.js?v=206";
-import { currentZoom } from "./scale.js?v=206";
+import { openWindow } from "./window-manager.js?v=207";
+import { ICONS } from "./icons.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=207";
 
 const LEVELS = {
   beginner:     { w:  9, h:  9, mines: 10 },
@@ -297,8 +297,8 @@ export function openMinesweeper() {
     const drop = document.createElement("div");
     drop.className = "ms-drop pm-drop";
     drop.style.position = "fixed";
-    drop.style.left = r.left + "px";
-    drop.style.top  = r.bottom + "px";
+    drop.style.left = (r.left / rectZoom()) + "px";
+    drop.style.top  = (r.bottom / rectZoom()) + "px";
     drop.innerHTML = `
       <div class="pm-item" data-lvl="beginner">New (Beginner)</div>
       <div class="pm-item" data-lvl="intermediate">New (Intermediate)</div>

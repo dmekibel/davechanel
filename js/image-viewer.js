@@ -7,11 +7,11 @@
 //   openImageViewer(src, title)
 //   openImageViewer({ list, index })   // list: [{src, name}], index: 0..n-1
 
-import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./window-manager.js?v=206";
-import { ICONS } from "./icons.js?v=206";
-import { FS } from "./file-system.js?v=206";
-import { currentZoom } from "./scale.js?v=206";
-import { getDescription } from "./fine-art-descriptions.js?v=206";
+import { openWindow, closeWindow, toggleMaximize, setWindowTitle } from "./window-manager.js?v=207";
+import { ICONS } from "./icons.js?v=207";
+import { FS } from "./file-system.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=207";
+import { getDescription } from "./fine-art-descriptions.js?v=207";
 
 // Collect every kind:"image" leaf in the virtual file system. Used as the
 // default list when the viewer is opened from the start menu.
@@ -1118,9 +1118,10 @@ function buildIvMenu(btn, items) {
       drop.appendChild(row);
     }
     const r = btn.getBoundingClientRect();
+    const rz = rectZoom();
     drop.style.position = "fixed";
-    drop.style.left = r.left + "px";
-    drop.style.top  = r.bottom + "px";
+    drop.style.left = (r.left / rz) + "px";
+    drop.style.top  = (r.bottom / rz) + "px";
     document.body.appendChild(drop);
     openDrop = drop;
     document.addEventListener("click", outsideClose, true);

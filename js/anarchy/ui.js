@@ -1,12 +1,12 @@
 // Anarchy — Win98 window UI on top of the pure engine.
-import { openWindow, closeWindow } from "../window-manager.js?v=206";
-import { ICONS } from "../icons.js?v=206";
+import { openWindow, closeWindow } from "../window-manager.js?v=207";
+import { ICONS } from "../icons.js?v=207";
 import {
   createGame, reduce, legalMoves, slapOpportunities,
   findStraights, rankLabel, colorOf,
-} from "./engine.js?v=206";
-import { chooseAction, botSlap } from "./bot.js?v=206";
-import { currentZoom } from "../scale.js?v=206";
+} from "./engine.js?v=207";
+import { chooseAction, botSlap } from "./bot.js?v=207";
+import { currentZoom, rectZoom } from "../scale.js?v=207";
 
 // ︎ forces text (monochrome) presentation so ♥/♦ render as glyphs the
 // same size as the rank digit and inherit the card's colour — not as big,
@@ -249,7 +249,7 @@ export function openAnarchy() {
     let fromX = from.x + from.w / 2 - (CW + span) / 2, fromY = from.y + (mine ? -6 : from.h / 2);
     if (mine && throwOrigin && group.some((c) => throwOrigin.ids.has(c.id))) {
       // a flicked card keeps flying from the exact spot it left your finger
-      const f = elFly.getBoundingClientRect(), z = currentZoom() || 1;
+      const f = elFly.getBoundingClientRect(), z = rectZoom() || 1;
       fromX = (throwOrigin.rect.left - f.left) / z;
       fromY = (throwOrigin.rect.top - f.top) / z;
     }
@@ -310,7 +310,7 @@ export function openAnarchy() {
   // position of an element's top-left within the fly layer (which spans the whole
   // game), so flies can travel between the felt and the hand without being clipped
   function feltPos(el) {
-    const z = currentZoom() || 1; // getBoundingClientRect is post-zoom; convert to layer px
+    const z = rectZoom() || 1; // getBoundingClientRect is post-zoom; convert to layer px
     const f = elFly.getBoundingClientRect(), r = el.getBoundingClientRect();
     return { x: (r.left - f.left) / z, y: (r.top - f.top) / z, w: r.width / z, h: r.height / z };
   }
@@ -509,8 +509,8 @@ export function openAnarchy() {
   function startFireworks() {
     if (fxTimer) return;
     const boom = () => {
-      const r = elFelt.getBoundingClientRect();
-      firework(24 + Math.random() * (r.width - 48), 20 + Math.random() * r.height * 0.6);
+      const r = elFelt.getBoundingClientRect(), z = rectZoom() || 1;
+      firework(24 + Math.random() * (r.width / z - 48), 20 + Math.random() * (r.height / z) * 0.6);
     };
     boom(); boom();
     fxTimer = setInterval(boom, 420);
@@ -527,7 +527,7 @@ export function openAnarchy() {
   }
   function startWinCascade() {
     if (winRainRAF || !elFly) return;
-    const z = currentZoom() || 1;
+    const z = rectZoom() || 1;
     const f = elFly.getBoundingClientRect();
     const W = Math.max(120, f.width / z), H = Math.max(120, f.height / z);
     const RANKS = [2,3,4,5,6,7,8,9,10,11,12,13,14], SUITS = ["H","D","C","S"];
@@ -1069,7 +1069,7 @@ export function openAnarchy() {
   function layoutSelectedPair() {
     const els = [...elHand.querySelectorAll(".acard.sel, .acard.sel-top")];
     if (els.length !== 2) return;
-    const z = currentZoom() || 1;
+    const z = rectZoom() || 1;
     const dx = (els[1].getBoundingClientRect().left - els[0].getBoundingClientRect().left) / z;
     const offset = Math.max(8, Math.round(CW * 0.25)); // close together: the back card peeks out just enough to read it
     els.forEach((el, i) => {
@@ -1110,7 +1110,7 @@ export function openAnarchy() {
     // a card moving into / out of the combo split also reflows (same ids, new spots)
     if (!changed && prevReserved) for (const el of els) if (prevReserved.has(el.dataset.id) !== el.classList.contains("reserved")) { changed = true; break; }
     if (!changed) return; // a selection-only re-render: leave the cards alone
-    const z = currentZoom() || 1;
+    const z = rectZoom() || 1;
     els.forEach((el) => {
       if (el.classList.contains("sel") || el.classList.contains("sel-top")) return; // a lifted pair is transform-managed; don't fight it
       const prev = prevRects.get(el.dataset.id);
@@ -1310,12 +1310,12 @@ export function openAnarchy() {
       const existing = document.querySelector(".menu-dropdown");
       document.querySelectorAll(".menu-dropdown").forEach((n) => n.remove());
       if (existing && existing.dataset.owner === btn.dataset.menu) return; // second click closes
-      const rect = btn.getBoundingClientRect();
+      const rect = btn.getBoundingClientRect(), z = rectZoom() || 1;
       const dd = document.createElement("div");
       dd.className = "menu-dropdown";
       dd.dataset.owner = btn.dataset.menu;
-      dd.style.left = rect.left + "px";
-      dd.style.top = rect.bottom + "px";
+      dd.style.left = rect.left / z + "px";
+      dd.style.top = rect.bottom / z + "px";
       for (const it of items) {
         if (it === "sep") { const s = document.createElement("div"); s.className = "sep"; dd.appendChild(s); continue; }
         const row = document.createElement("div");

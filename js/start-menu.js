@@ -2,11 +2,11 @@
 // Top-level entries can be programs or submenus; submenus open to the right
 // on hover and can themselves contain submenus.
 
-import { ICONS, iconFor } from "./icons.js?v=206";
-import { openProgram, openFile } from "./programs.js?v=206";
-import { findByPath } from "./file-system.js?v=206";
-import { t } from "./i18n.js?v=206";
-import { currentZoom } from "./scale.js?v=206";
+import { ICONS, iconFor } from "./icons.js?v=207";
+import { openProgram, openFile } from "./programs.js?v=207";
+import { findByPath } from "./file-system.js?v=207";
+import { t } from "./i18n.js?v=207";
+import { currentZoom, rectZoom } from "./scale.js?v=207";
 
 const ARROW = `▶`;
 
@@ -115,7 +115,8 @@ function makeMenuList(items, depth) {
         const r = li.getBoundingClientRect();
         // r is post-transform viewport; CSS positioning is body-internal.
         const z = currentZoom();
-        const rL = r.left  / z, rR = r.right / z, rT = r.top / z;
+        const rz = rectZoom();
+        const rL = r.left  / rz, rR = r.right / rz, rT = r.top / rz;
         const vw = window.innerWidth / z;
         // Position to the right of the parent item, aligned with its top
         const subW = wrap.offsetWidth;

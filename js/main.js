@@ -1,10 +1,10 @@
 // Mekibel — boot
 
-import { initDesktop } from "./desktop.js?v=206";
-import { shouldShowLogin, showLogin } from "./login.js?v=206";
-import { apply as applyOsMode } from "./os-mode.js?v=206";
-import { applyDomTranslations, getLang } from "./i18n.js?v=206";
-import { applyScale } from "./scale.js?v=206";
+import { initDesktop } from "./desktop.js?v=207";
+import { shouldShowLogin, showLogin } from "./login.js?v=207";
+import { apply as applyOsMode } from "./os-mode.js?v=207";
+import { applyDomTranslations, getLang } from "./i18n.js?v=207";
+import { applyScale } from "./scale.js?v=207";
 
 function boot() {
   disableZoom();
@@ -43,13 +43,14 @@ function initLangGlobe() {
 
 function showLangPopup(anchor) {
   closeLangPopup();
-  Promise.all([import("./i18n.js?v=206"), import("./scale.js?v=206")]).then(([{ getLang, setLang }, { currentZoom }]) => {
+  Promise.all([import("./i18n.js?v=207"), import("./scale.js?v=207")]).then(([{ getLang, setLang }, { currentZoom, rectZoom }]) => {
     const cur = getLang();
     const rect = anchor.getBoundingClientRect();
     // rect is post-transform viewport coords; CSS positioning is body-internal.
     const z = currentZoom();
-    const rectLeft = rect.left / z;
-    const rectTop  = rect.top  / z;
+    const rz = rectZoom();
+    const rectLeft = rect.left / rz;
+    const rectTop  = rect.top  / rz;
     const vw = window.innerWidth  / z;
     const vh = window.innerHeight / z;
     const menu = document.createElement("div");
@@ -78,7 +79,7 @@ function showLangPopup(anchor) {
     // Clamp inside viewport so the popup never gets cut off (login screen is
     // bottom-right so it overflows the right edge by default).
     const r = menu.getBoundingClientRect();
-    const rW = r.width / z;
+    const rW = r.width / rz;
     let left = rectLeft;
     if (left + rW > vw - 4) {
       left = Math.max(4, vw - rW - 4);
