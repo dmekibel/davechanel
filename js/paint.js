@@ -2,16 +2,16 @@
 // Tools: pencil, eraser, fill, line, rect, ellipse. 16-color palette.
 // Undo (Ctrl+Z), Export PNG, Win98-styled brush size + confirm dialog.
 
-import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=210";
-import { ICONS } from "./icons.js?v=210";
-import { saveImage, loadUserFS } from "./user-storage.js?v=210";
-import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=210";
-import { FS } from "./file-system.js?v=210";
-import { spawnStickmanAt } from "./stickman.js?v=210";
+import { openWindow, closeWindow, toggleMaximize, minimize } from "./window-manager.js?v=212";
+import { ICONS } from "./icons.js?v=212";
+import { saveImage, loadUserFS } from "./user-storage.js?v=212";
+import { win98Prompt, win98PickFolder } from "./win98-dialogs.js?v=212";
+import { FS } from "./file-system.js?v=212";
+import { spawnStickmanAt } from "./stickman.js?v=212";
 // currentZoom() divides POINTER coords (clientX/Y — proven iOS-correct in pos());
 // rectZoom() divides getBoundingClientRect() values (engine-calibrated: ≈zoom on
 // Chromium, ≈1 on iOS WebKit where rects under CSS zoom are already layout px).
-import { currentZoom, rectZoom } from "./scale.js?v=210";
+import { currentZoom, rectZoom } from "./scale.js?v=212";
 
 // Inline Win98-styled combobox (no native <select> — iOS renders that as
 // a modal picker which breaks the OS illusion).
@@ -711,6 +711,49 @@ export function openPaint(opts = {}) {
     ctx.restore();
   }
 
+  // Measure the DRAWING so the redrawn character inherits its identity:
+  // proportions (head size, arm/leg reach, torso), line weight, and ink color.
+  function measureDrawing(dd, w, h) {
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const neck = [0.5 * w, 0.30 * h], hip = [0.5 * w, 0.56 * h];
+    const segs = [ // nearest-segment partition (same template as the old rig)
+      [hip, neck], [hip, [0.40 * w, 0.99 * h]], [hip, [0.60 * w, 0.99 * h]],
+      [neck, [0.16 * w, 0.5 * h]], [neck, [0.84 * w, 0.5 * h]], [neck, [0.5 * w, 0.12 * h]],
+    ];
+    const d2 = (px, py, s) => {
+      const dx = s[1][0] - s[0][0], dy = s[1][1] - s[0][1], L2 = dx * dx + dy * dy || 1;
+      const t = Math.max(0, Math.min(1, ((px - s[0][0]) * dx + (py - s[0][1]) * dy) / L2));
+      const qx = s[0][0] + t * dx, qy = s[0][1] + t * dy;
+      return (px - qx) ** 2 + (py - qy) ** 2;
+    };
+    let n = 0, armMax = 0, legMax = 0, hx0 = 1e9, hy0 = 1e9, hx1 = -1e9, hy1 = -1e9;
+    const colors = new Map();
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const j = (y * w + x) * 4;
+      if (dd[j + 3] < 40) continue;
+      n++;
+      const key = ((dd[j] >> 5) << 6) | ((dd[j + 1] >> 5) << 3) | (dd[j + 2] >> 5); // coarse color bucket
+      colors.set(key, (colors.get(key) || 0) + 1);
+      let bi = 0, bd = Infinity;
+      for (let s = 0; s < 6; s++) { const dist = d2(x, y, segs[s]); if (dist < bd) { bd = dist; bi = s; } }
+      if (bi === 3 || bi === 4) armMax = Math.max(armMax, Math.hypot(x - neck[0], y - neck[1]));
+      else if (bi === 1 || bi === 2) legMax = Math.max(legMax, Math.hypot(x - hip[0], y - hip[1]));
+      else if (bi === 5) { if (x < hx0) hx0 = x; if (x > hx1) hx1 = x; if (y < hy0) hy0 = y; if (y > hy1) hy1 = y; }
+    }
+    // dominant ink color (bucket centre); near-white falls back to ink black
+    let topKey = 0, topN = -1;
+    colors.forEach((c, k) => { if (c > topN) { topN = c; topKey = k; } });
+    let cr2 = ((topKey >> 6) & 7) * 32 + 16, cg = ((topKey >> 3) & 7) * 32 + 16, cb = (topKey & 7) * 32 + 16;
+    if (Math.min(cr2, cg, cb) > 200) { cr2 = 26; cg = 26; cb = 26; }
+    const headR = clamp(Math.max(hx1 - hx0, hy1 - hy0) / 2, h * 0.05, h * 0.22);
+    const armLen = clamp(armMax, h * 0.12, h * 0.5);
+    const legLen = clamp(legMax, h * 0.25, h * 0.55);
+    const torsoLen = 0.26 * h;
+    const skel = 2 * Math.PI * headR * 0.7 + torsoLen + 2 * armLen + 2 * legLen;
+    const strokeW = clamp(n / Math.max(skel, 1), 1.5, Math.max(2, w * 0.1));
+    return { w, h, color: `rgb(${cr2},${cg},${cb})`, strokeW, headR, torsoLen, armLen, legLen };
+  }
+
   function bringToLife() {
     if (waking) return;
     const box = drawnBBox();
@@ -718,6 +761,8 @@ export function openPaint(opts = {}) {
     waking = true;
     lifeBtn.classList.remove("attn");
     try { sessionStorage.setItem("sm-life-used", "1"); } catch (_) {}
+    // safety: if anything below ever throws, don't leave the ⚡ jammed forever
+    setTimeout(() => { waking = false; }, 2500);
     // cut the drawing into a transparent sprite (white drops out)
     const cut = document.createElement("canvas");
     cut.width = box.w; cut.height = box.h;
@@ -733,6 +778,8 @@ export function openPaint(opts = {}) {
       else if (mn >= 200) d.data[i + 3] = Math.min(d.data[i + 3], Math.round(255 * (236 - mn) / 36));
     }
     cctx.putImageData(d, 0, 0);
+    // the drawing's identity — the redrawn character inherits these
+    const look = measureDrawing(d.data, box.w, box.h);
     // overlay the sprite exactly over the drawing (body-internal px). Every value
     // here is rect-derived → divide by the CALIBRATED rect scale (scrollLeft/Top
     // are already layout px — never divided).
@@ -753,14 +800,30 @@ export function openPaint(opts = {}) {
     pushUndo();
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(box.x, box.y, box.w, box.h);
-    sprite.classList.add("wake");                                                  // …did it just move?
-    setTimeout(() => { sprite.classList.remove("wake"); sprite.classList.add("hop"); }, 640); // it's ALIVE — two excited hops
+    // ---- THE LIGHTNING RITUAL: bolt strikes the drawing → flash + burst →
+    // where the hand-drawn guy was, a beautifully redrawn one stands. ----
+    const sL = parseFloat(sprite.style.left), sT = parseFloat(sprite.style.top);
+    const sW = box.w * sx, sH = box.h * sy;
+    const boltH = Math.max(40, sT + sH * 0.35);
+    const bolt = document.createElement("div");
+    bolt.className = "pt-bolt";
+    bolt.style.left = (sL + sW / 2 - 20) + "px";
+    bolt.style.top = "0px";
+    bolt.style.width = "40px"; bolt.style.height = boltH + "px";
+    bolt.innerHTML = `<svg viewBox="0 0 40 ${boltH.toFixed(0)}" width="40" height="${boltH.toFixed(0)}" style="overflow:visible">
+      <polyline points="20,0 13,${(boltH * 0.32).toFixed(0)} 25,${(boltH * 0.46).toFixed(0)} 11,${(boltH * 0.66).toFixed(0)} 23,${(boltH * 0.82).toFixed(0)} 17,${boltH.toFixed(0)}"
+        fill="none" stroke="#ffec6e" stroke-width="3.5" stroke-linejoin="miter"/></svg>`;
+    const flash = document.createElement("div"); flash.className = "pt-flash";
+    const burst = document.createElement("div"); burst.className = "pt-burst";
+    const bs = Math.max(sW, sH) * 1.2;
+    burst.style.cssText += `left:${(sL + sW / 2 - bs / 2)}px;top:${(sT + sH / 2 - bs / 2)}px;width:${bs}px;height:${bs}px;`;
+    setTimeout(() => { wrapEl.appendChild(bolt); }, 120);
+    setTimeout(() => { wrapEl.appendChild(flash); wrapEl.appendChild(burst); }, 300);
     setTimeout(() => {
-      // hand off to the engine IN PLACE — and the character IS the drawing:
-      // the exact cut-out bitmap becomes the playable figure, no swap, no poof.
-      // Level 1 is the canvas itself: it must crack a wall to get out.
+      // hand off to the engine — the REDRAWN character (the drawing's proportions,
+      // line weight and color on a clean articulated skeleton) takes its place.
       const sr = sprite.getBoundingClientRect();
-      const zh = rectZoom() || 1; // re-measure: the captured z is ~1.4s old by now
+      const zh = rectZoom() || 1;
       const worldX = (sr.left + sr.width / 2) / zh;
       const worldY = sr.bottom / zh;
       // STAYS IN PAINT: the figure lives inside the canvas, and whatever you draw
@@ -768,7 +831,7 @@ export function openPaint(opts = {}) {
       // through empty white space and lands on your strokes or the canvas floor.
       spawnStickmanAt({
         x: worldX, y: worldY - 2, vx: 0, vy: -8.5,
-        sprite: { url: sprite.src, w: sr.width / zh, h: sr.height / zh },
+        look,
         confine: {
           rect: canvasWorldRect, onCrack: drawWallCrack, onBreak: drawWallHole,
           sampleSurface: refreshSurface, // refresh the ink cache once per frame (throttled)
@@ -780,9 +843,10 @@ export function openPaint(opts = {}) {
           },
         },
       });
-      sprite.remove(); // the engine renders the SAME bitmap from this exact spot
+      sprite.remove(); // the hand-drawn guy is gone — long live the redrawn guy
       waking = false;
-    }, 640 + 800);
+    }, 430);
+    setTimeout(() => { bolt.remove(); flash.remove(); burst.remove(); }, 950);
   }
   lifeBtn.addEventListener("click", bringToLife);
   // the ⚡ IS the game's front door now — it pulses until the player has used

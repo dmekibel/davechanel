@@ -17,7 +17,7 @@
 //                  (rectZoom≈1). Dividing rects by currentZoom() instead made
 //                  every surface compute ~20% too high on iPhone — the
 //                  "floating above everything, figure too small" bug.
-import { currentZoom, rectZoom } from "./scale.js?v=210";
+import { currentZoom, rectZoom } from "./scale.js?v=212";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -62,13 +62,19 @@ function createStickman(opts = {}) {
   const layer = document.createElement("div");
   layer.className = "stickman-layer";
 
-  // THE PLAYER IS THE DRAWING: when the ritual hands us the cut-out bitmap, the
-  // exact pixels the player drew become the character (squash & stretch carries
-  // the life). The procedural SVG skeleton remains as the no-drawing fallback.
-  const spriteMode = !!(opts.sprite && opts.sprite.url);
+  // THE CHARACTER IS REDRAWN FROM THE DRAWING: the ritual measures the doodle
+  // (proportions, line weight, ink color) and the engine renders a clean
+  // articulated skeleton — real knees and elbows — that INHERITS that identity.
+  // (The old play-the-raw-bitmap mode still works when opts.sprite is passed.)
+  const look = opts.look || null;
+  const spriteMode = !!(opts.sprite && opts.sprite.url) && !look;
   let FW = VB, FH = NECK_TO_FOOT; // the figure's physical width/height (feet at bottom-center)
   let svg = null, seg = null, head = null, img = null;
-  if (spriteMode) {
+  // per-instance skeleton geometry (defaults = the classic fallback stickman)
+  const G = { HIPX: HIPX, HIPY: HIPY, TORSO: TORSO, HEADR: HEADR,
+              THIGH: THIGH, SHIN: SHIN, UARM: UARM, FARM: FARM, FOOT: NECK_TO_FOOT };
+  const srcDim = spriteMode ? opts.sprite : look; // whatever sized the drawing
+  if (srcDim && srcDim.w && srcDim.h) {
     // SIZE THE DRAWING TO FIT THE GAME: a big doodle is scaled DOWN so it can
     // actually move and jump — capped to ~11% of the screen, ~42% of the canvas
     // it's born in, and a sane width (wide scribbles shrink too). Normal-sized
@@ -78,11 +84,27 @@ function createStickman(opts = {}) {
     const rb = opts.confine && opts.confine.rect && opts.confine.rect();
     if (rb) maxH = Math.min(maxH, (rb.b - rb.t) * 0.42);
     const maxW = Math.min(vW * 0.18, maxH * 2.6);
-    let sf = Math.min(1, maxH / opts.sprite.h, maxW / opts.sprite.w); // only ever scale DOWN big ones
-    if (opts.sprite.h * sf < 28) sf = Math.min(28 / opts.sprite.h, maxH / opts.sprite.h, maxW / opts.sprite.w); // floor tiny doodles
-    FW = Math.max(12, opts.sprite.w * sf);
-    FH = Math.max(20, opts.sprite.h * sf);
-    if (sf < 0.8) setTimeout(() => say("<b>Sized to fit.</b> Big drawing — shrunk so it can roam!", 3400), 1500);
+    let sf = Math.min(1, maxH / srcDim.h, maxW / srcDim.w); // only ever scale DOWN big ones
+    if (srcDim.h * sf < 28) sf = Math.min(28 / srcDim.h, maxH / srcDim.h, maxW / srcDim.w); // floor tiny doodles
+    FW = Math.max(12, srcDim.w * sf);
+    FH = Math.max(20, srcDim.h * sf);
+    if (look) {
+      // the redrawn skeleton inherits the DRAWING's proportions (scaled to fit)
+      const s = FH / look.h;
+      const legLen = clamp(look.legLen * s, FH * 0.2, FH * 0.6);
+      const armLen = clamp(look.armLen * s, FH * 0.1, FH * 0.55);
+      G.HEADR = clamp(look.headR * s, 2.5, FH * 0.26);
+      G.TORSO = clamp(look.torsoLen * s, FH * 0.15, FH * 0.45);
+      G.HIPY  = FH - legLen;
+      G.THIGH = legLen * 0.48; G.SHIN = legLen * 0.52;
+      G.UARM  = armLen * 0.48; G.FARM = armLen * 0.52;
+      G.FOOT  = FH;
+      G.HIPX  = Math.max(FW / 2, armLen + 3);
+      // the physics body is the torso width, not the arm span (walls/edges feel right)
+      FW = clamp(G.HEADR * 2.6, 10, FW);
+    }
+  }
+  if (spriteMode) {
     img = document.createElement("img");
     img.src = opts.sprite.url;
     img.className = "stickman stickman-sprite";
@@ -90,19 +112,31 @@ function createStickman(opts = {}) {
     img.style.height = FH + "px";
     layer.appendChild(img);
   } else {
-    // the figure: a single SVG of strokes we re-point every frame
+    // the figure: a single SVG of strokes we re-point every frame — drawn with
+    // the DRAWING's ink color and line weight when a look was measured
     const NS = "http://www.w3.org/2000/svg";
+    const vbW = look ? G.HIPX * 2 : VB, vbH = look ? FH + 2 : VBH;
     svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${VB} ${VBH}`);
-    svg.setAttribute("width", VB); svg.setAttribute("height", VBH);
+    svg.setAttribute("viewBox", `0 0 ${vbW} ${vbH}`);
+    svg.setAttribute("width", vbW); svg.setAttribute("height", vbH);
+    svg.style.overflow = "visible";
     svg.classList.add("stickman");
     const g = document.createElementNS(NS, "g");
     g.setAttribute("class", "stickman-body");
     svg.appendChild(g);
-    const mkLine = () => { const l = document.createElementNS(NS, "line"); l.setAttribute("class", "sm-seg"); g.appendChild(l); return l; };
+    const ink = look ? look.color : "";
+    const sw = look ? clamp(look.strokeW * (FH / look.h) * 1.15, 2, 5.5) : 0;
+    const mkLine = () => {
+      const l = document.createElementNS(NS, "line");
+      l.setAttribute("class", "sm-seg");
+      l.setAttribute("stroke-linecap", "round");
+      if (ink) { l.style.stroke = ink; l.style.strokeWidth = sw.toFixed(1); }
+      g.appendChild(l); return l;
+    };
     seg = { torso: mkLine(), thighL: mkLine(), shinL: mkLine(), thighR: mkLine(), shinR: mkLine(), uarmL: mkLine(), farmL: mkLine(), uarmR: mkLine(), farmR: mkLine() };
     head = document.createElementNS(NS, "circle");
-    head.setAttribute("class", "sm-seg sm-head"); head.setAttribute("r", HEADR);
+    head.setAttribute("class", "sm-seg sm-head"); head.setAttribute("r", G.HEADR);
+    if (ink) { head.style.fill = ink; head.style.stroke = "none"; }
     g.appendChild(head);
     layer.appendChild(svg);
   }
@@ -230,20 +264,21 @@ function createStickman(opts = {}) {
   const setLine = (l, a, b) => { l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); };
 
   // build a pose from a set of joint angles (degrees) and write it to the SVG
+  // (all segment lengths come from G — the geometry measured from the drawing)
   function drawPose(P) {
     if (!seg) return; // sprite mode: the bitmap animates via applySpriteVisual instead
-    const neck = pt(HIPX, HIPY, 180 + P.lean, TORSO);           // torso goes UP from the hip
-    setLine(seg.torso, [HIPX, HIPY], neck);
-    const hc = pt(neck[0], neck[1], 180 + P.lean + P.head, HEADR + 1.5);
+    const neck = pt(G.HIPX, G.HIPY, 180 + P.lean, G.TORSO);     // torso goes UP from the hip
+    setLine(seg.torso, [G.HIPX, G.HIPY], neck);
+    const hc = pt(neck[0], neck[1], 180 + P.lean + P.head, G.HEADR + G.HEADR * 0.27);
     head.setAttribute("cx", hc[0]); head.setAttribute("cy", hc[1]);
     // legs from the hip
-    const kL = pt(HIPX, HIPY, P.thighL, THIGH), fL = pt(kL[0], kL[1], P.shinL, SHIN);
-    const kR = pt(HIPX, HIPY, P.thighR, THIGH), fR = pt(kR[0], kR[1], P.shinR, SHIN);
-    setLine(seg.thighL, [HIPX, HIPY], kL); setLine(seg.shinL, kL, fL);
-    setLine(seg.thighR, [HIPX, HIPY], kR); setLine(seg.shinR, kR, fR);
+    const kL = pt(G.HIPX, G.HIPY, P.thighL, G.THIGH), fL = pt(kL[0], kL[1], P.shinL, G.SHIN);
+    const kR = pt(G.HIPX, G.HIPY, P.thighR, G.THIGH), fR = pt(kR[0], kR[1], P.shinR, G.SHIN);
+    setLine(seg.thighL, [G.HIPX, G.HIPY], kL); setLine(seg.shinL, kL, fL);
+    setLine(seg.thighR, [G.HIPX, G.HIPY], kR); setLine(seg.shinR, kR, fR);
     // arms from the shoulders (≈ neck)
-    const eL = pt(neck[0], neck[1], P.uarmL, UARM), hL = pt(eL[0], eL[1], P.farmL, FARM);
-    const eR = pt(neck[0], neck[1], P.uarmR, UARM), hR = pt(eR[0], eR[1], P.farmR, FARM);
+    const eL = pt(neck[0], neck[1], P.uarmL, G.UARM), hL = pt(eL[0], eL[1], P.farmL, G.FARM);
+    const eR = pt(neck[0], neck[1], P.uarmR, G.UARM), hR = pt(eR[0], eR[1], P.farmR, G.FARM);
     setLine(seg.uarmL, neck, eL); setLine(seg.farmL, eL, hL);
     setLine(seg.uarmR, neck, eR); setLine(seg.farmR, eR, hR);
     // lowest foot → how far the feet sit below the hip, so we can plant them on the ground
@@ -637,7 +672,12 @@ function createStickman(opts = {}) {
     if (spriteMode) applyRigVisual(dt); // per-limb rig: blended poses + foot-planting
     else {
       let P;
-      if (S.attackTimer > 0) P = poseAttack(Math.sin((1 - S.attackTimer / 10) * Math.PI));
+      if (S.attackTimer > 0) {
+        // coil → SNAP (overshoot) → settle: same tight profile as the rig punch
+        const p = 1 - S.attackTimer / 10;
+        const k = p < 0.22 ? -(p / 0.22) * 0.6 : p < 0.5 ? ((p - 0.22) / 0.28) * 1.78 - 0.6 : 1.18 * (1 - (p - 0.5) / 0.5);
+        P = poseAttack(k);
+      }
       else if (S.sliding) P = poseSlide();
       else if (keys.down && S.grounded) P = poseCrawl(S.phase);
       else if (!S.grounded && S.walled !== 0) { S.facing = S.walled; P = poseWallCling(); }
@@ -653,7 +693,7 @@ function createStickman(opts = {}) {
 
   // position the SVG so the figure's feet sit at world (S.x, S.y)
   function place() {
-    const tx = S.x - HIPX, ty = S.y - NECK_TO_FOOT;
+    const tx = S.x - G.HIPX, ty = S.y - G.FOOT;
     svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scaleX(${S.facing})`;
   }
   // ===================== PER-LIMB RIG (sprite mode) =====================

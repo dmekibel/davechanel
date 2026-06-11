@@ -2954,6 +2954,14 @@ body.lang-ru .login-logo {
 .pt-life.attn { animation: ptLifePulse 1.1s ease-in-out infinite; }
 @keyframes ptLifePulse { 50% { box-shadow: 0 0 8px 2px #ffd24d; } }
 .paint-wake-sprite { position: absolute; z-index: 30; pointer-events: none; filter: drop-shadow(1px 2px 1px rgba(0,0,0,.25)); }
+/* the lightning ritual: a bolt strikes the drawing, the screen flashes, a burst
+   pops — and the beautifully-redrawn character stands where the doodle was */
+.pt-bolt { position: absolute; pointer-events: none; z-index: 32; filter: drop-shadow(0 0 7px rgba(255,236,110,.95)) drop-shadow(0 0 2px rgba(255,255,255,.9)); animation: ptBolt .42s linear forwards; }
+@keyframes ptBolt { 0% { opacity: 0; } 8% { opacity: 1; } 30% { opacity: .35; } 45% { opacity: 1; } 70% { opacity: .8; } 100% { opacity: 0; } }
+.pt-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 31; animation: ptFlash .5s ease-out forwards; }
+@keyframes ptFlash { 0% { opacity: 0; } 20% { opacity: .92; } 100% { opacity: 0; } }
+.pt-burst { position: absolute; border-radius: 50%; pointer-events: none; z-index: 33; background: radial-gradient(circle, rgba(255,255,255,.95) 18%, rgba(255,230,90,.75) 45%, transparent 72%); animation: ptBurst .55s ease-out forwards; }
+@keyframes ptBurst { from { transform: scale(.25); opacity: 1; } to { transform: scale(2.4); opacity: 0; } }
 .paint-wake-sprite.wake { animation: smWake .64s ease-in-out; }
 @keyframes smWake {
   0%, 100% { transform: translate(0,0) rotate(0); }
