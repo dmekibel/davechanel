@@ -8,7 +8,7 @@
 // desktop underneath. Coordinates are body-internal px (the desktop is scaled
 // with CSS `zoom`, so on-screen rects convert to our space by /currentZoom()).
 
-import { currentZoom } from "./scale.js?v=203";
+import { currentZoom } from "./scale.js?v=205";
 
 let active = null; // single instance — the desktop icon toggles it
 
@@ -676,8 +676,8 @@ function createStickman(opts = {}) {
     } else if (!S.grounded) { const up = S.vy < 0;
       d.armL = -100 * D; d.armR = 100 * D; d.legL = (up ? 18 : -12) * D; d.legR = (up ? -14 : 16) * D; d.torso = (up ? 6 : -5) * D; d.head = (up ? -3 : 5) * D;
     } else if (Math.abs(S.vx) > 0.4) { const run = Math.abs(S.vx) > WALK + 0.5;
-      const A = (run ? 38 : 24) * D, arm = (run ? 34 : 20) * D, sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
-      d.legL = A * sL; d.legR = A * sR; d.armL = -arm * sL * 0.9; d.armR = -arm * sR * 0.9; d.torso = (run ? 9 : 5) * D; d.head = (run ? -5 : -3) * D;
+      const A = (run ? 30 : 19) * D, arm = (run ? 26 : 15) * D, sL = Math.sin(S.phase), sR = Math.sin(S.phase + Math.PI);
+      d.legL = A * sL; d.legR = A * sR; d.armL = -arm * sL * 0.9; d.armR = -arm * sR * 0.9; d.torso = (run ? 8 : 4) * D; d.head = (run ? -4 : -2) * D;
     } else { const b = Math.sin(S.t * 0.05); d.torso = b * 0.5 * D; d.head = -b * 0.4 * D; d.armL = b * 1.3 * D; d.armR = -b * 1.3 * D; }
     return d;
   }
@@ -690,7 +690,17 @@ function createStickman(opts = {}) {
     const tLen = (RJ.hip[1] - RJ.neck[1]) * FH;
     const neck = [hip[0] + tLen * Math.cos(tA), hip[1] + tLen * Math.sin(tA)];
     const joint = { hip, neck };
-    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${S.y.toFixed(1)}px) scaleX(${S.facing})`;
+    // FOOT-PLANT: find each foot's height after its leg swings, and (when grounded)
+    // shift the whole figure so the LOWEST foot sits exactly on the surface (S.y).
+    // This is the fix for "floats when made smaller" — the legs swing without ever
+    // lifting the figure off the ground, at any scale.
+    const footY = (restFoot, dleg) => {
+      const fx = (restFoot[0] - 0.5) * FW, fy = -(1 - restFoot[1]) * FH;     // rest foot, feet-frame
+      const vx = fx - hip[0], vy = fy - hip[1], len = Math.hypot(vx, vy);
+      return hip[1] + len * Math.sin(Math.atan2(vy, vx) + dleg);             // y after the leg rotates
+    };
+    const plant = S.grounded ? Math.max(footY(RJ.footL, d.legL), footY(RJ.footR, d.legR)) : 0;
+    rigBox.style.transform = `translate(${S.x.toFixed(1)}px, ${(S.y - plant).toFixed(1)}px) scaleX(${S.facing})`;
     for (const part of rigParts) {
       const jp = joint[part.prox];
       // children of the neck inherit the torso tilt so arms/head ride the lean
@@ -737,8 +747,8 @@ function createStickman(opts = {}) {
     img.style.transform = `translate(${(S.x - FW / 2 + ax).toFixed(1)}px, ${(S.y - FH + dy).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(sx * S.facing).toFixed(3)}, ${sy.toFixed(3)})`;
   }
 
-  // NOTE: the per-limb rig (buildRig/applyRigVisual) is kept in the file but
-  // disabled — slicing a freehand drawing into limbs broke during the walk.
+  buildRig();                                 // slice the drawing into bones
+  if (spriteMode && rigOK) applyRigVisual();  // place at rest before the first frame
   raf = requestAnimationFrame(frame);
 
   function destroy() {
